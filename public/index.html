@@ -1,0 +1,2136 @@
+<!DOCTYPE html>
+<!-- saved from url=(0049)file:///Users/ricobaldon/Downloads/AxisAI-v2.html -->
+<html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AxisAI — Performance OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link href="./AxisAI — Performance OS_files/css2" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #050810;
+    --bg2:      #0c1020;
+    --surface:  #111827;
+    --border:   rgba(255,255,255,0.07);
+    --green:    #00ff87;
+    --green2:   #00c96b;
+    --blue:     #3b82f6;
+    --purple:   #a855f7;
+    --orange:   #f97316;
+    --red:      #ef4444;
+    --text:     #f0f4ff;
+    --muted:    #6b7280;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body:    'DM Sans', sans-serif;
+    --font-mono:    'JetBrains Mono', monospace;
+    --radius:   12px;
+    --sidebar:  240px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* ── AUTH SCREEN ── */
+  #screen-auth {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,255,135,0.12) 0%, transparent 60%),
+      var(--bg);
+    padding: 24px;
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+    animation: fadeUp 0.5s ease;
+  }
+
+  .auth-logo { text-align: center; margin-bottom: 28px; }
+
+  .auth-logo .wordmark {
+    font-family: var(--font-display);
+    font-size: 42px;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--green), #00c8ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+  }
+
+  .auth-logo .tagline {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 6px;
+    font-family: var(--font-mono);
+  }
+
+  .auth-tabs { display: flex; gap: 4px; background: var(--bg2); border-radius: 10px; padding: 4px; margin-bottom: 28px; }
+
+  .auth-tab {
+    flex: 1; padding: 8px; text-align: center; font-size: 13px; font-weight: 600;
+    border-radius: 7px; cursor: pointer; color: var(--muted); transition: all 0.2s;
+    border: none; background: none;
+  }
+
+  .auth-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .form-group input {
+    width: 100%; padding: 12px 16px; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--text); font-family: var(--font-body); font-size: 14px;
+    transition: border-color 0.2s; outline: none;
+  }
+  .form-group input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(0,255,135,0.1); }
+
+  .btn-primary {
+    width: 100%; padding: 14px; background: var(--green); color: #000;
+    font-family: var(--font-display); font-size: 18px; letter-spacing: 2px;
+    border: none; border-radius: var(--radius); cursor: pointer; transition: all 0.2s; margin-top: 8px;
+  }
+  .btn-primary:hover { background: var(--green2); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,255,135,0.3); }
+  .btn-primary:active { transform: translateY(0); }
+
+  /* ── APP LAYOUT ── */
+  #screen-app { display: none; min-height: 100vh; }
+  #screen-app.visible { display: flex; }
+
+  .sidebar {
+    width: var(--sidebar); background: var(--bg2); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; position: fixed; top: 0; left: 0;
+    height: 100vh; z-index: 100; transition: transform 0.3s ease;
+  }
+
+  .sidebar-logo { padding: 24px 20px; border-bottom: 1px solid var(--border); }
+  .sidebar-logo .wordmark {
+    font-family: var(--font-display); font-size: 28px; letter-spacing: 3px;
+    background: linear-gradient(135deg, var(--green), #00c8ff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .sidebar-logo .version { font-family: var(--font-mono); font-size: 9px; color: var(--muted); letter-spacing: 2px; margin-top: 2px; }
+
+  .sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px;
+    cursor: pointer; font-size: 14px; font-weight: 500; color: var(--muted); transition: all 0.2s;
+    border: none; background: none; width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+  .nav-item.active { background: rgba(0,255,135,0.1); color: var(--green); }
+  .nav-item .icon { font-size: 18px; flex-shrink: 0; }
+  .nav-item .label { flex: 1; }
+
+  .nav-section-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); padding: 12px 12px 4px; margin-top: 8px; }
+
+  .sidebar-footer { padding: 16px 12px; border-top: 1px solid var(--border); }
+
+  .user-chip { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; background: var(--surface); }
+  .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--green), #00c8ff); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #000; flex-shrink: 0; }
+  .user-info { flex: 1; min-width: 0; }
+  .user-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-plan { font-size: 11px; color: var(--green); font-family: var(--font-mono); }
+
+  .btn-logout { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 4px; border-radius: 6px; transition: color 0.2s; }
+  .btn-logout:hover { color: var(--red); }
+
+  /* ── MAIN CONTENT ── */
+  .main { margin-left: var(--sidebar); flex: 1; min-height: 100vh; padding: 32px; max-width: calc(100vw - var(--sidebar)); }
+
+  .page { display: none; animation: fadeUp 0.3s ease; }
+  .page.active { display: block; }
+
+  .page-header { margin-bottom: 32px; }
+  .page-header h1 { font-family: var(--font-display); font-size: 36px; letter-spacing: 2px; line-height: 1; }
+  .page-header p { color: var(--muted); font-size: 14px; margin-top: 8px; }
+
+  /* ── STAT CARDS ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; position: relative; overflow: hidden; transition: transform 0.2s; }
+  .stat-card:hover { transform: translateY(-2px); }
+  .stat-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+  .stat-card.green::before { background: var(--green); }
+  .stat-card.blue::before  { background: var(--blue); }
+  .stat-card.purple::before { background: var(--purple); }
+  .stat-icon { font-size: 20px; margin-bottom: 16px; opacity: 0.8; }
+  .stat-value { font-family: var(--font-display); font-size: 40px; letter-spacing: 1px; line-height: 1; }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .stat-link { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-top: 12px; cursor: pointer; border: none; background: none; padding: 0; transition: opacity 0.2s; }
+  .stat-link:hover { opacity: 0.7; }
+  .stat-card.green .stat-link { color: var(--green); }
+  .stat-card.blue .stat-link  { color: var(--blue); }
+  .stat-card.purple .stat-link { color: var(--purple); }
+
+  /* ── HERO BANNER ── */
+  .hero-banner { background: linear-gradient(135deg, rgba(0,255,135,0.08), rgba(0,200,255,0.04)); border: 1px solid rgba(0,255,135,0.15); border-radius: 20px; padding: 32px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 32px; }
+  .hero-banner h2 { font-family: var(--font-display); font-size: 28px; letter-spacing: 1px; margin-bottom: 8px; }
+  .hero-banner p { color: var(--muted); font-size: 14px; max-width: 400px; }
+
+  .btn-action { padding: 12px 28px; background: var(--green); color: #000; font-family: var(--font-display); font-size: 16px; letter-spacing: 2px; border: none; border-radius: 10px; cursor: pointer; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
+  .btn-action:hover { background: var(--green2); box-shadow: 0 8px 24px rgba(0,255,135,0.25); transform: translateY(-1px); }
+
+  /* ── WORKOUT CARDS ── */
+  .workout-list { display: flex; flex-direction: column; gap: 12px; }
+  .workout-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 24px; display: flex; align-items: center; gap: 16px; transition: all 0.2s; cursor: pointer; }
+  .workout-card:hover { border-color: rgba(0,255,135,0.3); transform: translateX(4px); }
+  .workout-card.completed { border-color: rgba(0,255,135,0.2); background: rgba(0,255,135,0.03); }
+  .workout-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .workout-icon.pending { background: rgba(59,130,246,0.15); }
+  .workout-icon.completed { background: rgba(0,255,135,0.15); }
+  .workout-info { flex: 1; }
+  .workout-title { font-weight: 600; font-size: 15px; }
+  .workout-meta { font-size: 12px; color: var(--muted); margin-top: 3px; font-family: var(--font-mono); }
+  .workout-badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; font-family: var(--font-mono); letter-spacing: 0.5px; flex-shrink: 0; }
+  .badge-pending { background: rgba(59,130,246,0.15); color: var(--blue); }
+  .badge-done { background: rgba(0,255,135,0.15); color: var(--green); }
+
+  /* ── EMPTY STATE ── */
+  .empty-state { text-align: center; padding: 80px 24px; border: 1px dashed var(--border); border-radius: 20px; background: var(--bg2); }
+  .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+  .empty-title { font-family: var(--font-display); font-size: 22px; letter-spacing: 1px; margin-bottom: 8px; }
+  .empty-desc { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+
+  /* ── CHAT ── */
+  .chat-layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; height: calc(100vh - 120px); }
+  .chat-container { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; }
+  .chat-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; background: var(--bg2); flex-shrink: 0; }
+  .chat-avatar { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .chat-agent-name { font-weight: 700; font-size: 15px; }
+  .chat-status { font-size: 12px; color: var(--green); display: flex; align-items: center; gap: 6px; }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 6px; animation: pulse 2s infinite; }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  .msg { display: flex; gap: 10px; animation: fadeUp 0.3s ease; max-width: 85%; }
+  .msg.user { flex-direction: row-reverse; align-self: flex-end; }
+  .msg-avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; align-self: flex-end; }
+  .msg.bot .msg-avatar { background: rgba(0,255,135,0.2); }
+  .msg.user .msg-avatar { background: rgba(255,255,255,0.1); }
+  .msg-bubble { padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.6; }
+  .msg.bot .msg-bubble { background: var(--bg2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .msg.user .msg-bubble { background: var(--green); color: #000; font-weight: 500; border-bottom-right-radius: 4px; }
+  .chat-input-area { padding: 16px; border-top: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; }
+  .chat-input-row { display: flex; gap: 10px; align-items: center; }
+  .chat-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; color: var(--text); font-family: var(--font-body); font-size: 14px; outline: none; transition: border-color 0.2s; resize: none; height: 44px; }
+  .chat-input:focus { border-color: var(--green); }
+  .chat-send { width: 44px; height: 44px; border-radius: 12px; background: var(--green); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all 0.2s; flex-shrink: 0; }
+  .chat-send:hover { background: var(--green2); transform: scale(1.05); }
+  .quick-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .quick-btn { padding: 6px 14px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); color: var(--text); font-size: 12px; cursor: pointer; transition: all 0.2s; font-family: var(--font-body); }
+  .quick-btn:hover { border-color: var(--green); color: var(--green); }
+
+  /* ── CHAT SIDEBAR ── */
+  .chat-sidebar { display: flex; flex-direction: column; gap: 16px; }
+  .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
+  .info-card-title { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+  .profile-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .profile-row:last-child { border-bottom: none; }
+  .profile-row .key { color: var(--muted); }
+  .profile-row .val { font-weight: 600; font-family: var(--font-mono); font-size: 12px; }
+
+  /* ── DIAGNOSIS / FMS ── */
+  .upload-zone { border: 2px dashed var(--border); border-radius: 16px; height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; background: var(--surface); }
+  .upload-zone:hover { border-color: var(--green); background: rgba(0,255,135,0.03); }
+  .upload-zone.has-file { border-style: solid; border-color: rgba(0,255,135,0.4); }
+  .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-icon { font-size: 32px; margin-bottom: 12px; opacity: 0.4; }
+  .upload-label { font-size: 14px; font-weight: 600; color: var(--muted); }
+  .upload-hint { font-size: 11px; color: var(--muted); margin-top: 4px; font-family: var(--font-mono); }
+  .upload-preview { position: absolute; inset: 0; object-fit: cover; opacity: 0.7; width: 100%; height: 100%; }
+  .upload-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
+  .upload-zone:hover .upload-overlay { opacity: 1; }
+
+  .result-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px; margin-top: 24px; display: none; }
+  .result-card.visible { display: block; animation: fadeUp 0.4s ease; }
+  .issue-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 16px; }
+  .issue-chip { padding: 12px 16px; border-radius: 12px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; }
+  .issue-chip.risk { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #fca5a5; }
+  .issue-chip.ok   { background: rgba(0,255,135,0.08); border: 1px solid rgba(0,255,135,0.2); color: var(--green); }
+
+  /* ── FMS GRID + PHOTO ROW ── */
+  .fms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-bottom: 24px; }
+  .fms-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
+  .fms-photo-row { display: flex; gap: 12px; margin-bottom: 14px; }
+  .fms-photo-col { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .fms-photo-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: center; }
+  .fms-upload-mini { height: 120px; }
+
+  /* ── TOE TOUCH ── */
+  .toe-touch-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+  .toe-btn { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 700; transition: all 0.2s; text-align: center; }
+  .toe-btn.active-pos { background: rgba(0,255,135,0.15); border-color: var(--green); color: var(--green); }
+  .toe-btn.active-neg { background: rgba(239,68,68,0.1); border-color: var(--red); color: #fca5a5; }
+
+  /* ── PROFILE PAGE ── */
+  .profile-grid { display: grid; grid-template-columns: 300px 1fr; gap: 24px; }
+  .profile-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px; text-align: center; }
+  .profile-big-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--green), #00c8ff); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; color: #000; margin: 0 auto 16px; }
+  .profile-name { font-family: var(--font-display); font-size: 26px; letter-spacing: 1px; }
+  .profile-email { font-size: 13px; color: var(--muted); margin-top: 4px; font-family: var(--font-mono); }
+  .profile-plan { display: inline-block; margin-top: 12px; padding: 4px 14px; background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 20px; font-size: 11px; font-weight: 700; color: var(--green); letter-spacing: 1px; font-family: var(--font-mono); }
+  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px; }
+  .form-card h3 { font-family: var(--font-display); font-size: 20px; letter-spacing: 1px; margin-bottom: 20px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-grid .span2 { grid-column: span 2; }
+  .form-group select { width: 100%; padding: 12px 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: var(--font-body); font-size: 14px; outline: none; cursor: pointer; }
+  .btn-save { padding: 12px 32px; background: var(--green); color: #000; font-family: var(--font-display); font-size: 16px; letter-spacing: 2px; border: none; border-radius: 10px; cursor: pointer; transition: all 0.2s; margin-top: 8px; }
+  .btn-save:hover { background: var(--green2); }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--green); border-radius: 12px; padding: 14px 20px; font-size: 14px; z-index: 9999; transform: translateY(100px); opacity: 0; transition: all 0.3s ease; max-width: 320px; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.error { border-left-color: var(--red); }
+
+  /* ── HAMBURGER ── */
+  .hamburger { display: none; position: fixed; top: 16px; left: 16px; z-index: 200; width: 40px; height: 40px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); align-items: center; justify-content: center; cursor: pointer; font-size: 18px; }
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
+  @keyframes typing { 0%, 80%, 100% { transform: scale(0.8); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+  .typing-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; animation: typing 1.4s infinite; }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  /* ── ONBOARDING WIZARD ── */
+  #screen-onboarding {
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,255,135,0.12) 0%, transparent 60%),
+      var(--bg);
+    padding: 24px;
+    overflow-y: auto;
+  }
+
+  .wizard-card {
+    width: 100%;
+    max-width: 520px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+    animation: fadeUp 0.5s ease;
+    margin: auto;
+  }
+
+  .wizard-step-title {
+    font-family: var(--font-display);
+    font-size: 26px;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+    color: var(--text);
+  }
+
+  .wizard-checkbox-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .wizard-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+    user-select: none;
+    line-height: 1.3;
+  }
+
+  .wizard-checkbox-item:has(input:checked) {
+    border-color: var(--green);
+    background: rgba(0,255,135,0.08);
+    color: var(--green);
+  }
+
+  .wizard-checkbox-item input[type=checkbox] {
+    accent-color: var(--green);
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .wizard-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: all 0.3s;
+  }
+
+  .wizard-dot.active {
+    background: var(--green);
+    transform: scale(1.3);
+    box-shadow: 0 0 8px rgba(0,255,135,0.5);
+  }
+
+  .wizard-dot.done {
+    background: var(--green2);
+  }
+
+  .btn-secondary {
+    flex: 1;
+    padding: 14px;
+    background: transparent;
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 18px;
+    letter-spacing: 2px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 0;
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--green);
+    color: var(--green);
+    transform: translateY(-1px);
+  }
+
+  .form-group select:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(0,255,135,0.1);
+  }
+
+  .form-group textarea {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    transition: border-color 0.2s;
+    outline: none;
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .form-group textarea:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(0,255,135,0.1);
+  }
+
+  /* ── FMS WIZARD STEP ── */
+  .fms-movement-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    transition: border-color 0.2s;
+  }
+  .fms-movement-card.scored  { border-color: rgba(0,255,135,0.35); }
+  .fms-movement-card.pain-active { border-color: rgba(239,68,68,0.4); }
+
+  .fms-score-group {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .fms-score-pill {
+    flex: 1;
+    padding: 7px 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--muted);
+    font-family: var(--font-display);
+    font-size: 16px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .fms-score-pill:hover { border-color: var(--green); color: var(--text); }
+  .fms-score-pill.selected {
+    background: var(--green);
+    border-color: var(--green);
+    color: #000;
+    font-weight: 700;
+  }
+  .fms-score-pill.pain {
+    background: rgba(239,68,68,0.08);
+    border-color: rgba(239,68,68,0.2);
+    color: rgba(239,68,68,0.4);
+    cursor: not-allowed;
+  }
+
+  .fms-tt-btn {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg2);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .fms-tt-btn.active-pos {
+    background: rgba(0,255,135,0.12);
+    border-color: var(--green);
+    color: var(--green);
+  }
+  .fms-tt-btn.active-neg {
+    background: rgba(249,115,22,0.1);
+    border-color: var(--orange);
+    color: var(--orange);
+  }
+
+  .fms-total-bar {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    gap: 12px;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .chat-layout { grid-template-columns: 1fr; }
+    .chat-sidebar { display: none; }
+    .profile-grid { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid .span2 { grid-column: span 1; }
+  }
+  @media (max-width: 768px) {
+    .hamburger { display: flex; }
+    .overlay.mobile-open { display: block; }
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.mobile-open { transform: translateX(0); }
+    .main { margin-left: 0; padding: 20px; padding-top: 72px; max-width: 100vw; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .fms-grid { grid-template-columns: 1fr; }
+    .hero-banner { flex-direction: column; }
+  }
+  @media (max-width: 480px) {
+    .stats-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ AUTH ═══ -->
+<div id="screen-auth" style="display: flex;">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <svg viewBox="0 0 260 190" xmlns="http://www.w3.org/2000/svg" style="width:200px;height:auto;display:block;margin:0 auto 4px;">
+        <defs>
+          <lineargradient id="axisGradAuth" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#ffffff"></stop>
+            <stop offset="50%" style="stop-color:#00c8ff"></stop>
+            <stop offset="100%" style="stop-color:#00ff87"></stop>
+          </lineargradient>
+        </defs>
+        <polygon points="95,8 148,8 178,90 125,90" fill="white" opacity="0.12"></polygon>
+        <circle cx="128" cy="26" r="12" fill="white"></circle>
+        <path d="M122,38 L105,72 L118,70 L126,84 L135,64 L150,70 L138,42 Z" fill="white"></path>
+        <path d="M116,52 L86,36 L92,47 L114,62 Z" fill="white"></path>
+        <path d="M130,70 L162,108 L154,106 L124,76 Z" fill="white"></path>
+        <path d="M118,70 L98,94 L107,96 L124,76 Z" fill="white"></path>
+        <text x="130" y="150" text-anchor="middle" font-family="&#39;Bebas Neue&#39;,&#39;Arial Black&#39;,sans-serif" font-size="68" font-weight="900" letter-spacing="5" fill="url(#axisGradAuth)">AXIS</text>
+        <text x="130" y="172" text-anchor="middle" font-family="&#39;JetBrains Mono&#39;,monospace" font-size="11" letter-spacing="7" fill="#6b7280">PERFORMANCE OS</text>
+      </svg>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab(&#39;login&#39;)">Entrar</button>
+      <button class="auth-tab" onclick="switchTab(&#39;register&#39;)">Cadastrar</button>
+    </div>
+    <div id="tab-login">
+      <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="seu@email.com"></div>
+      <div class="form-group"><label>Senha</label><input type="password" id="login-pass" placeholder="••••••••"></div>
+      <button class="btn-primary" onclick="doLogin()">ENTRAR</button>
+    </div>
+    <div id="tab-register" style="display:none">
+      <div class="form-group"><label>Nome</label><input type="text" id="reg-name" placeholder="Seu nome"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="seu@email.com"></div>
+      <div class="form-group"><label>Senha</label><input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres"></div>
+      <button class="btn-primary" onclick="doRegister()">CRIAR CONTA</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ONBOARDING WIZARD ═══ -->
+<div id="screen-onboarding" style="display:none;">
+  <div class="wizard-card">
+
+    <!-- Logo -->
+    <div class="auth-logo" style="margin-bottom:24px;">
+      <svg viewBox="0 0 260 190" xmlns="http://www.w3.org/2000/svg" style="width:140px;height:auto;display:block;margin:0 auto 4px;">
+        <defs>
+          <linearGradient id="axisGradWiz" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#ffffff"></stop>
+            <stop offset="50%" style="stop-color:#00c8ff"></stop>
+            <stop offset="100%" style="stop-color:#00ff87"></stop>
+          </linearGradient>
+        </defs>
+        <polygon points="95,8 148,8 178,90 125,90" fill="white" opacity="0.12"></polygon>
+        <circle cx="128" cy="26" r="12" fill="white"></circle>
+        <path d="M122,38 L105,72 L118,70 L126,84 L135,64 L150,70 L138,42 Z" fill="white"></path>
+        <path d="M116,52 L86,36 L92,47 L114,62 Z" fill="white"></path>
+        <path d="M130,70 L162,108 L154,106 L124,76 Z" fill="white"></path>
+        <path d="M118,70 L98,94 L107,96 L124,76 Z" fill="white"></path>
+        <text x="130" y="150" text-anchor="middle" font-family="'Bebas Neue','Arial Black',sans-serif" font-size="68" font-weight="900" letter-spacing="5" fill="url(#axisGradWiz)">AXIS</text>
+        <text x="130" y="172" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="11" letter-spacing="7" fill="#6b7280">PERFORMANCE OS</text>
+      </svg>
+    </div>
+
+    <!-- Progress bar -->
+    <div style="margin-bottom:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span id="wizard-step-label" style="font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">ETAPA 1 DE 5</span>
+        <span id="wizard-step-name" style="font-family:var(--font-mono);font-size:11px;letter-spacing:1px;color:var(--green);text-transform:uppercase;">SOBRE VOCÊ</span>
+      </div>
+      <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
+        <div id="wizard-progress-fill" style="height:100%;background:linear-gradient(90deg,var(--green),#00c8ff);border-radius:2px;transition:width 0.4s ease;width:20%;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-around;margin-top:10px;">
+        <div class="wizard-dot active" id="wdot-1"></div>
+        <div class="wizard-dot" id="wdot-2"></div>
+        <div class="wizard-dot" id="wdot-3"></div>
+        <div class="wizard-dot" id="wdot-4"></div>
+        <div class="wizard-dot" id="wdot-5"></div>
+      </div>
+    </div>
+
+    <!-- ── ETAPA 1: Sobre você ── -->
+    <div id="wizard-step-1">
+      <h3 class="wizard-step-title">SOBRE VOCÊ</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Idade</label>
+          <input type="number" id="w-age" placeholder="25" min="10" max="100">
+        </div>
+        <div class="form-group">
+          <label>Peso (kg)</label>
+          <input type="number" id="w-weight" placeholder="75" min="30" max="300">
+        </div>
+        <div class="form-group">
+          <label>Altura (cm)</label>
+          <input type="number" id="w-height" placeholder="175" min="100" max="250">
+        </div>
+        <div class="form-group">
+          <label>Sexo</label>
+          <select id="w-sex">
+            <option value="">Selecione...</option>
+            <option value="Masculino">Masculino</option>
+            <option value="Feminino">Feminino</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ETAPA 2: Seu treino ── -->
+    <div id="wizard-step-2" style="display:none;">
+      <h3 class="wizard-step-title">SEU TREINO</h3>
+      <div class="form-group">
+        <label>Frequência semanal</label>
+        <select id="w-frequency">
+          <option value="">Selecione...</option>
+          <option value="2x">2x por semana</option>
+          <option value="3x">3x por semana</option>
+          <option value="4x">4x por semana</option>
+          <option value="5x+">5x ou mais por semana</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Tempo disponível por sessão</label>
+        <select id="w-session-time">
+          <option value="">Selecione...</option>
+          <option value="30min">30 minutos</option>
+          <option value="45min">45 minutos</option>
+          <option value="60min">60 minutos</option>
+          <option value="90min">90 minutos</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Nível de experiência</label>
+        <select id="w-level">
+          <option value="">Selecione...</option>
+          <option value="beginner">Iniciante</option>
+          <option value="intermediate">Intermediário</option>
+          <option value="advanced">Avançado</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ── ETAPA 3: Seu espaço ── -->
+    <div id="wizard-step-3" style="display:none;">
+      <h3 class="wizard-step-title">SEU ESPAÇO</h3>
+      <div class="form-group">
+        <label>Local de treino</label>
+        <select id="w-gym">
+          <option value="">Selecione...</option>
+          <option value="Academia Comercial">Academia Comercial</option>
+          <option value="Box CrossFit">Box CrossFit</option>
+          <option value="Em Casa">Em Casa</option>
+          <option value="Ao ar livre">Ao ar livre</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Equipamentos disponíveis</label>
+        <div class="wizard-checkbox-grid">
+          <label class="wizard-checkbox-item">
+            <input type="checkbox" class="w-equipment" value="Barra e anilhas"> Barra e anilhas
+          </label>
+          <label class="wizard-checkbox-item">
+            <input type="checkbox" class="w-equipment" value="Halteres"> Halteres
+          </label>
+          <label class="wizard-checkbox-item">
+            <input type="checkbox" class="w-equipment" value="Kettlebell"> Kettlebell
+          </label>
+          <label class="wizard-checkbox-item">
+            <input type="checkbox" class="w-equipment" value="TRX/Suspensão"> TRX/Suspensão
+          </label>
+          <label class="wizard-checkbox-item">
+            <input type="checkbox" class="w-equipment" value="Máquinas"> Máquinas
+          </label>
+          <label class="wizard-checkbox-item">
+            <input type="checkbox" class="w-equipment" value="Sled/Trenó"> Sled/Trenó
+          </label>
+          <label class="wizard-checkbox-item">
+            <input type="checkbox" class="w-equipment" value="Bicicleta/Rower"> Bicicleta/Rower
+          </label>
+          <label class="wizard-checkbox-item">
+            <input type="checkbox" class="w-equipment" value="Apenas peso corporal"> Peso corporal
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ETAPA 4: Saúde e objetivo ── -->
+    <div id="wizard-step-4" style="display:none;">
+      <h3 class="wizard-step-title">SAÚDE E OBJETIVO</h3>
+      <div class="form-group">
+        <label>Objetivo principal</label>
+        <select id="w-goal">
+          <option value="">Selecione...</option>
+          <option value="Estética e Definição">Estética e Definição</option>
+          <option value="Força e Performance">Força e Performance</option>
+          <option value="Saúde e Bem-estar">Saúde e Bem-estar</option>
+          <option value="Performance Esportiva">Performance Esportiva</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Histórico de lesões</label>
+        <textarea id="w-injuries" placeholder="Descreva lesões ou restrições, ou deixe em branco se nenhuma"></textarea>
+      </div>
+      <div class="form-group">
+        <label>PAR-Q — Algum médico já disse que você tem problema cardíaco?</label>
+        <select id="w-parq" onchange="toggleParqWarning(this.value)">
+          <option value="no">Não</option>
+          <option value="yes">Sim</option>
+        </select>
+        <div id="parq-warning" style="display:none;margin-top:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:var(--radius);padding:14px;color:#fca5a5;font-size:13px;line-height:1.6;">
+          ⚠️ <strong>Atenção:</strong> Recomendamos que você consulte um médico antes de iniciar qualquer programa de exercícios. Sua saúde é a prioridade.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ETAPA 5: Avaliação FMS ── -->
+    <div id="wizard-step-5" style="display:none;">
+
+      <!-- Banner intro -->
+      <div style="background:rgba(0,255,135,0.08);border:1px solid rgba(0,255,135,0.2);border-radius:12px;padding:16px 18px;margin-bottom:20px;">
+        <div style="font-size:26px;margin-bottom:6px;">🎯</div>
+        <p style="font-family:var(--font-display);font-size:18px;letter-spacing:1px;margin-bottom:6px;">Avaliação FMS — Movimento é Diagnóstico</p>
+        <p style="font-size:13px;color:var(--muted);line-height:1.55;">O FMS identifica padrões de movimento disfuncionais antes que virem lesão. Quanto mais preciso o seu score, mais inteligente será o seu plano de treino gerado pela IA.</p>
+      </div>
+
+      <!-- Movement 1: Deep Squat -->
+      <div class="fms-movement-card" id="fms-card-dos">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">Deep Squat</p>
+            <p style="font-size:11px;color:var(--muted);font-family:var(--font-mono);">Mobilidade bilateral de quadril, joelho e tornozelo + estabilidade de coluna</p>
+          </div>
+          <span id="fms-badge-dos" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);flex-shrink:0;margin-left:8px;">—</span>
+        </div>
+        <div class="fms-score-group">
+          <button class="fms-score-pill" onclick="fmsSetScore('dos',0,this)">0</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('dos',1,this)">1</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('dos',2,this)">2</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('dos',3,this)">3</button>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;font-size:12px;color:var(--muted);">
+          <input type="checkbox" id="fms-pain-dos" onchange="fmsTogglePain('dos',this.checked)" style="accent-color:var(--red);width:14px;height:14px;cursor:pointer;"> Dor durante o movimento
+        </label>
+        <div id="fms-pain-msg-dos" style="display:none;margin-top:5px;font-size:12px;color:var(--red);">Score com dor = 0. Consulte um profissional.</div>
+      </div>
+
+      <!-- Movement 2: Hurdle Step -->
+      <div class="fms-movement-card" id="fms-card-hs">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">Hurdle Step</p>
+            <p style="font-size:11px;color:var(--muted);font-family:var(--font-mono);">Estabilidade e mobilidade de quadril durante passada</p>
+          </div>
+          <span id="fms-badge-hs" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);flex-shrink:0;margin-left:8px;">—</span>
+        </div>
+        <div class="fms-score-group">
+          <button class="fms-score-pill" onclick="fmsSetScore('hs',0,this)">0</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('hs',1,this)">1</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('hs',2,this)">2</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('hs',3,this)">3</button>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;font-size:12px;color:var(--muted);">
+          <input type="checkbox" id="fms-pain-hs" onchange="fmsTogglePain('hs',this.checked)" style="accent-color:var(--red);width:14px;height:14px;cursor:pointer;"> Dor durante o movimento
+        </label>
+        <div id="fms-pain-msg-hs" style="display:none;margin-top:5px;font-size:12px;color:var(--red);">Score com dor = 0. Consulte um profissional.</div>
+      </div>
+
+      <!-- Movement 3: Inline Lunge -->
+      <div class="fms-movement-card" id="fms-card-il">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">Inline Lunge</p>
+            <p style="font-size:11px;color:var(--muted);font-family:var(--font-mono);">Estabilidade, mobilidade e flexibilidade em posição de avanço</p>
+          </div>
+          <span id="fms-badge-il" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);flex-shrink:0;margin-left:8px;">—</span>
+        </div>
+        <div class="fms-score-group">
+          <button class="fms-score-pill" onclick="fmsSetScore('il',0,this)">0</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('il',1,this)">1</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('il',2,this)">2</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('il',3,this)">3</button>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;font-size:12px;color:var(--muted);">
+          <input type="checkbox" id="fms-pain-il" onchange="fmsTogglePain('il',this.checked)" style="accent-color:var(--red);width:14px;height:14px;cursor:pointer;"> Dor durante o movimento
+        </label>
+        <div id="fms-pain-msg-il" style="display:none;margin-top:5px;font-size:12px;color:var(--red);">Score com dor = 0. Consulte um profissional.</div>
+      </div>
+
+      <!-- Movement 4: Shoulder Mobility -->
+      <div class="fms-movement-card" id="fms-card-sm">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">Shoulder Mobility</p>
+            <p style="font-size:11px;color:var(--muted);font-family:var(--font-mono);">Amplitude bilateral de ombro e escápula</p>
+          </div>
+          <span id="fms-badge-sm" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);flex-shrink:0;margin-left:8px;">—</span>
+        </div>
+        <div class="fms-score-group">
+          <button class="fms-score-pill" onclick="fmsSetScore('sm',0,this)">0</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('sm',1,this)">1</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('sm',2,this)">2</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('sm',3,this)">3</button>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;font-size:12px;color:var(--muted);">
+          <input type="checkbox" id="fms-pain-sm" onchange="fmsTogglePain('sm',this.checked)" style="accent-color:var(--red);width:14px;height:14px;cursor:pointer;"> Dor durante o movimento
+        </label>
+        <div id="fms-pain-msg-sm" style="display:none;margin-top:5px;font-size:12px;color:var(--red);">Score com dor = 0. Consulte um profissional.</div>
+      </div>
+
+      <!-- Movement 5: ASLR -->
+      <div class="fms-movement-card" id="fms-card-aslr">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">Active Straight Leg Raise</p>
+            <p style="font-size:11px;color:var(--muted);font-family:var(--font-mono);">Flexibilidade de isquiotibiais e estabilidade de core</p>
+          </div>
+          <span id="fms-badge-aslr" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);flex-shrink:0;margin-left:8px;">—</span>
+        </div>
+        <div class="fms-score-group">
+          <button class="fms-score-pill" onclick="fmsSetScore('aslr',0,this)">0</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('aslr',1,this)">1</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('aslr',2,this)">2</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('aslr',3,this)">3</button>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;font-size:12px;color:var(--muted);">
+          <input type="checkbox" id="fms-pain-aslr" onchange="fmsTogglePain('aslr',this.checked)" style="accent-color:var(--red);width:14px;height:14px;cursor:pointer;"> Dor durante o movimento
+        </label>
+        <div id="fms-pain-msg-aslr" style="display:none;margin-top:5px;font-size:12px;color:var(--red);">Score com dor = 0. Consulte um profissional.</div>
+      </div>
+
+      <!-- Score total (updates in real-time) -->
+      <div class="fms-total-bar">
+        <div>
+          <span style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">Score Total</span>
+          <div style="display:flex;align-items:baseline;gap:4px;margin-top:2px;">
+            <span id="fms-total-num" style="font-family:var(--font-display);font-size:32px;letter-spacing:1px;line-height:1;">0</span>
+            <span style="font-family:var(--font-mono);font-size:13px;color:var(--muted);">/ 15</span>
+          </div>
+        </div>
+        <div style="text-align:right;flex:1;">
+          <p id="fms-classification" style="display:none;font-size:12px;font-weight:600;line-height:1.4;"></p>
+        </div>
+      </div>
+
+      <!-- Toe Touch Screening (seção separada, borda orange) -->
+      <div style="border:1px solid var(--orange);border-radius:14px;padding:16px;margin-top:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);border:1px solid var(--orange);padding:2px 8px;border-radius:20px;">SCREENING ELIMINATÓRIO</span>
+        </div>
+        <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:4px;">Toe Touch Screening</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5;">Toque na ponta dos pés com joelhos estendidos. Determina se o deadlift convencional pode ser prescrito com segurança.</p>
+        <div style="display:flex;gap:8px;">
+          <button class="fms-tt-btn" id="fms-tt-pos" onclick="fmsSetToeTouch(true)">✅ Consegue tocar</button>
+          <button class="fms-tt-btn" id="fms-tt-neg" onclick="fmsSetToeTouch(false)">❌ Não consegue tocar</button>
+        </div>
+        <div id="fms-tt-warning" style="display:none;margin-top:10px;font-size:12px;color:var(--orange);line-height:1.5;">Deadlift convencional não será prescrito até aprovação neste screening.</div>
+      </div>
+
+      <!-- Mensagem de skip (aparece ao clicar "Pular") -->
+      <div id="fms-skip-msg" style="display:none;margin-top:14px;background:rgba(107,114,128,0.1);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--muted);line-height:1.5;text-align:center;"></div>
+
+    </div><!-- /wizard-step-5 -->
+
+    <!-- Navigation: padrão (etapas 1–4) -->
+    <div id="wizard-nav-std" style="display:flex;gap:12px;margin-top:20px;">
+      <button id="wizard-back" class="btn-secondary" onclick="wizardBack()" style="display:none;">VOLTAR</button>
+      <button id="wizard-next" class="btn-primary" onclick="wizardNext()" style="margin-top:0;flex:1;">PRÓXIMO</button>
+    </div>
+
+    <!-- Navigation: FMS (etapa 5) -->
+    <div id="wizard-nav-fms" style="display:none;margin-top:20px;">
+      <div style="display:flex;gap:10px;">
+        <button class="btn-secondary" onclick="wizardBack()" style="flex:0 0 auto;padding:14px 18px;">VOLTAR</button>
+        <button id="fms-skip-btn" onclick="_skipFms()" style="flex:1;padding:14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius);color:var(--muted);font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--muted)'" onmouseout="this.style.borderColor='var(--border)'">Pular por agora →</button>
+        <button id="fms-save-btn" class="btn-primary" onclick="_saveFmsAndFinish()" style="margin-top:0;flex:1;" disabled>Salvar e Começar 🚀</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<button class="hamburger" onclick="toggleSidebar()">☰</button>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<div id="screen-app" class="">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <svg viewBox="0 0 200 72" xmlns="http://www.w3.org/2000/svg" style="width:160px;height:auto;display:block;">
+        <defs>
+          <lineargradient id="axisGradSide" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#ffffff"></stop>
+            <stop offset="50%" style="stop-color:#00c8ff"></stop>
+            <stop offset="100%" style="stop-color:#00ff87"></stop>
+          </lineargradient>
+        </defs>
+        <circle cx="18" cy="10" r="6" fill="white"></circle>
+        <path d="M14,16 L7,34 L14,32 L18,40 L22,30 L29,33 L24,18 Z" fill="white"></path>
+        <path d="M12,22 L2,16 L4,22 L12,28 Z" fill="white"></path>
+        <path d="M20,31 L32,46 L28,45 L18,33 Z" fill="white"></path>
+        <path d="M13,31 L6,43 L11,44 L18,33 Z" fill="white"></path>
+        <polygon points="10,4 26,4 34,38 20,38" fill="white" opacity="0.1"></polygon>
+        <text x="42" y="38" dominant-baseline="middle" font-family="&#39;Bebas Neue&#39;,&#39;Arial Black&#39;,sans-serif" font-size="38" font-weight="900" letter-spacing="3" fill="url(#axisGradSide)">AXIS</text>
+        <text x="42" y="58" dominant-baseline="middle" font-family="&#39;JetBrains Mono&#39;,monospace" font-size="8" letter-spacing="3" fill="#6b7280">PERFORMANCE OS v1.0</text>
+      </svg>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <button class="nav-item active" onclick="navigate(&#39;dashboard&#39;)"><span class="icon">⚡</span><span class="label">Dashboard</span></button>
+      <button class="nav-item" onclick="navigate(&#39;workouts&#39;)"><span class="icon">🏋️</span><span class="label">Treinos</span></button>
+      <button class="nav-item" onclick="navigate(&#39;chat&#39;)"><span class="icon">🤖</span><span class="label">Coach IA</span></button>
+      <div class="nav-section-label">Avaliação</div>
+      <button class="nav-item" onclick="navigate(&#39;diagnosis&#39;)"><span class="icon">📸</span><span class="label">Diagnóstico</span></button>
+      <div class="nav-section-label">Conta</div>
+      <button class="nav-item" onclick="navigate(&#39;profile&#39;)"><span class="icon">👤</span><span class="label">Perfil</span></button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar" id="user-avatar-letter">R</div>
+        <div class="user-info">
+          <div class="user-name" id="user-display-name">rerer</div>
+          <div class="user-plan">PRO PLAN</div>
+        </div>
+        <button class="btn-logout" onclick="doLogout()" title="Sair">↩</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ── DASHBOARD ── -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <h1>OLÁ, <span id="greeting-name">RERER</span> 👊</h1>
+        <p>Vamos otimizar sua performance hoje.</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card green">
+          <div class="stat-icon">🛡️</div>
+          <div class="stat-value" id="stat-risks">0</div>
+          <div class="stat-label">Alertas biomecânicos</div>
+          <button class="stat-link" onclick="navigate(&#39;diagnosis&#39;)">Ver diagnóstico →</button>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">🏋️</div>
+          <div class="stat-value" id="stat-workouts">0</div>
+          <div class="stat-label">Planos ativos</div>
+          <button class="stat-link" onclick="navigate(&#39;workouts&#39;)">Ver treinos →</button>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-icon">📊</div>
+          <div class="stat-value" id="stat-sessions">0</div>
+          <div class="stat-label">Sessões realizadas</div>
+          <button class="stat-link" onclick="navigate(&#39;diagnosis&#39;)">Nova avaliação →</button>
+        </div>
+      </div>
+      <div class="hero-banner" id="hero-next-step">
+        <div>
+          <h2 id="hero-title">COMECE SEU PRIMEIRO TREINO</h2>
+          <p id="hero-desc">Converse com o Axis Coach IA para receber seu plano personalizado.</p>
+        </div>
+        <button class="btn-action" id="hero-btn" onclick="navigate(&#39;chat&#39;)">PEDIR TREINO</button>
+      </div>
+      <div style="margin-bottom:16px;">
+        <h3 style="font-family:var(--font-display);font-size:20px;letter-spacing:1px;margin-bottom:12px;">TREINOS RECENTES</h3>
+        <div class="workout-list" id="recent-workouts"><div class="empty-state"><div class="empty-icon">🏋️</div><div class="empty-title">SEM TREINOS AINDA</div><div class="empty-desc">Use o Coach IA para gerar seu plano personalizado.</div><button class="btn-action" onclick="navigate(&#39;chat&#39;)">FALAR COM O COACH</button></div></div>
+      </div>
+    </div>
+
+    <!-- ── WORKOUTS ── -->
+    <div class="page" id="page-workouts">
+      <div class="page-header"><h1>MEUS TREINOS</h1><p>Linha do tempo de periodização com seus planos personalizados.</p></div>
+      <div class="workout-list" id="all-workouts">
+        <div class="empty-state">
+          <div class="empty-icon">🏋️</div>
+          <div class="empty-title">NENHUM TREINO AINDA</div>
+          <div class="empty-desc">Converse com o Coach IA para receber seu plano personalizado.</div>
+          <button class="btn-action" onclick="navigate(&#39;chat&#39;)">PEDIR TREINO</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CHAT ── -->
+    <div class="page" id="page-chat">
+      <div class="page-header"><h1>AXIS COACH IA</h1><p>Seu treinador inteligente — disponível 24h.</p></div>
+      <div class="chat-layout">
+        <div class="chat-container">
+          <div class="chat-header">
+            <div class="chat-avatar" style="background:transparent;border:1px solid rgba(0,255,135,0.3);">
+              <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" style="width:32px;height:32px;">
+                <defs><lineargradient id="avatarGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00ff87"></stop><stop offset="100%" style="stop-color:#00c8ff"></stop></lineargradient></defs>
+                <circle cx="22" cy="9" r="5" fill="url(#avatarGrad)"></circle>
+                <path d="M19,14 L12,28 L17,27 L21,34 L25,24 L30,27 L26,15 Z" fill="url(#avatarGrad)"></path>
+                <path d="M17,19 L8,14 L9,20 L17,24 Z" fill="url(#avatarGrad)"></path>
+                <path d="M23,25 L32,36 L29,35 L21,27 Z" fill="url(#avatarGrad)"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="chat-agent-name">Axis Coach IA</div>
+              <div class="chat-status"><span class="pulse"></span>Online</div>
+            </div>
+            <button onclick="clearChat()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px;">🔄 Reiniciar</button>
+          </div>
+          <div class="chat-messages" id="chat-messages">
+            <div class="msg bot">
+              <div class="msg-avatar" style="background:transparent;">
+                <svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" style="width:30px;height:30px;"><defs><lineargradient id="msgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00ff87"></stop><stop offset="100%" style="stop-color:#00c8ff"></stop></lineargradient></defs><circle cx="15" cy="6" r="4" fill="url(#msgGrad)"></circle><path d="M12,10 L7,20 L12,19 L14,24 L18,16 L22,18 L18,11 Z" fill="url(#msgGrad)"></path><path d="M10,13 L3,9 L4,14 L10,17 Z" fill="url(#msgGrad)"></path><path d="M16,17 L23,26 L20,25 L14,19 Z" fill="url(#msgGrad)"></path></svg>
+              </div>
+              <div class="msg-bubble">Olá! Sou o <strong>Axis Coach IA</strong>, seu treinador de performance. 🎯<br><br>Estou aqui para montar seu plano de treino personalizado, analisar sua biomecânica e otimizar sua performance.<br><br>Como posso te ajudar hoje?</div>
+            </div>
+          </div>
+          <div class="chat-input-area">
+            <div class="quick-actions">
+              <button class="quick-btn" onclick="quickSend(&#39;Monte meu treino de hoje baseado no meu perfil.&#39;)">🏋️ Treino de hoje</button>
+              <button class="quick-btn" onclick="quickSend(&#39;Me dê dicas de aquecimento para hoje.&#39;)">🔥 Aquecimento</button>
+              <button class="quick-btn" onclick="quickSend(&#39;Como posso melhorar minha postura?&#39;)">📐 Postura</button>
+              <button class="quick-btn" onclick="quickSend(&#39;Qual fase de treino estou?&#39;)">📊 Minha fase</button>
+            </div>
+            <div class="chat-input-row">
+              <textarea class="chat-input" id="chat-input" placeholder="Pergunte sobre seu treino..." rows="1" onkeydown="if(event.key===&#39;Enter&#39;&amp;&amp;!event.shiftKey){event.preventDefault();sendMessage()}" oninput="this.style.height=&#39;auto&#39;;this.style.height=Math.min(this.scrollHeight,120)+&#39;px&#39;"></textarea>
+              <button class="chat-send" onclick="sendMessage()">➤</button>
+            </div>
+          </div>
+        </div>
+        <div class="chat-sidebar">
+          <div class="info-card">
+            <div class="info-card-title">Seu Perfil</div>
+            <div id="profile-summary">
+              <div class="profile-row"><span class="key">Status</span><span class="val" style="color:var(--green)">ATIVO</span></div>
+              <div class="profile-row"><span class="key">Fase</span><span class="val" id="ps-phase">Fase 1</span></div>
+              <div class="profile-row"><span class="key">Nível</span><span class="val" id="ps-level">—</span></div>
+              <div class="profile-row"><span class="key">Objetivo</span><span class="val" id="ps-goal">—</span></div>
+              <div class="profile-row"><span class="key">Local</span><span class="val" id="ps-gym">—</span></div>
+            </div>
+          </div>
+          <div class="info-card">
+            <div class="info-card-title">Alertas Biomecânicos</div>
+            <div id="risk-flags-summary" style="font-size:13px;color:var(--muted);">Nenhum diagnóstico ainda. <button onclick="navigate(&#39;diagnosis&#39;)" style="color:var(--green);background:none;border:none;cursor:pointer;font-size:13px;">Fazer avaliação →</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DIAGNOSIS / FMS ── -->
+    <div class="page" id="page-diagnosis">
+      <div class="page-header">
+        <h1>AVALIAÇÃO FMS</h1>
+        <p>Envie fotos de frente e de lado para cada movimento. A análise considera sua postura e padrões de movimento.</p>
+      </div>
+      <div class="fms-grid" id="fms-grid-container"><div class="fms-card">
+      <div style="margin-bottom:14px;">
+        <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">Deep Overhead Squat</p>
+        <p style="font-size:12px;color:var(--muted);font-family:var(--font-mono);">Agachamento Profundo</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);white-space:nowrap;">Nota (0–3)</label>
+        <select id="fms-score-dos" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 12px;font-family:var(--font-body);font-size:14px;outline:none;flex:1;">
+          <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        </select>
+      </div>
+      <div class="fms-photo-row">
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">FRENTE</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-dos-front" onclick="document.getElementById(&#39;fms-input-dos-front&#39;).click()">
+        <input type="file" id="fms-input-dos-front" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-dos-front&#39;,&#39;fms-prev-dos-front&#39;,&#39;fms-icon-dos-front&#39;)">
+        <img id="fms-prev-dos-front" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-dos-front">📷</div>
+        <div class="upload-label">Foto</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">LADO</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-dos-side" onclick="document.getElementById(&#39;fms-input-dos-side&#39;).click()">
+        <input type="file" id="fms-input-dos-side" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-dos-side&#39;,&#39;fms-prev-dos-side&#39;,&#39;fms-icon-dos-side&#39;)">
+        <img id="fms-prev-dos-side" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-dos-side">📷</div>
+        <div class="upload-label">Foto</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+  </div>
+    </div><div class="fms-card">
+      <div style="margin-bottom:14px;">
+        <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">Inline Lunge</p>
+        <p style="font-size:12px;color:var(--muted);font-family:var(--font-mono);">Avanço em Linha</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);white-space:nowrap;">Nota (0–3)</label>
+        <select id="fms-score-il" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 12px;font-family:var(--font-body);font-size:14px;outline:none;flex:1;">
+          <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        </select>
+      </div>
+      <div class="fms-photo-row">
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">FRENTE</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-il-front" onclick="document.getElementById(&#39;fms-input-il-front&#39;).click()">
+        <input type="file" id="fms-input-il-front" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-il-front&#39;,&#39;fms-prev-il-front&#39;,&#39;fms-icon-il-front&#39;)">
+        <img id="fms-prev-il-front" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-il-front">📷</div>
+        <div class="upload-label">Foto</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">LADO</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-il-side" onclick="document.getElementById(&#39;fms-input-il-side&#39;).click()">
+        <input type="file" id="fms-input-il-side" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-il-side&#39;,&#39;fms-prev-il-side&#39;,&#39;fms-icon-il-side&#39;)">
+        <img id="fms-prev-il-side" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-il-side">📷</div>
+        <div class="upload-label">Foto</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+  </div>
+    </div><div class="fms-card">
+      <div style="margin-bottom:14px;">
+        <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">Hurdle Step</p>
+        <p style="font-size:12px;color:var(--muted);font-family:var(--font-mono);">Passada sobre Barreira</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);white-space:nowrap;">Nota (0–3)</label>
+        <select id="fms-score-hs" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 12px;font-family:var(--font-body);font-size:14px;outline:none;flex:1;">
+          <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        </select>
+      </div>
+      <div class="fms-photo-row">
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">FRENTE</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-hs-front" onclick="document.getElementById(&#39;fms-input-hs-front&#39;).click()">
+        <input type="file" id="fms-input-hs-front" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-hs-front&#39;,&#39;fms-prev-hs-front&#39;,&#39;fms-icon-hs-front&#39;)">
+        <img id="fms-prev-hs-front" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-hs-front">📷</div>
+        <div class="upload-label">Foto</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">LADO</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-hs-side" onclick="document.getElementById(&#39;fms-input-hs-side&#39;).click()">
+        <input type="file" id="fms-input-hs-side" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-hs-side&#39;,&#39;fms-prev-hs-side&#39;,&#39;fms-icon-hs-side&#39;)">
+        <img id="fms-prev-hs-side" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-hs-side">📷</div>
+        <div class="upload-label">Foto</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+  </div>
+    </div><div class="fms-card">
+      <div style="margin-bottom:14px;">
+        <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">Shoulder Mobility</p>
+        <p style="font-size:12px;color:var(--muted);font-family:var(--font-mono);">Mobilidade de Ombro</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);white-space:nowrap;">Nota (0–3)</label>
+        <select id="fms-score-sm" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 12px;font-family:var(--font-body);font-size:14px;outline:none;flex:1;">
+          <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        </select>
+      </div>
+      <div class="fms-photo-row">
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">FRENTE</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-sm-front" onclick="document.getElementById(&#39;fms-input-sm-front&#39;).click()">
+        <input type="file" id="fms-input-sm-front" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-sm-front&#39;,&#39;fms-prev-sm-front&#39;,&#39;fms-icon-sm-front&#39;)">
+        <img id="fms-prev-sm-front" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-sm-front">📷</div>
+        <div class="upload-label">Foto</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">LADO</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-sm-side" onclick="document.getElementById(&#39;fms-input-sm-side&#39;).click()">
+        <input type="file" id="fms-input-sm-side" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-sm-side&#39;,&#39;fms-prev-sm-side&#39;,&#39;fms-icon-sm-side&#39;)">
+        <img id="fms-prev-sm-side" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-sm-side">📷</div>
+        <div class="upload-label">Foto</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+  </div>
+    </div><div class="fms-card">
+      <div style="margin-bottom:14px;">
+        <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">ASLR</p>
+        <p style="font-size:12px;color:var(--muted);font-family:var(--font-mono);">Elevação Ativa da Perna Reta</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);white-space:nowrap;">Nota (0–3)</label>
+        <select id="fms-score-aslr" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 12px;font-family:var(--font-body);font-size:14px;outline:none;flex:1;">
+          <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        </select>
+      </div>
+      <div class="fms-photo-row">
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">FRENTE</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-aslr-front" onclick="document.getElementById(&#39;fms-input-aslr-front&#39;).click()">
+        <input type="file" id="fms-input-aslr-front" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-aslr-front&#39;,&#39;fms-prev-aslr-front&#39;,&#39;fms-icon-aslr-front&#39;)">
+        <img id="fms-prev-aslr-front" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-aslr-front">📷</div>
+        <div class="upload-label">Foto</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">LADO</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-aslr-side" onclick="document.getElementById(&#39;fms-input-aslr-side&#39;).click()">
+        <input type="file" id="fms-input-aslr-side" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-aslr-side&#39;,&#39;fms-prev-aslr-side&#39;,&#39;fms-icon-aslr-side&#39;)">
+        <img id="fms-prev-aslr-side" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-aslr-side">📷</div>
+        <div class="upload-label">Foto</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+  </div>
+    </div><div class="fms-card">
+        <div style="margin-bottom:14px;">
+          <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">Toe Touch Screen</p>
+          <p style="font-size:12px;color:var(--muted);font-family:var(--font-mono);">Toque na Ponta dos Pés</p>
+        </div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Joelhos estendidos — consegue tocar a ponta dos pés?</p>
+        <div class="toe-touch-toggle">
+          <button class="toe-btn" id="toe-btn-pos" onclick="setToeTouch(&#39;positive&#39;)">✅ POSITIVO</button>
+          <button class="toe-btn" id="toe-btn-neg" onclick="setToeTouch(&#39;negative&#39;)">❌ NEGATIVO</button>
+        </div>
+        <div class="fms-photo-row">
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">FRENTE</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-tt-front" onclick="document.getElementById(&#39;fms-input-tt-front&#39;).click()">
+        <input type="file" id="fms-input-tt-front" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-tt-front&#39;,&#39;fms-prev-tt-front&#39;,&#39;fms-icon-tt-front&#39;)">
+        <img id="fms-prev-tt-front" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-tt-front">📷</div>
+        <div class="upload-label">Foto</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">LADO</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-tt-side" onclick="document.getElementById(&#39;fms-input-tt-side&#39;).click()">
+        <input type="file" id="fms-input-tt-side" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-tt-side&#39;,&#39;fms-prev-tt-side&#39;,&#39;fms-icon-tt-side&#39;)">
+        <img id="fms-prev-tt-side" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-tt-side">📷</div>
+        <div class="upload-label">Foto</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+  </div>
+      </div></div>
+      <div style="display:flex;justify-content:flex-end;">
+        <button class="btn-action" onclick="runDiagnosis()">GERAR DIAGNÓSTICO</button>
+      </div>
+      <div class="result-card" id="diagnosis-result">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <h3 style="font-family:var(--font-display);font-size:22px;letter-spacing:1px;">RESULTADO DA ANÁLISE</h3>
+          <span id="result-badge" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;font-family:var(--font-mono);"></span>
+        </div>
+        <p style="color:var(--muted);font-size:14px;line-height:1.7;" id="result-feedback"></p>
+        <div class="issue-grid" id="result-issues"></div>
+      </div>
+    </div>
+
+    <!-- ── PROFILE ── -->
+    <div class="page" id="page-profile">
+      <div class="page-header"><h1>MEU PERFIL</h1><p>Gerencie seus dados e preferências de treino.</p></div>
+      <div class="profile-grid">
+        <div>
+          <div class="profile-card">
+            <div class="profile-big-avatar" id="profile-avatar-big">R</div>
+            <div class="profile-name" id="profile-full-name">rerer</div>
+            <div class="profile-email" id="profile-email-display">erere</div>
+            <div class="profile-plan">AXIS PRO</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:24px;">
+          <div class="form-card">
+            <h3>DADOS DE TREINO</h3>
+            <div class="form-grid">
+              <div class="form-group"><label>Idade</label><input type="number" id="p-age" placeholder="25"></div>
+              <div class="form-group"><label>Peso (kg)</label><input type="number" id="p-weight" placeholder="80"></div>
+              <div class="form-group"><label>Altura (cm)</label><input type="number" id="p-height" placeholder="175"></div>
+              <div class="form-group"><label>Nível</label><select id="p-level"><option value="">Selecione...</option><option value="beginner">Iniciante</option><option value="intermediate">Intermediário</option><option value="advanced">Avançado</option></select></div>
+              <div class="form-group"><label>Objetivo</label><select id="p-goal"><option value="">Selecione...</option><option value="Estética e Definição">Estética e Definição</option><option value="Força e Performance">Força e Performance</option><option value="Saúde e Bem-estar">Saúde e Bem-estar</option><option value="Performance Esportiva">Performance Esportiva</option></select></div>
+              <div class="form-group"><label>Local de Treino</label><select id="p-gym"><option value="">Selecione...</option><option value="Academia Comercial">Academia Comercial</option><option value="Box CrossFit">Box CrossFit</option><option value="Em Casa">Em Casa</option></select></div>
+              <div class="form-group span2"><label>Lesões / Histórico Clínico</label><input type="text" id="p-injuries" placeholder="Ex: Tendinite no joelho, lombar..."></div>
+            </div>
+            <button class="btn-save" onclick="saveProfile()">SALVAR PERFIL</button>
+          </div>
+          <div class="form-card">
+            <h3>AVALIAÇÃO FMS</h3>
+            <div class="form-grid">
+              <div class="form-group"><label>Deep Overhead Squat<br><span style="font-weight:400;color:var(--muted);">(Agachamento Profundo)</span></label><select id="p-fms-dos"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+              <div class="form-group"><label>Inline Lunge<br><span style="font-weight:400;color:var(--muted);">(Avanço em Linha)</span></label><select id="p-fms-il"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+              <div class="form-group"><label>Hurdle Step<br><span style="font-weight:400;color:var(--muted);">(Passada sobre Barreira)</span></label><select id="p-fms-hs"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+              <div class="form-group"><label>Shoulder Mobility<br><span style="font-weight:400;color:var(--muted);">(Mobilidade de Ombro)</span></label><select id="p-fms-sm"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+              <div class="form-group"><label>ASLR<br><span style="font-weight:400;color:var(--muted);">(Elevação Ativa da Perna Reta)</span></label><select id="p-fms-aslr"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+              <div class="form-group"><label>Toe Touch Screen<br><span style="font-weight:400;color:var(--muted);">(Toque na Ponta dos Pés)</span></label><select id="p-fms-tt"><option value="">Selecione...</option><option value="positive">Positivo</option><option value="negative">Negativo</option></select></div>
+            </div>
+            <button class="btn-save" onclick="saveFMS()">SALVAR FMS</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+const state = { user: null, workouts: [], profile: null, chatHistory: [], toeTouch: null };
+
+// FMS test definitions for dynamic rendering
+const FMS_TESTS = [
+  { id: 'dos', name: 'Deep Overhead Squat', namePt: 'Agachamento Profundo', type: 'score' },
+  { id: 'il',  name: 'Inline Lunge',        namePt: 'Avanço em Linha',       type: 'score' },
+  { id: 'hs',  name: 'Hurdle Step',          namePt: 'Passada sobre Barreira', type: 'score' },
+  { id: 'sm',  name: 'Shoulder Mobility',    namePt: 'Mobilidade de Ombro',    type: 'score' },
+  { id: 'aslr', name: 'ASLR',               namePt: 'Elevação Ativa da Perna Reta', type: 'score' },
+  { id: 'tt',  name: 'Toe Touch Screen',     namePt: 'Toque na Ponta dos Pés', type: 'toggle' },
+];
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('axisai_user');
+  if (saved) { state.user = JSON.parse(saved); enterApp(); }
+  loadWorkouts();
+  loadProfile();
+  renderFMSGrid();
+});
+
+// Build FMS grid dynamically to avoid repetition and <br/> issues
+function renderFMSGrid() {
+  const container = document.getElementById('fms-grid-container');
+  container.innerHTML = FMS_TESTS.map(t => {
+    if (t.type === 'toggle') {
+      return `<div class="fms-card">
+        <div style="margin-bottom:14px;">
+          <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">${t.name}</p>
+          <p style="font-size:12px;color:var(--muted);font-family:var(--font-mono);">${t.namePt}</p>
+        </div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Joelhos estendidos — consegue tocar a ponta dos pés?</p>
+        <div class="toe-touch-toggle">
+          <button class="toe-btn" id="toe-btn-pos" onclick="setToeTouch('positive')">✅ POSITIVO</button>
+          <button class="toe-btn" id="toe-btn-neg" onclick="setToeTouch('negative')">❌ NEGATIVO</button>
+        </div>
+        ${photoRowHTML(t.id)}
+      </div>`;
+    }
+    return `<div class="fms-card">
+      <div style="margin-bottom:14px;">
+        <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">${t.name}</p>
+        <p style="font-size:12px;color:var(--muted);font-family:var(--font-mono);">${t.namePt}</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);white-space:nowrap;">Nota (0–3)</label>
+        <select id="fms-score-${t.id}" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 12px;font-family:var(--font-body);font-size:14px;outline:none;flex:1;">
+          <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        </select>
+      </div>
+      ${photoRowHTML(t.id)}
+    </div>`;
+  }).join('');
+}
+
+function photoRowHTML(id) {
+  return `<div class="fms-photo-row">
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">FRENTE</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-${id}-front" onclick="document.getElementById('fms-input-${id}-front').click()">
+        <input type="file" id="fms-input-${id}-front" accept="image/*" style="display:none" onchange="previewFMS(this,'fms-zone-${id}-front','fms-prev-${id}-front','fms-icon-${id}-front')">
+        <img id="fms-prev-${id}-front" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-${id}-front">📷</div>
+        <div class="upload-label">Foto</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">LADO</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-${id}-side" onclick="document.getElementById('fms-input-${id}-side').click()">
+        <input type="file" id="fms-input-${id}-side" accept="image/*" style="display:none" onchange="previewFMS(this,'fms-zone-${id}-side','fms-prev-${id}-side','fms-icon-${id}-side')">
+        <img id="fms-prev-${id}-side" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-${id}-side">📷</div>
+        <div class="upload-label">Foto</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((el, i) => el.classList.toggle('active', tab === 'login' ? i === 0 : i === 1));
+  document.getElementById('tab-login').style.display    = tab === 'login'    ? 'block' : 'none';
+  document.getElementById('tab-register').style.display = tab === 'register' ? 'block' : 'none';
+}
+
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  if (!email || !pass) return showToast('Preencha email e senha.', true);
+  const users = JSON.parse(localStorage.getItem('axisai_users') || '[]');
+  const found = users.find(u => u.email === email && u.pass === pass);
+  if (!found) return showToast('Email ou senha incorretos.', true);
+  state.user = { name: found.name, email: found.email };
+  localStorage.setItem('axisai_user', JSON.stringify(state.user));
+  enterApp();
+}
+
+function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass = document.getElementById('reg-pass').value;
+  if (!name || !email || !pass) return showToast('Preencha todos os campos.', true);
+  if (pass.length < 6) return showToast('Senha deve ter ao menos 6 caracteres.', true);
+  const users = JSON.parse(localStorage.getItem('axisai_users') || '[]');
+  if (users.find(u => u.email === email)) return showToast('Email já cadastrado.', true);
+  users.push({ name, email, pass });
+  localStorage.setItem('axisai_users', JSON.stringify(users));
+  state.user = { name, email };
+  localStorage.setItem('axisai_user', JSON.stringify(state.user));
+  enterApp();
+  showToast('Conta criada com sucesso!');
+}
+
+function doLogout() {
+  localStorage.removeItem('axisai_user');
+  state.user = null;
+  document.getElementById('screen-auth').style.display = 'flex';
+  document.getElementById('screen-app').classList.remove('visible');
+}
+
+function enterApp() {
+  document.getElementById('screen-auth').style.display = 'none';
+  if (!localStorage.getItem('axisai_onboarding_done')) {
+    showOnboarding();
+    return;
+  }
+  completeEnterApp();
+}
+
+function completeEnterApp() {
+  document.getElementById('screen-onboarding').style.display = 'none';
+  document.getElementById('screen-app').classList.add('visible');
+  const name = state.user?.name || 'Atleta';
+  const initial = name.charAt(0).toUpperCase();
+  const firstName = name.split(' ')[0].toUpperCase();
+  document.getElementById('user-avatar-letter').textContent = initial;
+  document.getElementById('user-display-name').textContent = name;
+  document.getElementById('greeting-name').textContent = firstName;
+  document.getElementById('profile-avatar-big').textContent = initial;
+  document.getElementById('profile-full-name').textContent = name;
+  document.getElementById('profile-email-display').textContent = state.user?.email || '';
+  refreshDashboard();
+  refreshChatSidebar();
+}
+
+// ═══════════════════════════════════════════════
+//  ONBOARDING WIZARD
+// ═══════════════════════════════════════════════
+let _wizardStep = 1;
+const WIZARD_TOTAL_STEPS = 5;
+const WIZARD_STEP_NAMES = ['SOBRE VOCÊ', 'SEU TREINO', 'SEU ESPAÇO', 'SAÚDE E OBJETIVO', 'AVALIAÇÃO FMS'];
+
+function showOnboarding() {
+  document.getElementById('screen-onboarding').style.display = 'flex';
+  _goToWizardStep(1);
+}
+
+function _goToWizardStep(n) {
+  _wizardStep = n;
+  for (let i = 1; i <= WIZARD_TOTAL_STEPS; i++) {
+    document.getElementById('wizard-step-' + i).style.display = i === n ? 'block' : 'none';
+    const dot = document.getElementById('wdot-' + i);
+    if (dot) dot.className = 'wizard-dot' + (i < n ? ' done' : i === n ? ' active' : '');
+  }
+  const pct = Math.round((n / WIZARD_TOTAL_STEPS) * 100);
+  document.getElementById('wizard-progress-fill').style.width = pct + '%';
+  document.getElementById('wizard-step-label').textContent = 'ETAPA ' + n + ' DE ' + WIZARD_TOTAL_STEPS;
+  document.getElementById('wizard-step-name').textContent = WIZARD_STEP_NAMES[n - 1];
+
+  // Step 5 uses its own nav; steps 1-4 use the standard nav
+  const isFms = n === 5;
+  document.getElementById('wizard-nav-std').style.display = isFms ? 'none' : 'flex';
+  document.getElementById('wizard-nav-fms').style.display = isFms ? 'block' : 'none';
+
+  // Standard nav back/next controls
+  if (!isFms) {
+    document.getElementById('wizard-back').style.display = n > 1 ? '' : 'none';
+    document.getElementById('wizard-next').textContent = 'PRÓXIMO';
+  }
+
+  // Scroll wizard card to top when changing steps
+  document.querySelector('.wizard-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function wizardBack() {
+  if (_wizardStep > 1) _goToWizardStep(_wizardStep - 1);
+}
+
+function wizardNext() {
+  if (_wizardStep < WIZARD_TOTAL_STEPS) {
+    _goToWizardStep(_wizardStep + 1);
+  } else {
+    _finishWizard();
+  }
+}
+
+function toggleParqWarning(val) {
+  document.getElementById('parq-warning').style.display = val === 'yes' ? 'block' : 'none';
+}
+
+// ── FMS wizard state ──────────────────────────
+const _fmsScores = { dos: null, hs: null, il: null, sm: null, aslr: null };
+let _fmsToeTouch = null;
+let _wizardFmsData = null; // set by _saveFmsAndFinish before calling _finishWizard
+
+function fmsSetScore(id, score, el) {
+  const painCheck = document.getElementById('fms-pain-' + id);
+  if (painCheck?.checked && score > 0) return; // pain locked to 0
+  _fmsScores[id] = score;
+
+  const group = el.closest('.fms-score-group');
+  group.querySelectorAll('.fms-score-pill').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+
+  document.getElementById('fms-card-' + id).classList.add('scored');
+  const badge = document.getElementById('fms-badge-' + id);
+  if (badge) { badge.textContent = score; badge.style.color = score <= 1 ? 'var(--red)' : 'var(--green)'; }
+
+  _updateFmsTotal();
+}
+
+function fmsTogglePain(id, isPain) {
+  const card  = document.getElementById('fms-card-' + id);
+  const msg   = document.getElementById('fms-pain-msg-' + id);
+  const group = card.querySelector('.fms-score-group');
+
+  msg.style.display = isPain ? 'block' : 'none';
+  card.classList.toggle('pain-active', isPain);
+
+  if (isPain) {
+    _fmsScores[id] = 0;
+    group.querySelectorAll('.fms-score-pill').forEach((p, i) => {
+      p.classList.toggle('selected', i === 0);
+      p.classList.toggle('pain', i > 0);
+    });
+    card.classList.add('scored');
+    const badge = document.getElementById('fms-badge-' + id);
+    if (badge) { badge.textContent = '0'; badge.style.color = 'var(--red)'; }
+    _updateFmsTotal();
+  } else {
+    group.querySelectorAll('.fms-score-pill').forEach(p => p.classList.remove('pain'));
+  }
+}
+
+function fmsSetToeTouch(val) {
+  _fmsToeTouch = val;
+  document.getElementById('fms-tt-pos').className = 'fms-tt-btn' + (val === true  ? ' active-pos' : '');
+  document.getElementById('fms-tt-neg').className = 'fms-tt-btn' + (val === false ? ' active-neg' : '');
+  document.getElementById('fms-tt-warning').style.display = val === false ? 'block' : 'none';
+  _updateFmsSaveBtn();
+}
+
+function _updateFmsTotal() {
+  const vals = Object.values(_fmsScores).filter(v => v !== null);
+  const total = vals.reduce((a, b) => a + b, 0);
+  document.getElementById('fms-total-num').textContent = total;
+
+  const cls = document.getElementById('fms-classification');
+  if (vals.length > 0) {
+    if (total <= 9) {
+      cls.textContent = 'Alto risco — prioridade em mobilidade e padrões básicos';
+      cls.style.color  = 'var(--red)';
+    } else if (total <= 12) {
+      cls.textContent = 'Atenção — disfunções presentes, progressão cautelosa';
+      cls.style.color  = 'var(--orange)';
+    } else {
+      cls.textContent = 'Boa base de movimento — pode progredir com segurança';
+      cls.style.color  = 'var(--green)';
+    }
+    cls.style.display = 'block';
+  }
+  _updateFmsSaveBtn();
+}
+
+function _updateFmsSaveBtn() {
+  const allScored  = Object.values(_fmsScores).every(v => v !== null);
+  const toeAnswered = _fmsToeTouch !== null;
+  const btn = document.getElementById('fms-save-btn');
+  if (btn) btn.disabled = !(allScored && toeAnswered);
+}
+
+function _computeFmsRiskFlags() {
+  const flags = [];
+  if (_fmsScores.dos  !== null && _fmsScores.dos  <= 1) flags.push('squat_dysfunction');
+  if (_fmsScores.il   !== null && _fmsScores.il   <= 1) flags.push('lunge_dysfunction');
+  if (_fmsScores.hs   !== null && _fmsScores.hs   <= 1) flags.push('hip_instability');
+  if (_fmsScores.sm   !== null && _fmsScores.sm   <= 1) flags.push('shoulder_restriction');
+  if (_fmsScores.aslr !== null && _fmsScores.aslr <= 1) flags.push('hamstring_restriction');
+  if (_fmsToeTouch === false) flags.push('toe_touch_negative');
+  return flags.length > 0 ? flags : ['none'];
+}
+
+function _saveFmsAndFinish() {
+  _wizardFmsData = {
+    fms: {
+      dos:  _fmsScores.dos,
+      il:   _fmsScores.il,
+      hs:   _fmsScores.hs,
+      sm:   _fmsScores.sm,
+      aslr: _fmsScores.aslr,
+      tt:   _fmsToeTouch === true ? 'positive' : _fmsToeTouch === false ? 'negative' : null,
+    },
+    toeTouch:   _fmsToeTouch,
+    riskFlags:  _computeFmsRiskFlags(),
+  };
+  // Sync app-level toeTouch used by the diagnosis page
+  if (_fmsToeTouch !== null) state.toeTouch = _wizardFmsData.fms.tt;
+  _finishWizard();
+}
+
+function _skipFms() {
+  const msg = document.getElementById('fms-skip-msg');
+  msg.textContent = 'Tudo bem! Você pode fazer a avaliação FMS depois em Avaliações. Lembre que ela melhora muito a precisão do seu plano.';
+  msg.style.display = 'block';
+  document.getElementById('fms-skip-btn').disabled = true;
+  setTimeout(() => _finishWizard(), 2000);
+}
+
+function _finishWizard() {
+  const equipment = [...document.querySelectorAll('.w-equipment:checked')].map(e => e.value);
+  const newData = {
+    age:         document.getElementById('w-age').value,
+    weight:      document.getElementById('w-weight').value,
+    height:      document.getElementById('w-height').value,
+    sex:         document.getElementById('w-sex').value,
+    frequency:   document.getElementById('w-frequency').value,
+    sessionTime: document.getElementById('w-session-time').value,
+    level:       document.getElementById('w-level').value,
+    gym:         document.getElementById('w-gym').value,
+    equipment:   equipment,
+    goal:        document.getElementById('w-goal').value,
+    injuries:    document.getElementById('w-injuries').value,
+    parq:        document.getElementById('w-parq').value,
+  };
+  // Merge FMS data if collected in step 5
+  if (_wizardFmsData) {
+    newData.fms       = _wizardFmsData.fms;
+    newData.toeTouch  = _wizardFmsData.toeTouch;
+    newData.riskFlags = _wizardFmsData.riskFlags;
+    _wizardFmsData = null;
+  }
+  const existing = JSON.parse(localStorage.getItem('axisai_profile') || '{}');
+  const merged = { ...existing };
+  Object.keys(newData).forEach(k => {
+    const v = newData[k];
+    if (Array.isArray(v) ? v.length > 0 : v !== '' && v !== undefined && v !== null) {
+      merged[k] = v;
+    }
+  });
+  state.profile = merged;
+  localStorage.setItem('axisai_profile', JSON.stringify(merged));
+  localStorage.setItem('axisai_onboarding_done', '1');
+  loadProfile();
+  completeEnterApp();
+}
+
+// ═══════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const target = document.getElementById('page-' + page);
+  if (target) target.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick')?.includes("'" + page + "'")) n.classList.add('active');
+  });
+  closeSidebar();
+  if (page === 'workouts') renderWorkouts();
+}
+
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('mobile-open'); document.getElementById('overlay').classList.toggle('mobile-open'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('mobile-open'); document.getElementById('overlay').classList.remove('mobile-open'); }
+
+// ═══════════════════════════════════════════════
+//  WORKOUTS
+// ═══════════════════════════════════════════════
+function loadWorkouts() { state.workouts = JSON.parse(localStorage.getItem('axisai_workouts') || '[]'); }
+function saveWorkouts() { localStorage.setItem('axisai_workouts', JSON.stringify(state.workouts)); }
+
+function renderWorkouts() {
+  const c = document.getElementById('all-workouts');
+  if (!state.workouts.length) { c.innerHTML = `<div class="empty-state"><div class="empty-icon">🏋️</div><div class="empty-title">NENHUM TREINO AINDA</div><div class="empty-desc">Converse com o Coach IA para receber seu plano personalizado.</div><button class="btn-action" onclick="navigate('chat')">PEDIR TREINO</button></div>`; return; }
+  c.innerHTML = state.workouts.map((w,i) => `<div class="workout-card ${w.completed?'completed':''}"><div class="workout-icon ${w.completed?'completed':'pending'}">${w.completed?'✅':'🏋️'}</div><div class="workout-info"><div class="workout-title">${w.title}</div><div class="workout-meta">${w.phase||'Fase 1'} · ${new Date(w.date).toLocaleDateString('pt-BR')}</div></div><span class="workout-badge ${w.completed?'badge-done':'badge-pending'}">${w.completed?'FEITO':'PENDENTE'}</span>${!w.completed?`<button onclick="completeWorkout(${i})" style="margin-left:8px;padding:6px 14px;border:1px solid var(--green);background:none;color:var(--green);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;">MARCAR FEITO</button>`:''}<button onclick="deleteWorkout(${i})" style="margin-left:4px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;" title="Excluir">🗑️</button></div>`).join('');
+}
+
+function completeWorkout(i) { state.workouts[i].completed = true; saveWorkouts(); renderWorkouts(); refreshDashboard(); showToast('Treino marcado como concluído! 💪'); }
+function deleteWorkout(i) { state.workouts.splice(i,1); saveWorkouts(); renderWorkouts(); refreshDashboard(); }
+
+function refreshDashboard() {
+  const active = state.workouts.filter(w => !w.completed);
+  const done = state.workouts.filter(w => w.completed);
+  document.getElementById('stat-workouts').textContent = active.length;
+  document.getElementById('stat-sessions').textContent = done.length;
+  const riskCount = (state.profile?.riskFlags || []).filter(f => f !== 'none').length;
+  document.getElementById('stat-risks').textContent = riskCount;
+  const recent = document.getElementById('recent-workouts');
+  if (!state.workouts.length) {
+    recent.innerHTML = `<div class="empty-state"><div class="empty-icon">🏋️</div><div class="empty-title">SEM TREINOS AINDA</div><div class="empty-desc">Use o Coach IA para gerar seu plano personalizado.</div><button class="btn-action" onclick="navigate('chat')">FALAR COM O COACH</button></div>`;
+  } else {
+    recent.innerHTML = state.workouts.slice(0,3).map(w => `<div class="workout-card ${w.completed?'completed':''}"><div class="workout-icon ${w.completed?'completed':'pending'}">${w.completed?'✅':'🏋️'}</div><div class="workout-info"><div class="workout-title">${w.title}</div><div class="workout-meta">${w.phase||'Fase 1'} · ${new Date(w.date).toLocaleDateString('pt-BR')}</div></div><span class="workout-badge ${w.completed?'badge-done':'badge-pending'}">${w.completed?'FEITO':'PENDENTE'}</span></div>`).join('');
+  }
+  const next = active[0];
+  if (next) {
+    document.getElementById('hero-title').textContent = next.title.toUpperCase();
+    document.getElementById('hero-desc').textContent = 'Baseado no seu último diagnóstico, ajustamos os exercícios para você.';
+    document.getElementById('hero-btn').textContent = 'INICIAR TREINO';
+    document.getElementById('hero-btn').onclick = () => navigate('workouts');
+  } else {
+    document.getElementById('hero-title').textContent = 'COMECE SEU PRIMEIRO TREINO';
+    document.getElementById('hero-desc').textContent = 'Converse com o Axis Coach IA para receber seu plano personalizado.';
+    document.getElementById('hero-btn').textContent = 'PEDIR TREINO';
+    document.getElementById('hero-btn').onclick = () => navigate('chat');
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  CHAT (with full system prompt)
+// ═══════════════════════════════════════════════
+function quickSend(msg) { document.getElementById('chat-input').value = msg; sendMessage(); }
+
+function clearChat() {
+  state.chatHistory = [];
+  document.getElementById('chat-messages').innerHTML = `<div class="msg bot"><div class="msg-avatar" style="background:transparent;"><svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" style="width:30px;height:30px;"><defs><linearGradient id="cg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00ff87"/><stop offset="100%" style="stop-color:#00c8ff"/></linearGradient></defs><circle cx="15" cy="6" r="4" fill="url(#cg)"/><path d="M12,10 L7,20 L12,19 L14,24 L18,16 L22,18 L18,11 Z" fill="url(#cg)"/><path d="M10,13 L3,9 L4,14 L10,17 Z" fill="url(#cg)"/><path d="M16,17 L23,26 L20,25 L14,19 Z" fill="url(#cg)"/></svg></div><div class="msg-bubble">Conversa reiniciada! Como posso te ajudar? 💪</div></div>`;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = ''; input.style.height = '44px';
+  appendMsg('user', text);
+  state.chatHistory.push({ role: 'user', content: text });
+
+  const typingId = 'typing-' + Date.now();
+  const box = document.getElementById('chat-messages');
+  const uid = 'tg' + typingId;
+  box.innerHTML += `<div class="msg bot" id="${typingId}"><div class="msg-avatar" style="background:transparent;"><svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" style="width:30px;height:30px;"><defs><linearGradient id="${uid}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00ff87"/><stop offset="100%" style="stop-color:#00c8ff"/></linearGradient></defs><circle cx="15" cy="6" r="4" fill="url(#${uid})"/><path d="M12,10 L7,20 L12,19 L14,24 L18,16 L22,18 L18,11 Z" fill="url(#${uid})"/></svg></div><div class="msg-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>`;
+  box.scrollTop = box.scrollHeight;
+
+  try {
+    const p = state.profile;
+    const profileCtx = p ? `\n\n## PERFIL DO USUÁRIO\nIdade: ${p.age||'?'} | Peso: ${p.weight||'?'}kg | Altura: ${p.height||'?'}cm | Sexo: ${p.sex||'?'} | Nível: ${p.level||'?'} | Objetivo: ${p.goal||'?'} | Local: ${p.gym||'?'} | Frequência: ${p.frequency||'?'}/semana | Tempo/sessão: ${p.sessionTime||'?'} | Equipamentos: ${(p.equipment||[]).join(', ')||'?'} | Lesões: ${p.injuries||'Nenhuma'} | PAR-Q cardíaco: ${p.parq==='yes'?'Sim — recomendado acompanhamento médico':'Não'}.` : '\n\n## PERFIL\nNão preenchido — pergunte dados essenciais.';
+    const fmsTotal = p?.fms ? (p.fms.dos??0)+(p.fms.il??0)+(p.fms.hs??0)+(p.fms.sm??0)+(p.fms.aslr??0) : null;
+    const fmsFlags = (p?.riskFlags||[]).filter(f=>f!=='none');
+    const fmsFlagMap = { squat_dysfunction:'Deep Squat ≤1', lunge_dysfunction:'Inline Lunge ≤1', hip_instability:'Hurdle Step ≤1', shoulder_restriction:'Shoulder Mobility ≤1', hamstring_restriction:'ASLR ≤1', toe_touch_negative:'Toe Touch negativo' };
+    const _ttLabel = p?.fms?.tt === 'positive' ? 'Sim' : p?.fms?.tt === 'negative' ? 'Não' : '?';
+    const fmsCtx = p?.fms ? `\n\n## SCORES FMS\nFMS Total: ${fmsTotal}/15 | DOS: ${p.fms.dos??'?'} | IL: ${p.fms.il??'?'} | HS: ${p.fms.hs??'?'} | SM: ${p.fms.sm??'?'} | ASLR: ${p.fms.aslr??'?'} | Toe Touch: ${_ttLabel}\nFlags: ${fmsFlags.length>0?fmsFlags.map(f=>fmsFlagMap[f]||f).join(', '):'Nenhuma'}` : '';
+    const flagMap = { shoulder_restriction:'Restrição de Ombro', hamstring_restriction:'Restrição de Isquiotibiais', hip_instability:'Instabilidade de Quadril', squat_dysfunction:'Disfunção de Agachamento', lunge_dysfunction:'Disfunção de Avanço', apt:'APT/Hiperlordose', rib_flare:'Costelas Abertas', knee_valgus:'Valgo de Joelho', toe_touch_negative:'Toe Touch Negativo' };
+    const activeFlags = (p?.riskFlags || []).filter(f => f !== 'none');
+    const flagCtx = activeFlags.length > 0 ? `\n\n## FLAGS ATIVAS\n${activeFlags.map(f => '⚠️ ' + (flagMap[f]||f)).join('\n')}` : '\n\n## FLAGS\nNenhuma disfunção.';
+
+    // ── DETECT if user is requesting a workout/prescription ──
+    const prescriptionTriggers = /treino|exerc[ií]cio|s[ée]rie|programa|prescrever|monte|gerar|plano|aquecimento|pillar|prep|warm|workout|periodiza/i;
+    const needsReference = prescriptionTriggers.test(text);
+
+    // ── CORE PROMPT (always sent — v16.1 compressed) ──
+    const CORE_PROMPT = `Você é o AxisAI, coach de Performance Humana baseado em evidência. PT-BR obrigatório.
+
+MISSÃO: Democratizar treino de alta performance com prescrição personalizada, clara e segura.
+PRINCÍPIO: "Do No Harm" — Proteger > Corrigir > Desenvolver (FMS/CFSC).
+
+FILOSOFIA: KISS | Risk×Benefit | Joint by Joint (Boyle) | Movimentos > músculos | Cues externos > internos | Diagnosticar antes de prescrever | "Move Well, Then Move Often" (Cook).
+
+FONTES (REGRA INVIOLÁVEL):
+CFSC (Sheet+Manual+FMS): ÚNICA fonte para exercícios, progressões, regressões, estrutura de sessão, Pillar Prep. Todo exercício DEVE existir na CFSC Sheet. PROIBIDO inventar.
+CSCS (Casturo): APENAS teoria — bioenergética, fisiologia, biomecânica, nutrição. NÃO define exercícios.
+Conflito → CFSC prevalece SEMPRE.
+
+NOMENCLATURA: Nome inglês CFSC + (tradução PT). Ex: Ring Row (Remada em Argola). Abreviações: BOLD=Baseline, TK=Tall Kneeling, BW=Bodyweight, KB=Kettlebell, DB=Dumbbell, SL=Single Leg, SLDL=Single Leg Deadlift, RFESS=Rear Foot Elevated Split Squat, OH=Overhead, ECC=Eccentric, ISO=Isometric.
+
+ANTI-ALUCINAÇÃO: Sem arquivo disponível → NÃO invente. Use placeholders: [VALIDAR NA CFSC SHEET], [CONFIRMAR NO FMS MANUAL].
+
+SAFETY SHIELD (FMS → CFSC):
+Squat ≤2 → Proibir Back Squat → Goblet Squat / Front Squat to Box
+ASLR ≤1 → Proibir Deadlift convencional → Trap Bar DL / Assisted SLDL
+Shoulder ≤1 → Proibir OH Press → ½KN Landmine Press / ½KN Alt DB Press
+Lunge ≤1 → Proibir Walking Lunge → Static Split Squat Hold
+Sem FMS/vídeo → escolhas conservadoras obrigatórias
+
+FMS PONTUAÇÃO: 3=sem compensação, 2=com compensação, 1=incapaz, 0=dor→encaminhar médico. Assimetria E/D = prioridade.
+ALGORITMO CORRETIVO: 1.Eliminar dor 2.Tratar assimetrias 3.Mobilidade antes de estabilidade 4.Padrões fundamentais primeiro.
+SEMÁFORO: 🔴EVITAR 🟡CAUTELA 🟢INCORPORAR.
+
+NÍVEIS AXIS: R3(Reab)→R2→R1→B(Baseline)→P1→P2→P3(Elite).
+REGRA 80/20: Iniciante(<3m)=80%R1-R2/20%B | Inter(<6-24m)=80%B/20%R1-R2 | Avançado(>24m)=80%P1/20%B-R1.
+RESTRIÇÕES: Clean→≥6m exp. | Back Squat/BB Bench/Conv DL→≥12m + domínio unilateral + sem lesão.
+
+SESSÃO MBSC 60min: 25min Pillar Prep + 25min Força(Tri-sets) + 10min ESD.
+TRI-SET: A1=MI(knee/hip) A2=MS(push/pull) A3=Core/Corretivo. Frequência não informada → PERGUNTAR.
+SLDL no treino → Leg Lowering no Prep (obrigatório). OH no treino → Floor Slides no Prep (obrigatório).
+
+PILLAR PREP (ordem imutável): 1.Foam Roll(2-3min) 2.Mobilidade(90/90,Spiderman,T-Spine Rot,Ankle Mob) 3.Ativação(Respiração PRI,Floor Slides,Leg Lowering,Cook Hip Lift,Mini-Band,Plank) 4.Dinâmico(5min: Squat Matrix,Bear Crawl,Knee Hug,Skip,Shuffle,Carioca).
+
+STATE MACHINE:
+E1-ANAMNESE: idade/peso/altura/objetivo/nível/lesões/PAR-Q/local/freq/tempo/equipamento. PAR-Q+=PARAR→médico.
+E2-DIAGNÓSTICO: oferecer modalidade(avulsa/Fase1/consultoria).
+E3-CHECK-IN: sono/estresse/DOMS/hidratação/tempo. Sono<4||Estresse>5→reduzir volume.
+E4-GERAÇÃO: Master Schedule→Day→Pods→Slots→exercícios CFSC+nível.
+E5-PÓS: RPE/smartwatch. FC>140-150 em força→W:R violado.
+
+PERIODIZAÇÃO 4sem: F1-Acumulação(3-4×8-12,ECC 3-5s,R2/R1/B) F2-Intensificação(3×3-6,B/P1) F3-Realização(potência,P1/P2) F4-Deload(-50%vol,regredir 1 nível).
+
+BIOENERGÉTICA(CSCS-teoria): Fosfagênio(5-10s,W:R 1:12-1:20) Glicólise(15-30s,W:R 1:3-1:5) Oxidativo(>3min,W:R 1:1-1:3).
+SPRINTS(CFSC): Após Prep, antes de força. ≥6m exp, sem lesão MI. <40a=planares, >40a=hill/sled. 3-5 reps, W:R ≥1:12.
+ESD: >3min, bike/rower/esteira. Esteira=apenas avançado sem lesão MI.
+
+NUTRIÇÃO(CSCS-escopo): Menor/gestante/clínico→redirecionar nutricionista. Proteína: força 1.4-1.7g/kg, cutting 1.8-2.7g/kg. Hidratação: 90-240mL/15min. Pós-treino: 30-60min, C:P 4:1.`;
+
+    // ── REFERENCE TABLES (injected only when prescribing) ──
+    const REF_TABLES = `
+
+## MASTER SCHEDULE 4-DAY (CFSC)
+DAY1: Pod1[Linear Power+Anti-Extension] Pod2[Uni Knee Dom+Horiz Pull] Pod3[Uni Hip Dom+Vert Pull+Knee Flex] ESD:Run
+DAY2: Pod1[Rot Power+Anti-Rot Chop] Pod2[Bilat Horiz Push+Vert Pull] Pod3[Uni Vert Push+Uni Horiz Pull+Hip Ext] ESD:Bike
+DAY3: Pod1[Uni Power+Anti-Extension] Pod2[Bilat Hip Dom+Horiz Push BW] Pod3[Uni Knee Dom+Horiz Pull+Anti-Rot Lift+TGU] ESD:Run
+DAY4: Pod1[Rot Power+Anti-Rot Chop] Pod2[Incline Push+Vert Pull] Pod3[Uni Hip Dom+Uni Horiz Pull+Hip Add+TGU+Carry] ESD:Bike
+2x/sem→Sample 2 Day | 3x→Sample 3 Day | 4x→Sample 4 Day
+
+## EXERCÍCIOS CFSC (PROGRESSÕES POR CATEGORIA)
+HIP DOM: Assisted SLDL→Cross Reaching→Medball Reaching→1KB SLDL→2KB SLDL→Barbell SLDL. Toe Touch Seq→Hip Hinge→KB DL→KB Swing. *Dor lombar→Goblet Sq ou Split Sq.
+KNEE DOM: Assisted Split Sq→SS Hold→SS→Goblet SS→2KB SS→RFESS→5s ECC RFESS→Goblet RFESS→2DB RFESS→U-Bar RFESS. Heels Elev Sq→MB Reaching Sq→Goblet Sq Box→2KB Goblet Sq Box→Front Sq Box. Slider Rev Lunge: BW→Goblet→1KB→2KB→2KB Rack. Lateral Sq: BW→MB Reaching→Goblet→1-2DB→1-2DB Lunge. Rev Lunge FFE: BW→BW FFE→Goblet FFE→1DB FFE→2DB FFE.
+KNEE FLEX: 2-Leg Bridge→1-Leg Bridge→Shoulders Elev 2L→Shoulders Elev 1L→w/Sandbag→Slider 2L ECC→Slider 2L→Slider 1L ECC→Slider 1L.
+ANTI-EXT: Elbows Elev Plank→Plank→FE Plank→Body Saw→Ring Fallout→SB Rollout→Wheel Rollout. SA Plank→Clock Plank→Plank Taps→SA Sandbag Pull.
+ANTI-ROT: TK Anti-Rot→½KN Anti-Rot→Iso SS Anti-Rot→Standing Anti-Rot→SL Anti-Rot.
+ANTI-LAT: Short Lever SP→Side Plank→SP Row→FE SP→SP w/Adduction.
+CHOP/LIFT: TK→½KN Inline→Iso SS Inline→Standing Static→Dynamic. TK Landmine Anti-Rot→½KN→Standing→w/Rotation.
+HORIZ PUSH: SA Plank→Hands Elev PU→Push Up→FE PU→Weighted PU→Ring PU. DB Bench→Alt DB Bench→1-Arm DB Bench.
+VERT PUSH: ½KN Landmine→½KN Alt KB/DB→½KN 1-Arm→Standing Alt→Standing 1-Arm. TK 1-Arm Cable→½KN Push/Pull→Standing PP→Dynamic PP. ½KN Inline Press→Iso SS Inline→Standing 1-Arm Cable.
+VERT PULL: Cable X-Pulldown. Chin-Up ECC→Band Assisted→Chin-Up→Weighted→Pull-Up→Weighted Pull-Up.
+HORIZ PULL: Ring Row→FE Ring Row→WV Ring Row. Bench DB Row→DB Row. ½KN 1-Arm Cable→Iso SS→Standing→1A1L Row→Dynamic→Rotational Row.
+CARRIES: Goblet→Farmer→Suitcase→Waiter's BU→OH Carry.
+POWER JUMPS: Drop Squat→Box Jump→Jump Sq Stick→Continuous→MB/WV Jump Sq→Shuttle. Lateral: Alt SL Balance→SL Drop Sq→SL Lat Bound Stick→@45° Stick→@45° Mini-bounce→Continuous→Vert Jump.
+POWER MED BALL: Chest Pass: TK No Hinge→TK Dynamic→Standing→2-Point→Sprint Start. Side Toss: ½KN→Standing→Stepping→Lat Bound→Shuffle/Crossover.
+TGU: ¼ No Wt→½ No Wt→½ w/Wt→¾ w/Wt→Full w/Wt.
+SPRINT/SKIP: Supine Banded Hip Flex→SA Plank Slider Hip Flex→½KN Hip Flex→Linear Skip→Lateral Skip→High Knee Run→SL Walk→SL Skip.`;
+
+    const systemPrompt = CORE_PROMPT + profileCtx + fmsCtx + flagCtx + (needsReference ? REF_TABLES : '');
+
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2048, system: systemPrompt, messages: state.chatHistory })
+    });
+    const data = await response.json();
+    const reply = data.content?.[0]?.text || 'Desculpe, não consegui processar sua mensagem.';
+    document.getElementById(typingId)?.remove();
+    appendMsg('bot', reply);
+    state.chatHistory.push({ role: 'assistant', content: reply });
+    if (reply.toLowerCase().includes('aquecimento') && reply.toLowerCase().includes('série')) offerSaveWorkout();
+  } catch (err) {
+    document.getElementById(typingId)?.remove();
+    appendMsg('bot', 'Não consegui conectar ao servidor. Verifique sua conexão.');
+  }
+}
+
+function appendMsg(role, text) {
+  const box = document.getElementById('chat-messages');
+  const isUser = role === 'user';
+  const uid = 'mg' + Date.now();
+  const div = document.createElement('div');
+  div.className = `msg ${isUser ? 'user' : 'bot'}`;
+  const botSvg = `<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" style="width:30px;height:30px;"><defs><linearGradient id="${uid}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00ff87"/><stop offset="100%" style="stop-color:#00c8ff"/></linearGradient></defs><circle cx="15" cy="6" r="4" fill="url(#${uid})"/><path d="M12,10 L7,20 L12,19 L14,24 L18,16 L22,18 L18,11 Z" fill="url(#${uid})"/><path d="M10,13 L3,9 L4,14 L10,17 Z" fill="url(#${uid})"/><path d="M16,17 L23,26 L20,25 L14,19 Z" fill="url(#${uid})"/></svg>`;
+  div.innerHTML = `<div class="msg-avatar" style="${isUser?'':'background:transparent;'}">${isUser?'👤':botSvg}</div><div class="msg-bubble">${text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div>`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function offerSaveWorkout() {
+  const box = document.getElementById('chat-messages');
+  const id = 'save-' + Date.now();
+  const div = document.createElement('div');
+  div.className = 'msg bot'; div.id = id;
+  div.innerHTML = `<div class="msg-avatar">💾</div><div class="msg-bubble" style="background:rgba(0,255,135,0.08);border-color:rgba(0,255,135,0.2);"><strong>Salvar este treino?</strong><br><small style="color:var(--muted)">Ele vai aparecer na sua lista de treinos.</small><br><br><button onclick="saveWorkoutFromChat('${id}')" style="padding:8px 20px;background:var(--green);color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;margin-right:8px;">✅ SALVAR</button><button onclick="document.getElementById('${id}').remove()" style="padding:8px 16px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;cursor:pointer;font-size:13px;">Não</button></div>`;
+  box.appendChild(div); box.scrollTop = box.scrollHeight;
+}
+
+function saveWorkoutFromChat(cardId) {
+  state.workouts.unshift({ title: 'Treino — ' + new Date().toLocaleDateString('pt-BR'), phase: 'Fase 1 · Acumulação', date: new Date().toISOString(), completed: false });
+  saveWorkouts(); refreshDashboard();
+  document.getElementById(cardId)?.remove();
+  appendMsg('bot', '✅ Treino salvo! Acesse **Meus Treinos** para ver.');
+  showToast('Treino salvo! 🏋️');
+}
+
+function refreshChatSidebar() {
+  const p = state.profile;
+  document.getElementById('ps-phase').textContent = 'Fase 1';
+  document.getElementById('ps-level').textContent = p?.level || '—';
+  document.getElementById('ps-goal').textContent = p?.goal || '—';
+  document.getElementById('ps-gym').textContent = p?.gym || '—';
+  const activeFlags = (p?.riskFlags || []).filter(f => f !== 'none');
+  const rfSummary = document.getElementById('risk-flags-summary');
+  const labels = { squat_dysfunction:'⚠️ Disfunção de Agachamento', lunge_dysfunction:'⚠️ Disfunção de Avanço', hip_instability:'⚠️ Instabilidade de Quadril', shoulder_restriction:'⚠️ Restrição de Ombro', hamstring_restriction:'⚠️ Restrição de Isquiotibiais', apt:'⚠️ Hiperlordose (APT)', rib_flare:'⚠️ Costelas Abertas', knee_valgus:'⚠️ Valgo de Joelho', toe_touch_negative:'⚠️ Toe Touch Negativo' };
+  rfSummary.innerHTML = activeFlags.length > 0 ? activeFlags.map(f => `<span style="display:block;font-size:13px;color:#fca5a5;margin-bottom:4px;">${labels[f]||f}</span>`).join('') : `Nenhum diagnóstico ainda. <button onclick="navigate('diagnosis')" style="color:var(--green);background:none;border:none;cursor:pointer;font-size:13px;">Fazer avaliação →</button>`;
+}
+
+// ═══════════════════════════════════════════════
+//  DIAGNOSIS
+// ═══════════════════════════════════════════════
+function previewFMS(input, zoneId, prevId, iconId) {
+  const file = input.files[0]; if (!file) return;
+  const zone = document.getElementById(zoneId);
+  const icon = document.getElementById(iconId);
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = e => { const prev = document.getElementById(prevId); prev.src = e.target.result; prev.style.display = 'block'; };
+    reader.readAsDataURL(file);
+  }
+  zone.classList.add('has-file');
+  if (icon) icon.style.display = 'none';
+}
+
+function setToeTouch(val) {
+  state.toeTouch = val;
+  document.getElementById('toe-btn-pos').className = 'toe-btn' + (val === 'positive' ? ' active-pos' : '');
+  document.getElementById('toe-btn-neg').className = 'toe-btn' + (val === 'negative' ? ' active-neg' : '');
+}
+
+function runDiagnosis() {
+  const scores = {
+    dos:  parseInt(document.getElementById('fms-score-dos')?.value) || 0,
+    il:   parseInt(document.getElementById('fms-score-il')?.value)  || 0,
+    hs:   parseInt(document.getElementById('fms-score-hs')?.value)  || 0,
+    sm:   parseInt(document.getElementById('fms-score-sm')?.value)  || 0,
+    aslr: parseInt(document.getElementById('fms-score-aslr')?.value)|| 0,
+    tt:   state.toeTouch || null,
+  };
+  const totalScore = scores.dos + scores.il + scores.hs + scores.sm + scores.aslr;
+  const hasMedia = document.querySelector('.fms-grid .upload-zone.has-file');
+  if (totalScore === 0 && !hasMedia && !scores.tt) return showToast('Preencha ao menos uma nota FMS, envie uma foto ou faça o Toe Touch.', true);
+
+  showToast('Analisando seus scores FMS…');
+  const resultCard = document.getElementById('diagnosis-result');
+  resultCard.classList.remove('visible');
+
+  const issues = [];
+  const feedback = [];
+  if (scores.dos <= 1) { issues.push('squat_dysfunction'); feedback.push(`Deep Squat nota ${scores.dos}: Disfunção de agachamento. Use Goblet Squat to Box; evite Back Squat.`); }
+  if (scores.il <= 1) { issues.push('lunge_dysfunction'); feedback.push(`Inline Lunge nota ${scores.il}: Disfunção de avanço. Use Split Squat estático.`); }
+  if (scores.hs <= 1) { issues.push('hip_instability'); feedback.push(`Hurdle Step nota ${scores.hs}: Instabilidade de quadril. Regrida para Bridge.`); }
+  if (scores.sm <= 1) { issues.push('shoulder_restriction'); feedback.push(`Shoulder Mobility nota ${scores.sm}: Restrição de ombro. Use Floor Slides.`); }
+  if (scores.aslr <= 1) { issues.push('hamstring_restriction'); feedback.push(`ASLR nota ${scores.aslr}: Restrição de isquiotibiais. Use Reaching SLDL BW.`); }
+  if (scores.tt === 'negative') { issues.push('toe_touch_negative'); feedback.push('Toe Touch negativo: Indica restrição posterior. Incluir Toe Touch Sequence no aquecimento.'); }
+  if (issues.length === 0) { issues.push('none'); feedback.push(`Todos os testes OK. Score total: ${totalScore}/15. Pode progredir normalmente.`); }
+
+  if (!state.profile) state.profile = {};
+  state.profile.fms = scores;
+  state.profile.riskFlags = issues;
+  saveProfile(true);
+
+  // Sync profile selects
+  ['dos','il','hs','sm','aslr'].forEach(k => { const el = document.getElementById('p-fms-' + k); if (el) el.value = scores[k]; });
+  if (scores.tt) { const el = document.getElementById('p-fms-tt'); if (el) el.value = scores.tt; }
+
+  document.getElementById('stat-risks').textContent = issues.filter(f => f !== 'none').length;
+  refreshChatSidebar();
+
+  document.getElementById('result-feedback').textContent = feedback.join('\n\n');
+  const issueLabels = { squat_dysfunction:'Disfunção de Agachamento', lunge_dysfunction:'Disfunção de Avanço', hip_instability:'Instabilidade de Quadril', shoulder_restriction:'Restrição de Ombro', hamstring_restriction:'Restrição de Isquiotibiais', toe_touch_negative:'Toe Touch Negativo', none:'Sem alterações' };
+  document.getElementById('result-issues').innerHTML = issues.map(i => `<div class="issue-chip ${i==='none'?'ok':'risk'}">${i==='none'?'✅':'⚠️'} ${issueLabels[i]||i}</div>`).join('');
+  const badge = document.getElementById('result-badge');
+  const rc = issues.filter(f => f !== 'none').length;
+  if (rc > 0) { badge.textContent = rc + ' FLAG' + (rc>1?'S':''); badge.style.background = 'rgba(239,68,68,0.1)'; badge.style.color = '#fca5a5'; }
+  else { badge.textContent = 'APROVADO'; badge.style.background = 'rgba(0,255,135,0.1)'; badge.style.color = 'var(--green)'; }
+  resultCard.classList.add('visible');
+  showToast(`Diagnóstico FMS concluído! Score: ${totalScore}/15`);
+}
+
+// ═══════════════════════════════════════════════
+//  PROFILE
+// ═══════════════════════════════════════════════
+function loadProfile() {
+  const saved = localStorage.getItem('axisai_profile');
+  if (saved) {
+    state.profile = JSON.parse(saved);
+    const p = state.profile;
+    if (p.age) document.getElementById('p-age').value = p.age;
+    if (p.weight) document.getElementById('p-weight').value = p.weight;
+    if (p.height) document.getElementById('p-height').value = p.height;
+    if (p.level) document.getElementById('p-level').value = p.level;
+    if (p.goal) document.getElementById('p-goal').value = p.goal;
+    if (p.gym) document.getElementById('p-gym').value = p.gym;
+    if (p.injuries) document.getElementById('p-injuries').value = p.injuries;
+    if (p.fms) {
+      ['dos','il','hs','sm','aslr'].forEach(k => { if (p.fms[k] !== undefined) { const el = document.getElementById('p-fms-' + k); if (el) el.value = p.fms[k]; } });
+      if (p.fms.tt) { const el = document.getElementById('p-fms-tt'); if (el) el.value = p.fms.tt; }
+    }
+  }
+}
+
+function saveProfile(silent = false) {
+  const p = {
+    age: document.getElementById('p-age')?.value || state.profile?.age,
+    weight: document.getElementById('p-weight')?.value || state.profile?.weight,
+    height: document.getElementById('p-height')?.value || state.profile?.height,
+    level: document.getElementById('p-level')?.value || state.profile?.level,
+    goal: document.getElementById('p-goal')?.value || state.profile?.goal,
+    gym: document.getElementById('p-gym')?.value || state.profile?.gym,
+    injuries: document.getElementById('p-injuries')?.value || state.profile?.injuries,
+    riskFlags: state.profile?.riskFlags || [],
+    fms: state.profile?.fms || {},
+  };
+  state.profile = { ...state.profile, ...p };
+  localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
+  refreshChatSidebar();
+  if (!silent) showToast('Perfil salvo com sucesso! ✅');
+}
+
+function saveFMS() {
+  const vals = {};
+  ['dos','il','hs','sm','aslr'].forEach(k => { const v = document.getElementById('p-fms-' + k).value; if (v !== '') vals[k] = parseInt(v); });
+  const tt = document.getElementById('p-fms-tt').value;
+  if (tt) vals.tt = tt;
+  if (Object.keys(vals).length === 0) return showToast('Preencha ao menos um score.', true);
+  if (!state.profile) state.profile = {};
+  state.profile.fms = { ...state.profile.fms, ...vals };
+
+  const flags = [];
+  const fms = state.profile.fms;
+  if (fms.dos !== undefined && fms.dos <= 1) flags.push('squat_dysfunction');
+  if (fms.il !== undefined && fms.il <= 1) flags.push('lunge_dysfunction');
+  if (fms.hs !== undefined && fms.hs <= 1) flags.push('hip_instability');
+  if (fms.sm !== undefined && fms.sm <= 1) flags.push('shoulder_restriction');
+  if (fms.aslr !== undefined && fms.aslr <= 1) flags.push('hamstring_restriction');
+  if (fms.tt === 'negative') flags.push('toe_touch_negative');
+  state.profile.riskFlags = flags.length > 0 ? flags : ['none'];
+
+  saveProfile(true);
+  refreshDashboard();
+  showToast('FMS salvo! ' + (flags.length > 0 ? flags.length + ' flag(s) ⚠️' : 'Sem disfunções ✅'));
+}
+
+// ═══════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════
+let toastTimer;
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+
+
+</body></html>
