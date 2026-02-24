@@ -1842,7 +1842,7 @@ function renderWorkouts() {
   }
   let html = '';
   if (treinosIA.length) {
-    html += treinosIA.map(t => `<div class="treino-card"><div class="treino-card-header"><div><div class="treino-card-title">🤖 ${t.titulo}</div><div class="treino-card-meta">${t.data} · Coach IA</div></div><button class="btn-ver-treino" onclick="toggleTreino('tb-${t.id}',this)">▼ Ver treino completo</button></div><div class="treino-card-body" id="tb-${t.id}">${cleanMarkdown(t.conteudo).replace(/\n/g,'<br>')}</div></div>`).join('');
+    html += treinosIA.map(t => `<div class="treino-card"><div class="treino-card-header"><div><div class="treino-card-title">🤖 ${t.titulo}</div><div class="treino-card-meta">${t.data} · Coach IA</div></div><button class="btn-ver-treino" onclick="toggleTreino('tb-${t.id}',this)">▼ Ver treino completo</button></div><div class="treino-card-body" id="tb-${t.id}">${sanitizarMensagem(t.conteudo).replace(/\n/g,'<br>')}</div></div>`).join('');
   }
   if (state.workouts.length) {
     if (treinosIA.length) html += `<div style="margin:20px 0 12px;"><h3 style="font-family:var(--font-display);font-size:18px;letter-spacing:1px;color:var(--muted);">OUTROS TREINOS</h3></div>`;
