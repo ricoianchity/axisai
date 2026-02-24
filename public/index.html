@@ -549,6 +549,23 @@
   @media (max-width: 480px) {
     .stats-grid { grid-template-columns: 1fr; }
   }
+
+  /* ── TREINO IA CARDS ── */
+  .treino-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--blue); border-radius: 14px; padding: 20px 24px; margin-bottom: 12px; transition: all 0.2s; }
+  .treino-card:hover { border-left-color: rgba(59,130,246,0.7); }
+  .treino-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .treino-card-title { font-weight: 600; font-size: 15px; }
+  .treino-card-meta { font-size: 12px; color: var(--muted); margin-top: 3px; font-family: var(--font-mono); }
+  .treino-card-body { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 14px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
+  .treino-card-body.open { display: block; animation: fadeUp 0.3s ease; }
+  .btn-ver-treino { padding: 6px 14px; border: 1px solid var(--blue); background: none; color: var(--blue); border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
+  .btn-ver-treino:hover { background: rgba(59,130,246,0.1); }
+
+  /* ── AVATAR FOTO ── */
+  .avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+  .profile-big-avatar { cursor: pointer; position: relative; }
+  .profile-big-avatar:hover::after { content: '📷'; position: absolute; inset: 0; background: rgba(0,0,0,0.55); border-radius: 50%; text-align: center; line-height: 80px; font-size: 22px; pointer-events: none; }
+  .user-avatar { overflow: hidden; }
 </style>
 </head>
 <body>
@@ -1333,7 +1350,8 @@
       <div class="profile-grid">
         <div>
           <div class="profile-card">
-            <div class="profile-big-avatar" id="profile-avatar-big">R</div>
+            <div class="profile-big-avatar" id="profile-avatar-big" onclick="document.getElementById('avatar-input').click()" title="Clique para trocar a foto">R</div>
+            <input type="file" id="avatar-input" accept="image/*" style="display:none" onchange="handleAvatarUpload(this)">
             <div class="profile-name" id="profile-full-name">rerer</div>
             <div class="profile-email" id="profile-email-display">erere</div>
             <div class="profile-plan">AXIS PRO</div>
@@ -1527,6 +1545,7 @@ function completeEnterApp() {
   document.getElementById('profile-avatar-big').textContent = initial;
   document.getElementById('profile-full-name').textContent = name;
   document.getElementById('profile-email-display').textContent = state.user?.email || '';
+  loadAvatar();
   refreshDashboard();
   refreshChatSidebar();
 }
@@ -1768,17 +1787,30 @@ function saveWorkouts() { localStorage.setItem('axisai_workouts', JSON.stringify
 
 function renderWorkouts() {
   const c = document.getElementById('all-workouts');
-  if (!state.workouts.length) { c.innerHTML = `<div class="empty-state"><div class="empty-icon">🏋️</div><div class="empty-title">NENHUM TREINO AINDA</div><div class="empty-desc">Converse com o Coach IA para receber seu plano personalizado.</div><button class="btn-action" onclick="navigate('chat')">PEDIR TREINO</button></div>`; return; }
-  c.innerHTML = state.workouts.map((w,i) => `<div class="workout-card ${w.completed?'completed':''}"><div class="workout-icon ${w.completed?'completed':'pending'}">${w.completed?'✅':'🏋️'}</div><div class="workout-info"><div class="workout-title">${w.title}</div><div class="workout-meta">${w.phase||'Fase 1'} · ${new Date(w.date).toLocaleDateString('pt-BR')}</div></div><span class="workout-badge ${w.completed?'badge-done':'badge-pending'}">${w.completed?'FEITO':'PENDENTE'}</span>${!w.completed?`<button onclick="completeWorkout(${i})" style="margin-left:8px;padding:6px 14px;border:1px solid var(--green);background:none;color:var(--green);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;">MARCAR FEITO</button>`:''}<button onclick="deleteWorkout(${i})" style="margin-left:4px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;" title="Excluir">🗑️</button></div>`).join('');
+  const treinosIA = loadTreinosIA();
+  if (!state.workouts.length && !treinosIA.length) {
+    c.innerHTML = `<div class="empty-state"><div class="empty-icon">🏋️</div><div class="empty-title">NENHUM TREINO AINDA</div><div class="empty-desc">Converse com o Coach IA para receber seu plano personalizado.</div><button class="btn-action" onclick="navigate('chat')">PEDIR TREINO</button></div>`;
+    return;
+  }
+  let html = '';
+  if (treinosIA.length) {
+    html += treinosIA.map(t => `<div class="treino-card"><div class="treino-card-header"><div><div class="treino-card-title">🤖 ${t.titulo}</div><div class="treino-card-meta">${t.data} · Coach IA</div></div><button class="btn-ver-treino" onclick="toggleTreino('tb-${t.id}',this)">▼ Ver treino completo</button></div><div class="treino-card-body" id="tb-${t.id}">${cleanMarkdown(t.conteudo).replace(/\n/g,'<br>')}</div></div>`).join('');
+  }
+  if (state.workouts.length) {
+    if (treinosIA.length) html += `<div style="margin:20px 0 12px;"><h3 style="font-family:var(--font-display);font-size:18px;letter-spacing:1px;color:var(--muted);">OUTROS TREINOS</h3></div>`;
+    html += state.workouts.map((w,i) => `<div class="workout-card ${w.completed?'completed':''}"><div class="workout-icon ${w.completed?'completed':'pending'}">${w.completed?'✅':'🏋️'}</div><div class="workout-info"><div class="workout-title">${w.title}</div><div class="workout-meta">${w.phase||'Fase 1'} · ${new Date(w.date).toLocaleDateString('pt-BR')}</div></div><span class="workout-badge ${w.completed?'badge-done':'badge-pending'}">${w.completed?'FEITO':'PENDENTE'}</span>${!w.completed?`<button onclick="completeWorkout(${i})" style="margin-left:8px;padding:6px 14px;border:1px solid var(--green);background:none;color:var(--green);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;">MARCAR FEITO</button>`:''}<button onclick="deleteWorkout(${i})" style="margin-left:4px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;" title="Excluir">🗑️</button></div>`).join('');
+  }
+  c.innerHTML = html;
 }
 
 function completeWorkout(i) { state.workouts[i].completed = true; saveWorkouts(); renderWorkouts(); refreshDashboard(); showToast('Treino marcado como concluído! 💪'); }
 function deleteWorkout(i) { state.workouts.splice(i,1); saveWorkouts(); renderWorkouts(); refreshDashboard(); }
 
 function refreshDashboard() {
+  const treinosIA = loadTreinosIA();
   const active = state.workouts.filter(w => !w.completed);
   const done = state.workouts.filter(w => w.completed);
-  document.getElementById('stat-workouts').textContent = active.length;
+  document.getElementById('stat-workouts').textContent = active.length + treinosIA.length;
   document.getElementById('stat-sessions').textContent = done.length;
   const riskCount = (state.profile?.riskFlags || []).filter(f => f !== 'none').length;
   document.getElementById('stat-risks').textContent = riskCount;
@@ -1800,6 +1832,38 @@ function refreshDashboard() {
     document.getElementById('hero-btn').textContent = 'PEDIR TREINO';
     document.getElementById('hero-btn').onclick = () => navigate('chat');
   }
+}
+
+// ═══════════════════════════════════════════════
+//  TREINOS IA
+// ═══════════════════════════════════════════════
+function loadTreinosIA() {
+  return JSON.parse(localStorage.getItem('axisai_treinos') || '[]');
+}
+function saveTreinosIA(treinos) {
+  localStorage.setItem('axisai_treinos', JSON.stringify(treinos));
+}
+function detectTreino(mensagem) {
+  return /AQUECIMENTO|BLOCO|S[EÉ]RIES|REPETI[ÇC][OÕ]ES|DESCANSO|EXERC[ÍI]CIO|TREINO DO DIA|Pillar Prep|PILLAR PREP|A1\.|A2\.|A3\.|Pod\s*\d|Deep Squat|Goblet|Split Squat|Push.Up|Ring Row|Chin.Up|Deadlift|SLDL|RFESS/i.test(mensagem);
+}
+function saveTreinoIA(mensagem) {
+  const treinos = loadTreinosIA();
+  treinos.unshift({
+    id: Date.now(),
+    data: new Date().toLocaleDateString('pt-BR'),
+    titulo: 'Treino gerado pelo Coach IA',
+    conteudo: mensagem,
+    fonte: 'coach_ia'
+  });
+  saveTreinosIA(treinos);
+  refreshDashboard();
+  showToast('🏋️ Treino salvo automaticamente em Meus Treinos!');
+}
+function toggleTreino(bodyId, btn) {
+  const body = document.getElementById(bodyId);
+  if (!body) return;
+  body.classList.toggle('open');
+  btn.textContent = body.classList.contains('open') ? '▲ Ocultar' : '▼ Ver treino completo';
 }
 
 // ═══════════════════════════════════════════════
@@ -1893,7 +1957,9 @@ BIOENERGÉTICA(CSCS-teoria): Fosfagênio(5-10s,W:R 1:12-1:20) Glicólise(15-30s,
 SPRINTS(CFSC): Após Prep, antes de força. ≥6m exp, sem lesão MI. <40a=planares, >40a=hill/sled. 3-5 reps, W:R ≥1:12.
 ESD: >3min, bike/rower/esteira. Esteira=apenas avançado sem lesão MI.
 
-NUTRIÇÃO(CSCS-escopo): Menor/gestante/clínico→redirecionar nutricionista. Proteína: força 1.4-1.7g/kg, cutting 1.8-2.7g/kg. Hidratação: 90-240mL/15min. Pós-treino: 30-60min, C:P 4:1.`;
+NUTRIÇÃO(CSCS-escopo): Menor/gestante/clínico→redirecionar nutricionista. Proteína: força 1.4-1.7g/kg, cutting 1.8-2.7g/kg. Hidratação: 90-240mL/15min. Pós-treino: 30-60min, C:P 4:1.
+
+FORMATAÇÃO OBRIGATÓRIA: Nunca use Markdown nas respostas. Proibido usar ##, **, __, *, ou qualquer símbolo de formatação Markdown. Use apenas texto limpo, emojis e traços (---) para separar seções. Estruture visualmente apenas com emojis e quebras de linha.`;
 
     // ── REFERENCE TABLES (injected only when prescribing) ──
     const REF_TABLES = `
@@ -1935,11 +2001,26 @@ SPRINT/SKIP: Supine Banded Hip Flex→SA Plank Slider Hip Flex→½KN Hip Flex�
     document.getElementById(typingId)?.remove();
     appendMsg('bot', reply);
     state.chatHistory.push({ role: 'assistant', content: reply });
-    if (reply.toLowerCase().includes('aquecimento') && reply.toLowerCase().includes('série')) offerSaveWorkout();
+    if (detectTreino(reply)) {
+      saveTreinoIA(reply);
+    } else if (reply.toLowerCase().includes('aquecimento') && reply.toLowerCase().includes('série')) {
+      offerSaveWorkout();
+    }
   } catch (err) {
     document.getElementById(typingId)?.remove();
     appendMsg('bot', 'Não consegui conectar ao servidor. Verifique sua conexão.');
   }
+}
+
+function cleanMarkdown(text) {
+  return text
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/\*([^*\n]+)\*/g, '$1')
+    .replace(/_([^_\n]+)_/g, '$1')
+    .replace(/`([^`\n]+)`/g, '$1')
+    .trim();
 }
 
 function appendMsg(role, text) {
@@ -1949,7 +2030,8 @@ function appendMsg(role, text) {
   const div = document.createElement('div');
   div.className = `msg ${isUser ? 'user' : 'bot'}`;
   const botSvg = `<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" style="width:30px;height:30px;"><defs><linearGradient id="${uid}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00ff87"/><stop offset="100%" style="stop-color:#00c8ff"/></linearGradient></defs><circle cx="15" cy="6" r="4" fill="url(#${uid})"/><path d="M12,10 L7,20 L12,19 L14,24 L18,16 L22,18 L18,11 Z" fill="url(#${uid})"/><path d="M10,13 L3,9 L4,14 L10,17 Z" fill="url(#${uid})"/><path d="M16,17 L23,26 L20,25 L14,19 Z" fill="url(#${uid})"/></svg>`;
-  div.innerHTML = `<div class="msg-avatar" style="${isUser?'':'background:transparent;'}">${isUser?'👤':botSvg}</div><div class="msg-bubble">${text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div>`;
+  const displayText = isUser ? text : cleanMarkdown(text);
+  div.innerHTML = `<div class="msg-avatar" style="${isUser?'':'background:transparent;'}">${isUser?'👤':botSvg}</div><div class="msg-bubble">${displayText.replace(/\n/g,'<br>')}</div>`;
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
@@ -2117,6 +2199,62 @@ function saveFMS() {
   saveProfile(true);
   refreshDashboard();
   showToast('FMS salvo! ' + (flags.length > 0 ? flags.length + ' flag(s) ⚠️' : 'Sem disfunções ✅'));
+}
+
+// ═══════════════════════════════════════════════
+//  AVATAR
+// ═══════════════════════════════════════════════
+function handleAvatarUpload(input) {
+  const file = input.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    // base64 de 500KB ≈ ~700.000 chars
+    if (dataUrl.length > 700000) {
+      resizeAndSaveAvatar(dataUrl);
+    } else {
+      saveAndDisplayAvatar(dataUrl);
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function resizeAndSaveAvatar(dataUrl) {
+  const img = new Image();
+  img.onload = function() {
+    const MAX = 300;
+    let w = img.width, h = img.height;
+    if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+    else { w = Math.round(w * MAX / h); h = MAX; }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    saveAndDisplayAvatar(canvas.toDataURL('image/jpeg', 0.8));
+  };
+  img.src = dataUrl;
+}
+
+function saveAndDisplayAvatar(dataUrl) {
+  localStorage.setItem('axisai_avatar', dataUrl);
+  displayAvatar(dataUrl);
+  showToast('Foto de perfil atualizada! 📸');
+}
+
+function displayAvatar(dataUrl) {
+  if (!dataUrl) return;
+  const bigAvatar = document.getElementById('profile-avatar-big');
+  if (bigAvatar) bigAvatar.innerHTML = `<img src="${dataUrl}" class="avatar-img" alt="Foto">`;
+  const sideAvatar = document.getElementById('user-avatar-letter');
+  if (sideAvatar) {
+    sideAvatar.innerHTML = `<img src="${dataUrl}" class="avatar-img" alt="Foto">`;
+    sideAvatar.style.background = 'none';
+  }
+}
+
+function loadAvatar() {
+  const saved = localStorage.getItem('axisai_avatar');
+  if (saved) displayAvatar(saved);
 }
 
 // ═══════════════════════════════════════════════
