@@ -281,6 +281,12 @@
   .toe-btn { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 700; transition: all 0.2s; text-align: center; }
   .toe-btn.active-pos { background: rgba(0,255,135,0.15); border-color: var(--green); color: var(--green); }
   .toe-btn.active-neg { background: rgba(239,68,68,0.1); border-color: var(--red); color: #fca5a5; }
+  .fms-info-btn { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; line-height: 1; flex-shrink: 0; padding: 0; }
+  .fms-info-btn:hover { border-color: var(--green); color: var(--green); }
+  .fms-info-panel { display: none; margin-top: 10px; padding: 12px; background: var(--bg2,var(--bg)); border-radius: 8px; border: 1px solid var(--border); font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .fms-info-panel.open { display: block; }
+  .fms-info-panel ul { margin: 8px 0 0 0; padding-left: 16px; }
+  .fms-info-panel li { margin-bottom: 3px; }
 
   /* ── PROFILE PAGE ── */
   .profile-grid { display: grid; grid-template-columns: 300px 1fr; gap: 24px; }
@@ -1400,12 +1406,24 @@ const state = { user: null, workouts: [], profile: null, chatHistory: [], toeTou
 
 // FMS test definitions for dynamic rendering
 const FMS_TESTS = [
-  { id: 'dos', name: 'Deep Overhead Squat', namePt: 'Agachamento Profundo', type: 'score' },
-  { id: 'il',  name: 'Inline Lunge',        namePt: 'Avanço em Linha',       type: 'score' },
-  { id: 'hs',  name: 'Hurdle Step',          namePt: 'Passada sobre Barreira', type: 'score' },
-  { id: 'sm',  name: 'Shoulder Mobility',    namePt: 'Mobilidade de Ombro',    type: 'score' },
-  { id: 'aslr', name: 'ASLR',               namePt: 'Elevação Ativa da Perna Reta', type: 'score' },
-  { id: 'tt',  name: 'Toe Touch Screen',     namePt: 'Toque na Ponta dos Pés', type: 'toggle' },
+  { id: 'dos', name: 'Deep Overhead Squat', namePt: 'Agachamento Profundo', type: 'score',
+    desc: 'Avalia mobilidade bilateral simétrica de quadril, joelho e tornozelo, além de estabilidade bilateral do ombro e coluna torácica.',
+    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'] },
+  { id: 'il',  name: 'Inline Lunge',        namePt: 'Avanço em Linha',       type: 'score',
+    desc: 'Avalia estabilidade, flexibilidade e função do quadril e tornozelo em padrão de passada.',
+    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'] },
+  { id: 'hs',  name: 'Hurdle Step',          namePt: 'Passada sobre Barreira', type: 'score',
+    desc: 'Avalia mobilidade e estabilidade de quadril, joelho e tornozelo em padrão de passada unilateral.',
+    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'] },
+  { id: 'sm',  name: 'Shoulder Mobility',    namePt: 'Mobilidade de Ombro',    type: 'score',
+    desc: 'Avalia amplitude bilateral de rotação e adução/abdução de ombro.',
+    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'] },
+  { id: 'aslr', name: 'ASLR',               namePt: 'Elevação Ativa da Perna Reta', type: 'score',
+    desc: 'Avalia mobilidade ativa de isquiotibiais e panturrilha com estabilização de pelve e core ativo.',
+    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'] },
+  { id: 'tt',  name: 'Toe Touch Screen',     namePt: 'Toque na Ponta dos Pés', type: 'toggle',
+    desc: 'Avalia mobilidade global da cadeia posterior com joelhos estendidos.',
+    scores: ['Positivo — Consegue tocar a ponta dos pés', 'Negativo — Não consegue tocar'] },
 ];
 
 // ═══════════════════════════════════════════════
@@ -1423,11 +1441,21 @@ window.addEventListener('DOMContentLoaded', () => {
 function renderFMSGrid() {
   const container = document.getElementById('fms-grid-container');
   container.innerHTML = FMS_TESTS.map(t => {
+    const infoPanel = `<div class="fms-info-panel" id="fms-info-${t.id}">
+        ${t.desc}
+        <ul>${t.scores.map(s => `<li>${s}</li>`).join('')}</ul>
+      </div>`;
     if (t.type === 'toggle') {
       return `<div class="fms-card">
         <div style="margin-bottom:14px;">
-          <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">${t.name}</p>
-          <p style="font-size:12px;color:var(--muted);font-family:var(--font-mono);">${t.namePt}</p>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div>
+              <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">${t.name}</p>
+              <p style="font-size:12px;color:var(--muted);font-family:var(--font-mono);">${t.namePt}</p>
+            </div>
+            <button class="fms-info-btn" onclick="event.stopPropagation();toggleFmsInfo('${t.id}')" title="O que é este teste?">?</button>
+          </div>
+          ${infoPanel}
         </div>
         <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Joelhos estendidos — consegue tocar a ponta dos pés?</p>
         <div class="toe-touch-toggle">
@@ -1439,8 +1467,14 @@ function renderFMSGrid() {
     }
     return `<div class="fms-card">
       <div style="margin-bottom:14px;">
-        <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">${t.name}</p>
-        <p style="font-size:12px;color:var(--muted);font-family:var(--font-mono);">${t.namePt}</p>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div>
+            <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">${t.name}</p>
+            <p style="font-size:12px;color:var(--muted);font-family:var(--font-mono);">${t.namePt}</p>
+          </div>
+          <button class="fms-info-btn" onclick="event.stopPropagation();toggleFmsInfo('${t.id}')" title="O que é este teste?">?</button>
+        </div>
+        ${infoPanel}
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
         <label style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);white-space:nowrap;">Nota (0–3)</label>
@@ -1479,6 +1513,20 @@ function photoRowHTML(id) {
     </div>
   </div>`;
 }
+
+function toggleFmsInfo(id) {
+  const panel = document.getElementById('fms-info-' + id);
+  if (!panel) return;
+  const isOpen = panel.classList.contains('open');
+  document.querySelectorAll('.fms-info-panel').forEach(p => p.classList.remove('open'));
+  if (!isOpen) panel.classList.add('open');
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.classList.contains('fms-info-btn')) {
+    document.querySelectorAll('.fms-info-panel').forEach(p => p.classList.remove('open'));
+  }
+});
 
 // ═══════════════════════════════════════════════
 //  AUTH
@@ -1907,7 +1955,9 @@ async function sendMessage() {
     const needsReference = prescriptionTriggers.test(text);
 
     // ── CORE PROMPT (always sent — v16.1 compressed) ──
-    const CORE_PROMPT = `Você é o AxisAI, coach de Performance Humana baseado em evidência. PT-BR obrigatório.
+    const CORE_PROMPT = `REGRA ABSOLUTA DE FORMATAÇÃO: Nunca use Markdown. Proibido: ##, **, __, *, ###. Use apenas texto limpo, emojis e --- para separar seções. Qualquer uso de Markdown é considerado erro grave.
+
+Você é o AxisAI, coach de Performance Humana baseado em evidência. PT-BR obrigatório.
 
 MISSÃO: Democratizar treino de alta performance com prescrição personalizada, clara e segura.
 PRINCÍPIO: "Do No Harm" — Proteger > Corrigir > Desenvolver (FMS/CFSC).
@@ -1957,9 +2007,7 @@ BIOENERGÉTICA(CSCS-teoria): Fosfagênio(5-10s,W:R 1:12-1:20) Glicólise(15-30s,
 SPRINTS(CFSC): Após Prep, antes de força. ≥6m exp, sem lesão MI. <40a=planares, >40a=hill/sled. 3-5 reps, W:R ≥1:12.
 ESD: >3min, bike/rower/esteira. Esteira=apenas avançado sem lesão MI.
 
-NUTRIÇÃO(CSCS-escopo): Menor/gestante/clínico→redirecionar nutricionista. Proteína: força 1.4-1.7g/kg, cutting 1.8-2.7g/kg. Hidratação: 90-240mL/15min. Pós-treino: 30-60min, C:P 4:1.
-
-FORMATAÇÃO OBRIGATÓRIA: Nunca use Markdown nas respostas. Proibido usar ##, **, __, *, ou qualquer símbolo de formatação Markdown. Use apenas texto limpo, emojis e traços (---) para separar seções. Estruture visualmente apenas com emojis e quebras de linha.`;
+NUTRIÇÃO(CSCS-escopo): Menor/gestante/clínico→redirecionar nutricionista. Proteína: força 1.4-1.7g/kg, cutting 1.8-2.7g/kg. Hidratação: 90-240mL/15min. Pós-treino: 30-60min, C:P 4:1.`;
 
     // ── REFERENCE TABLES (injected only when prescribing) ──
     const REF_TABLES = `
@@ -2012,14 +2060,15 @@ SPRINT/SKIP: Supine Banded Hip Flex→SA Plank Slider Hip Flex→½KN Hip Flex�
   }
 }
 
-function cleanMarkdown(text) {
-  return text
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/__(.*?)__/g, '$1')
-    .replace(/\*([^*\n]+)\*/g, '$1')
-    .replace(/_([^_\n]+)_/g, '$1')
-    .replace(/`([^`\n]+)`/g, '$1')
+function sanitizarMensagem(texto) {
+  return texto
+    .replace(/^#{1,6}\s+.*/gm, '')       // remove ## heading lines entirely
+    .replace(/\*\*(.*?)\*\*/g, '$1')      // remove **bold**
+    .replace(/__(.*?)__/g, '$1')          // remove __underline__
+    .replace(/^\s*\*\s+/gm, '')           // remove * at line start (bullets)
+    .replace(/\*([^*\n]+)\*/g, '$1')      // remove *italic*
+    .replace(/_([^_\n]+)_/g, '$1')        // remove _italic_
+    .replace(/`([^`\n]+)`/g, '$1')        // remove `code`
     .trim();
 }
 
@@ -2030,7 +2079,7 @@ function appendMsg(role, text) {
   const div = document.createElement('div');
   div.className = `msg ${isUser ? 'user' : 'bot'}`;
   const botSvg = `<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" style="width:30px;height:30px;"><defs><linearGradient id="${uid}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00ff87"/><stop offset="100%" style="stop-color:#00c8ff"/></linearGradient></defs><circle cx="15" cy="6" r="4" fill="url(#${uid})"/><path d="M12,10 L7,20 L12,19 L14,24 L18,16 L22,18 L18,11 Z" fill="url(#${uid})"/><path d="M10,13 L3,9 L4,14 L10,17 Z" fill="url(#${uid})"/><path d="M16,17 L23,26 L20,25 L14,19 Z" fill="url(#${uid})"/></svg>`;
-  const displayText = isUser ? text : cleanMarkdown(text);
+  const displayText = isUser ? text : sanitizarMensagem(text);
   div.innerHTML = `<div class="msg-avatar" style="${isUser?'':'background:transparent;'}">${isUser?'👤':botSvg}</div><div class="msg-bubble">${displayText.replace(/\n/g,'<br>')}</div>`;
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
@@ -2209,13 +2258,7 @@ function handleAvatarUpload(input) {
   if (!file || !file.type.startsWith('image/')) return;
   const reader = new FileReader();
   reader.onload = function(e) {
-    const dataUrl = e.target.result;
-    // base64 de 500KB ≈ ~700.000 chars
-    if (dataUrl.length > 700000) {
-      resizeAndSaveAvatar(dataUrl);
-    } else {
-      saveAndDisplayAvatar(dataUrl);
-    }
+    resizeAndSaveAvatar(e.target.result); // always resize to guarantee <100KB
   };
   reader.readAsDataURL(file);
 }
@@ -2223,14 +2266,14 @@ function handleAvatarUpload(input) {
 function resizeAndSaveAvatar(dataUrl) {
   const img = new Image();
   img.onload = function() {
-    const MAX = 300;
+    const MAX = 200;
     let w = img.width, h = img.height;
     if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
     else { w = Math.round(w * MAX / h); h = MAX; }
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    saveAndDisplayAvatar(canvas.toDataURL('image/jpeg', 0.8));
+    saveAndDisplayAvatar(canvas.toDataURL('image/jpeg', 0.7));
   };
   img.src = dataUrl;
 }
