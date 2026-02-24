@@ -281,6 +281,35 @@
   .toe-btn { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 700; transition: all 0.2s; text-align: center; }
   .toe-btn.active-pos { background: rgba(0,255,135,0.15); border-color: var(--green); color: var(--green); }
   .toe-btn.active-neg { background: rgba(239,68,68,0.1); border-color: var(--red); color: #fca5a5; }
+
+  /* ── CATEGORIA BADGES ── */
+  .cat-badge { display:inline-flex; align-items:center; padding:2px 9px; border-radius:20px; font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; }
+  .cat-superior { background:rgba(59,130,246,0.15); color:#60a5fa; }
+  .cat-inferior { background:rgba(0,255,135,0.12); color:#00ff87; }
+  .cat-fullbody { background:rgba(168,85,247,0.15); color:#c084fc; }
+  .cat-mobilidade { background:rgba(251,191,36,0.15); color:#fbbf24; }
+  .cat-condicionamento { background:rgba(249,115,22,0.15); color:#fb923c; }
+
+  /* ── AXIS CONFIRM CARD ── */
+  .axis-confirm-card { background:rgba(0,255,135,0.04); border:1px solid rgba(0,255,135,0.2); border-radius:14px; padding:16px 20px; margin:8px 0 8px 44px; }
+  .axis-confirm-header { display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:14px; flex-wrap:wrap; }
+  .axis-confirm-btns { display:flex; gap:8px; flex-wrap:wrap; }
+  .axis-confirm-btns button { padding:7px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; transition:all 0.2s; border:none; }
+  .axis-confirm-btns button.btn-accept { background:var(--green); color:#000; }
+  .axis-confirm-btns button.btn-secondary { background:none; border:1px solid var(--border) !important; color:var(--muted); }
+  .axis-confirm-btns button:hover { opacity:0.85; }
+  .axis-sessoes-lista { margin-top:12px; padding-top:12px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:8px; font-size:13px; }
+  .axis-sessao-check { display:flex; align-items:center; gap:8px; cursor:pointer; padding:6px 0; }
+  .axis-sessao-check input { flex-shrink:0; }
+
+  /* ── FASE HEADERS (aba Treinos) ── */
+  .fase-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; margin:16px 0 8px; cursor:pointer; user-select:none; }
+  .fase-header:hover { border-color:rgba(0,255,135,0.3); }
+  .fase-titulo { font-family:var(--font-display); font-size:13px; letter-spacing:1px; color:var(--muted); }
+  .fase-toggle-icon { font-size:11px; color:var(--muted); }
+  .fase-body { display:flex; flex-direction:column; gap:8px; margin-bottom:8px; }
+  .fase-body.collapsed { display:none; }
+
   .fms-info-btn { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; line-height: 1; flex-shrink: 0; padding: 0; }
   .fms-info-btn:hover { border-color: var(--green); color: var(--green); }
   .fms-info-panel { display: none; margin-top: 10px; padding: 12px; background: var(--bg2,var(--bg)); border-radius: 8px; border: 1px solid var(--border); font-size: 12px; color: var(--muted); line-height: 1.6; }
@@ -681,6 +710,49 @@
             <option value="">Selecione...</option>
             <option value="Masculino">Masculino</option>
             <option value="Feminino">Feminino</option>
+          </select>
+        </div>
+      </div>
+      <p style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin:20px 0 12px;border-top:1px solid var(--border);padding-top:16px;">ROTINA PROFISSIONAL</p>
+      <div class="form-grid">
+        <div class="form-group span2">
+          <label>Profissão</label>
+          <input type="text" id="w-profissao" placeholder="Ex: Analista, Professor, Médico...">
+        </div>
+        <div class="form-group">
+          <label>Horas de trabalho por dia</label>
+          <input type="number" id="w-horas-trabalho" placeholder="8" min="1" max="24">
+        </div>
+        <div class="form-group">
+          <label>Perfil postural do trabalho</label>
+          <select id="w-perfil-postural" onchange="toggleHorasSentado(this,'w-horas-sentado-group')">
+            <option value="">Selecione...</option>
+            <option value="Predominantemente sentado">Predominantemente sentado</option>
+            <option value="Misto">Misto</option>
+            <option value="Predominantemente em pé">Predominantemente em pé</option>
+          </select>
+        </div>
+        <div class="form-group" id="w-horas-sentado-group" style="display:none">
+          <label>Horas sentado por dia</label>
+          <input type="number" id="w-horas-sentado" placeholder="4" min="1" max="24">
+        </div>
+        <div class="form-group">
+          <label>Nível de estresse ocupacional</label>
+          <select id="w-estresse-ocup">
+            <option value="">Selecione...</option>
+            <option value="Baixo">Baixo</option>
+            <option value="Moderado">Moderado</option>
+            <option value="Alto">Alto</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Turno de trabalho</label>
+          <select id="w-turno">
+            <option value="">Selecione...</option>
+            <option value="Manhã">Manhã</option>
+            <option value="Tarde">Tarde</option>
+            <option value="Noite">Noite</option>
+            <option value="Variável">Variável</option>
           </select>
         </div>
       </div>
@@ -1378,6 +1450,18 @@
             <button class="btn-save" onclick="saveProfile()">SALVAR PERFIL</button>
           </div>
           <div class="form-card">
+            <h3>ROTINA PROFISSIONAL</h3>
+            <div class="form-grid">
+              <div class="form-group span2"><label>Profissão</label><input type="text" id="p-profissao" placeholder="Ex: Analista, Professor, Médico..."></div>
+              <div class="form-group"><label>Horas de trabalho por dia</label><input type="number" id="p-horas-trabalho" placeholder="8" min="1" max="24"></div>
+              <div class="form-group"><label>Perfil postural do trabalho</label><select id="p-perfil-postural" onchange="toggleHorasSentado(this,'p-horas-sentado-group')"><option value="">Selecione...</option><option value="Predominantemente sentado">Predominantemente sentado</option><option value="Misto">Misto</option><option value="Predominantemente em pé">Predominantemente em pé</option></select></div>
+              <div class="form-group" id="p-horas-sentado-group" style="display:none"><label>Horas sentado por dia</label><input type="number" id="p-horas-sentado" placeholder="4" min="1" max="24"></div>
+              <div class="form-group"><label>Estresse ocupacional</label><select id="p-estresse-ocup"><option value="">Selecione...</option><option value="Baixo">Baixo</option><option value="Moderado">Moderado</option><option value="Alto">Alto</option></select></div>
+              <div class="form-group"><label>Turno de trabalho</label><select id="p-turno"><option value="">Selecione...</option><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option><option value="Variável">Variável</option></select></div>
+            </div>
+            <button class="btn-save" onclick="saveProfile()">SALVAR PERFIL</button>
+          </div>
+          <div class="form-card">
             <h3>AVALIAÇÃO FMS</h3>
             <div class="form-grid">
               <div class="form-group"><label>Deep Overhead Squat<br><span style="font-weight:400;color:var(--muted);">(Agachamento Profundo)</span></label><select id="p-fms-dos"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
@@ -1512,6 +1596,11 @@ function photoRowHTML(id) {
       </div>
     </div>
   </div>`;
+}
+
+function toggleHorasSentado(selectEl, groupId) {
+  const grp = document.getElementById(groupId);
+  if (grp) grp.style.display = selectEl.value === 'Misto' ? 'block' : 'none';
 }
 
 function toggleFmsInfo(id) {
@@ -1785,7 +1874,13 @@ function _finishWizard() {
     equipment:   equipment,
     goal:        document.getElementById('w-goal').value,
     injuries:    document.getElementById('w-injuries').value,
-    parq:        document.getElementById('w-parq').value,
+    parq:         document.getElementById('w-parq').value,
+    profissao:    document.getElementById('w-profissao')?.value || '',
+    horasTrabalho: document.getElementById('w-horas-trabalho')?.value || '',
+    perfilPostural: document.getElementById('w-perfil-postural')?.value || '',
+    horasSentado: document.getElementById('w-horas-sentado')?.value || '',
+    estresseOcup: document.getElementById('w-estresse-ocup')?.value || '',
+    turnoTrabalho: document.getElementById('w-turno')?.value || '',
   };
   // Merge FMS data if collected in step 5
   if (_wizardFmsData) {
@@ -1841,11 +1936,40 @@ function renderWorkouts() {
     return;
   }
   let html = '';
-  if (treinosIA.length) {
-    html += treinosIA.map(t => `<div class="treino-card"><div class="treino-card-header"><div><div class="treino-card-title">🤖 ${t.titulo}</div><div class="treino-card-meta">${t.data} · Coach IA</div></div><button class="btn-ver-treino" onclick="toggleTreino('tb-${t.id}',this)">▼ Ver treino completo</button></div><div class="treino-card-body" id="tb-${t.id}">${sanitizarMensagem(t.conteudo).replace(/\n/g,'<br>')}</div></div>`).join('');
+  // Sessões avulsas (tipo='sessao')
+  const avulsos = treinosIA.filter(t => t.tipo === 'sessao' || !t.tipo);
+  // Sessões de plano (tipo='plano_sessao')
+  const planoSessoes = treinosIA.filter(t => t.tipo === 'plano_sessao');
+  // Agrupar planos por planoTitulo
+  const planos = {};
+  planoSessoes.forEach(t => {
+    const key = t.planoTitulo || 'Plano';
+    if (!planos[key]) planos[key] = {};
+    const fKey = t.faseNum || 1;
+    if (!planos[key][fKey]) planos[key][fKey] = { nome: t.faseNome || `Fase ${fKey}`, sessoes: [] };
+    planos[key][fKey].sessoes.push(t);
+  });
+  // Render planos
+  Object.entries(planos).forEach(([planoTitulo, fases]) => {
+    html += `<div style="margin-bottom:20px;"><div style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:4px;">📋 ${planoTitulo}</div>`;
+    Object.entries(fases).sort((a,b)=>a[0]-b[0]).forEach(([fNum, fase]) => {
+      const fId = 'fase-' + Date.now() + '-' + fNum;
+      html += `<div class="fase-header" onclick="toggleFaseBody('${fId}')"><span class="fase-titulo">FASE ${fNum} — ${fase.nome.toUpperCase()}</span><span class="fase-toggle-icon">▼</span></div><div class="fase-body" id="${fId}">`;
+      fase.sessoes.forEach(t => {
+        html += `<div class="treino-card"><div class="treino-card-header"><div><div class="treino-card-title" style="display:flex;align-items:center;gap:8px;">${t.titulo} <span class="cat-badge cat-${t.categoria||'fullbody'}">${t.categoria||'fullbody'}</span></div><div class="treino-card-meta">${t.data} · Coach IA</div></div><div style="display:flex;gap:8px;align-items:center;"><button class="btn-ver-treino" onclick="toggleTreino('tb-${t.id}',this)">▼ Ver</button><button onclick="deleteTreinoIA(${t.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;" title="Excluir">🗑️</button></div></div><div class="treino-card-body" id="tb-${t.id}">${sanitizarMensagem(t.conteudo||'').replace(/\n/g,'<br>')}</div></div>`;
+      });
+      html += `</div>`;
+    });
+    html += `</div>`;
+  });
+  // Render sessões avulsas
+  if (avulsos.length) {
+    if (Object.keys(planos).length) html += `<div style="margin:20px 0 12px;font-family:var(--font-display);font-size:14px;letter-spacing:1px;color:var(--muted);">SESSÕES AVULSAS</div>`;
+    html += avulsos.map(t => `<div class="treino-card"><div class="treino-card-header"><div><div class="treino-card-title" style="display:flex;align-items:center;gap:8px;">🤖 ${t.titulo} <span class="cat-badge cat-${t.categoria||'fullbody'}">${t.categoria||'fullbody'}</span></div><div class="treino-card-meta">${t.data} · Coach IA</div></div><div style="display:flex;gap:8px;align-items:center;"><button class="btn-ver-treino" onclick="toggleTreino('tb-${t.id}',this)">▼ Ver treino completo</button><button onclick="deleteTreinoIA(${t.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;" title="Excluir">🗑️</button></div></div><div class="treino-card-body" id="tb-${t.id}">${sanitizarMensagem(t.conteudo||'').replace(/\n/g,'<br>')}</div></div>`).join('');
   }
+  // Treinos manuais (state.workouts)
   if (state.workouts.length) {
-    if (treinosIA.length) html += `<div style="margin:20px 0 12px;"><h3 style="font-family:var(--font-display);font-size:18px;letter-spacing:1px;color:var(--muted);">OUTROS TREINOS</h3></div>`;
+    if (treinosIA.length) html += `<div style="margin:20px 0 12px;font-family:var(--font-display);font-size:14px;letter-spacing:1px;color:var(--muted);">OUTROS TREINOS</div>`;
     html += state.workouts.map((w,i) => `<div class="workout-card ${w.completed?'completed':''}"><div class="workout-icon ${w.completed?'completed':'pending'}">${w.completed?'✅':'🏋️'}</div><div class="workout-info"><div class="workout-title">${w.title}</div><div class="workout-meta">${w.phase||'Fase 1'} · ${new Date(w.date).toLocaleDateString('pt-BR')}</div></div><span class="workout-badge ${w.completed?'badge-done':'badge-pending'}">${w.completed?'FEITO':'PENDENTE'}</span>${!w.completed?`<button onclick="completeWorkout(${i})" style="margin-left:8px;padding:6px 14px;border:1px solid var(--green);background:none;color:var(--green);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;">MARCAR FEITO</button>`:''}<button onclick="deleteWorkout(${i})" style="margin-left:4px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;" title="Excluir">🗑️</button></div>`).join('');
   }
   c.innerHTML = html;
@@ -1891,22 +2015,123 @@ function loadTreinosIA() {
 function saveTreinosIA(treinos) {
   localStorage.setItem('axisai_treinos', JSON.stringify(treinos));
 }
-function detectTreino(mensagem) {
-  return /AQUECIMENTO|BLOCO|S[EÉ]RIES|REPETI[ÇC][OÕ]ES|DESCANSO|EXERC[ÍI]CIO|TREINO DO DIA|Pillar Prep|PILLAR PREP|A1\.|A2\.|A3\.|Pod\s*\d|Deep Squat|Goblet|Split Squat|Push.Up|Ring Row|Chin.Up|Deadlift|SLDL|RFESS/i.test(mensagem);
-}
-function saveTreinoIA(mensagem) {
-  const treinos = loadTreinosIA();
-  treinos.unshift({
-    id: Date.now(),
-    data: new Date().toLocaleDateString('pt-BR'),
-    titulo: 'Treino gerado pelo Coach IA',
-    conteudo: mensagem,
-    fonte: 'coach_ia'
-  });
+function deleteTreinoIA(id) {
+  const treinos = loadTreinosIA().filter(t => t.id !== id);
   saveTreinosIA(treinos);
   refreshDashboard();
-  showToast('🏋️ Treino salvo automaticamente em Meus Treinos!');
+  renderWorkouts();
+  showToast('Treino removido.');
 }
+
+function toggleFaseBody(id) {
+  const body = document.getElementById(id);
+  if (!body) return;
+  body.classList.toggle('collapsed');
+  const header = body.previousElementSibling;
+  if (header) { const icon = header.querySelector('.fase-toggle-icon'); if (icon) icon.textContent = body.classList.contains('collapsed') ? '▶' : '▼'; }
+}
+
+// ── AXIS WORKOUT CONFIRM SYSTEM ──
+window._axisWorkouts = {};
+
+function renderWorkoutConfirmCard(data) {
+  const id = Date.now();
+  window._axisWorkouts[id] = data;
+  const box = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.id = 'axiscard-' + id;
+  div.className = 'axis-confirm-card';
+  if (data.tipo === 'sessao_unica') {
+    div.innerHTML = `
+      <div class="axis-confirm-header">💪 <strong>${data.titulo}</strong> <span class="cat-badge cat-${data.categoria||'fullbody'}">${data.categoria||'fullbody'}</span></div>
+      <div class="axis-confirm-btns">
+        <button class="btn-accept" onclick="aceitarTreino(${id})">✅ Aceitar treino</button>
+        <button class="btn-secondary" onclick="descartarConfirm(${id})">❌ Descartar</button>
+      </div>`;
+  } else {
+    const totalSessoes = (data.fases||[]).reduce((s,f) => s + (f.sessoes||[]).length, 0);
+    const totalFases = (data.fases||[]).length;
+    let sessoesHtml = (data.fases||[]).map(f =>
+      (f.sessoes||[]).map((s,si) => `<label class="axis-sessao-check"><input type="checkbox" id="axischk-${id}-${f.fase}-${si}" checked> <span class="cat-badge cat-${s.categoria||'fullbody'}" style="margin-right:4px;">${s.categoria||'fullbody'}</span> Fase ${f.fase} — ${s.titulo}</label>`).join('')
+    ).join('');
+    div.innerHTML = `
+      <div class="axis-confirm-header">📋 <strong>${data.titulo}</strong> · ${totalSessoes} sessões / ${totalFases} fase${totalFases>1?'s':''}</div>
+      <div class="axis-confirm-btns">
+        <button class="btn-accept" onclick="aceitarPlanoCompleto(${id})">✅ Aceitar plano completo</button>
+        <button class="btn-secondary" onclick="mostrarSessoesEscolha(${id})">📋 Escolher sessões</button>
+        <button class="btn-secondary" onclick="descartarConfirm(${id})">❌ Descartar</button>
+      </div>
+      <div class="axis-sessoes-lista" id="axislista-${id}" style="display:none">
+        ${sessoesHtml}
+        <button class="btn-accept" style="margin-top:8px;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;" onclick="aceitarSessoesSelecionadas(${id})">Salvar selecionadas</button>
+      </div>`;
+  }
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function aceitarTreino(id) {
+  const data = window._axisWorkouts[id];
+  if (!data) return;
+  const treinos = loadTreinosIA();
+  treinos.unshift({ id: Date.now(), data: new Date().toLocaleDateString('pt-BR'), titulo: data.titulo, categoria: data.categoria||'fullbody', conteudo: data.conteudo||'', tipo: 'sessao', faseNum: null, faseNome: null, planoTitulo: null, fonte: 'coach_ia' });
+  saveTreinosIA(treinos);
+  delete window._axisWorkouts[id];
+  document.getElementById('axiscard-' + id)?.remove();
+  refreshDashboard();
+  showToast('🏋️ Treino salvo! Veja em Meus Treinos.');
+}
+
+function aceitarPlanoCompleto(id) {
+  const data = window._axisWorkouts[id];
+  if (!data) return;
+  const treinos = loadTreinosIA();
+  const agora = new Date().toLocaleDateString('pt-BR');
+  (data.fases||[]).forEach(f => {
+    (f.sessoes||[]).forEach(s => {
+      treinos.unshift({ id: Date.now() + Math.random(), data: agora, titulo: s.titulo, categoria: s.categoria||'fullbody', conteudo: s.conteudo||'', tipo: 'plano_sessao', faseNum: f.fase, faseNome: f.nome||`Fase ${f.fase}`, planoTitulo: data.titulo, fonte: 'coach_ia' });
+    });
+  });
+  saveTreinosIA(treinos);
+  delete window._axisWorkouts[id];
+  document.getElementById('axiscard-' + id)?.remove();
+  refreshDashboard();
+  showToast('📋 Plano completo salvo! Veja em Meus Treinos.');
+}
+
+function mostrarSessoesEscolha(id) {
+  const lista = document.getElementById('axislista-' + id);
+  if (lista) lista.style.display = lista.style.display === 'none' ? 'flex' : 'none';
+}
+
+function aceitarSessoesSelecionadas(id) {
+  const data = window._axisWorkouts[id];
+  if (!data) return;
+  const treinos = loadTreinosIA();
+  const agora = new Date().toLocaleDateString('pt-BR');
+  let count = 0;
+  (data.fases||[]).forEach(f => {
+    (f.sessoes||[]).forEach((s,si) => {
+      const chk = document.getElementById(`axischk-${id}-${f.fase}-${si}`);
+      if (chk && chk.checked) {
+        treinos.unshift({ id: Date.now() + Math.random(), data: agora, titulo: s.titulo, categoria: s.categoria||'fullbody', conteudo: s.conteudo||'', tipo: 'plano_sessao', faseNum: f.fase, faseNome: f.nome||`Fase ${f.fase}`, planoTitulo: data.titulo, fonte: 'coach_ia' });
+        count++;
+      }
+    });
+  });
+  saveTreinosIA(treinos);
+  delete window._axisWorkouts[id];
+  document.getElementById('axiscard-' + id)?.remove();
+  refreshDashboard();
+  showToast(`✅ ${count} sessão(ões) salva(s)!`);
+}
+
+function descartarConfirm(id) {
+  delete window._axisWorkouts[id];
+  document.getElementById('axiscard-' + id)?.remove();
+  showToast('Treino descartado.');
+}
+
 function toggleTreino(bodyId, btn) {
   const body = document.getElementById(bodyId);
   if (!body) return;
@@ -1940,7 +2165,7 @@ async function sendMessage() {
 
   try {
     const p = state.profile;
-    const profileCtx = p ? `\n\n## PERFIL DO USUÁRIO\nIdade: ${p.age||'?'} | Peso: ${p.weight||'?'}kg | Altura: ${p.height||'?'}cm | Sexo: ${p.sex||'?'} | Nível: ${p.level||'?'} | Objetivo: ${p.goal||'?'} | Local: ${p.gym||'?'} | Frequência: ${p.frequency||'?'}/semana | Tempo/sessão: ${p.sessionTime||'?'} | Equipamentos: ${(p.equipment||[]).join(', ')||'?'} | Lesões: ${p.injuries||'Nenhuma'} | PAR-Q cardíaco: ${p.parq==='yes'?'Sim — recomendado acompanhamento médico':'Não'}.` : '\n\n## PERFIL\nNão preenchido — pergunte dados essenciais.';
+    const profileCtx = p ? `\n\n## PERFIL DO USUÁRIO\nIdade: ${p.age||'?'} | Peso: ${p.weight||'?'}kg | Altura: ${p.height||'?'}cm | Sexo: ${p.sex||'?'} | Nível: ${p.level||'?'} | Objetivo: ${p.goal||'?'} | Local: ${p.gym||'?'} | Frequência: ${p.frequency||'?'}/semana | Tempo/sessão: ${p.sessionTime||'?'} | Equipamentos: ${(p.equipment||[]).join(', ')||'?'} | Lesões: ${p.injuries||'Nenhuma'} | PAR-Q cardíaco: ${p.parq==='yes'?'Sim — recomendado acompanhamento médico':'Não'}.\nProfissão: ${p.profissao||'?'} | Jornada: ${p.horasTrabalho||'?'}h/dia | Perfil postural: ${p.perfilPostural||'?'}${p.perfilPostural==='Misto'?' ('+( p.horasSentado||'?')+'h sentado)':''} | Estresse ocupacional: ${p.estresseOcup||'?'} | Turno: ${p.turnoTrabalho||'?'}.` : '\n\n## PERFIL\nNão preenchido — pergunte dados essenciais.';
     const fmsTotal = p?.fms ? (p.fms.dos??0)+(p.fms.il??0)+(p.fms.hs??0)+(p.fms.sm??0)+(p.fms.aslr??0) : null;
     const fmsFlags = (p?.riskFlags||[]).filter(f=>f!=='none');
     const fmsFlagMap = { squat_dysfunction:'Deep Squat ≤1', lunge_dysfunction:'Inline Lunge ≤1', hip_instability:'Hurdle Step ≤1', shoulder_restriction:'Shoulder Mobility ≤1', hamstring_restriction:'ASLR ≤1', toe_touch_negative:'Toe Touch negativo' };
@@ -1956,6 +2181,11 @@ async function sendMessage() {
 
     // ── CORE PROMPT (always sent — v16.1 compressed) ──
     const CORE_PROMPT = `REGRA ABSOLUTA DE FORMATAÇÃO: Nunca use Markdown. Proibido: ##, **, __, *, ###. Use apenas texto limpo, emojis e --- para separar seções. Qualquer uso de Markdown é considerado erro grave.
+
+ESTRUTURA OBRIGATÓRIA PARA TREINOS: Sempre que gerar um treino ou plano de treinamento, inclua ao FINAL da resposta o seguinte bloco (a tag não será exibida ao usuário):
+Para sessão única: <AXIS_WORKOUT>{"tipo":"sessao_unica","categoria":"fullbody","titulo":"Título do Treino","conteudo":"texto completo do treino aqui"}</AXIS_WORKOUT>
+Para plano multi-fase: <AXIS_WORKOUT>{"tipo":"plano","titulo":"Título do Plano","fases":[{"fase":1,"nome":"Acumulação","semanas":"1-4","sessoes":[{"titulo":"Dia A — Superior","categoria":"superior","conteudo":"..."},{"titulo":"Dia B — Inferior","categoria":"inferior","conteudo":"..."}]}]}</AXIS_WORKOUT>
+Categorias válidas: superior | inferior | fullbody | mobilidade | condicionamento
 
 Você é o AxisAI, coach de Performance Humana baseado em evidência. PT-BR obrigatório.
 
@@ -2047,12 +2277,13 @@ SPRINT/SKIP: Supine Banded Hip Flex→SA Plank Slider Hip Flex→½KN Hip Flex�
     const data = await response.json();
     const reply = data.content?.[0]?.text || 'Desculpe, não consegui processar sua mensagem.';
     document.getElementById(typingId)?.remove();
-    appendMsg('bot', reply);
+    const axisMatch = reply.match(/<AXIS_WORKOUT>([\s\S]*?)<\/AXIS_WORKOUT>/);
+    const cleanReply = reply.replace(/<AXIS_WORKOUT>[\s\S]*?<\/AXIS_WORKOUT>/g, '').trim();
+    appendMsg('bot', cleanReply);
     state.chatHistory.push({ role: 'assistant', content: reply });
-    if (detectTreino(reply)) {
-      saveTreinoIA(reply);
-    } else if (reply.toLowerCase().includes('aquecimento') && reply.toLowerCase().includes('série')) {
-      offerSaveWorkout();
+    if (axisMatch) {
+      try { renderWorkoutConfirmCard(JSON.parse(axisMatch[1].trim())); }
+      catch(e) { console.warn('AXIS_WORKOUT parse error', e); }
     }
   } catch (err) {
     document.getElementById(typingId)?.remove();
@@ -2205,6 +2436,13 @@ function loadProfile() {
       ['dos','il','hs','sm','aslr'].forEach(k => { if (p.fms[k] !== undefined) { const el = document.getElementById('p-fms-' + k); if (el) el.value = p.fms[k]; } });
       if (p.fms.tt) { const el = document.getElementById('p-fms-tt'); if (el) el.value = p.fms.tt; }
     }
+    // Rotina profissional
+    if (p.profissao)    { const el = document.getElementById('p-profissao');     if (el) el.value = p.profissao; }
+    if (p.horasTrabalho){ const el = document.getElementById('p-horas-trabalho'); if (el) el.value = p.horasTrabalho; }
+    if (p.perfilPostural){ const el = document.getElementById('p-perfil-postural'); if (el) { el.value = p.perfilPostural; toggleHorasSentado(el,'p-horas-sentado-group'); } }
+    if (p.horasSentado) { const el = document.getElementById('p-horas-sentado');  if (el) el.value = p.horasSentado; }
+    if (p.estresseOcup) { const el = document.getElementById('p-estresse-ocup');  if (el) el.value = p.estresseOcup; }
+    if (p.turnoTrabalho){ const el = document.getElementById('p-turno');           if (el) el.value = p.turnoTrabalho; }
   }
 }
 
@@ -2219,6 +2457,12 @@ function saveProfile(silent = false) {
     injuries: document.getElementById('p-injuries')?.value || state.profile?.injuries,
     riskFlags: state.profile?.riskFlags || [],
     fms: state.profile?.fms || {},
+    profissao:    document.getElementById('p-profissao')?.value    || state.profile?.profissao    || '',
+    horasTrabalho: document.getElementById('p-horas-trabalho')?.value || state.profile?.horasTrabalho || '',
+    perfilPostural: document.getElementById('p-perfil-postural')?.value || state.profile?.perfilPostural || '',
+    horasSentado: document.getElementById('p-horas-sentado')?.value  || state.profile?.horasSentado  || '',
+    estresseOcup: document.getElementById('p-estresse-ocup')?.value  || state.profile?.estresseOcup  || '',
+    turnoTrabalho: document.getElementById('p-turno')?.value          || state.profile?.turnoTrabalho || '',
   };
   state.profile = { ...state.profile, ...p };
   localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
