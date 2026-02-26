@@ -665,15 +665,15 @@
   .streak-stat-block { display: flex; flex-direction: column; }
   .streak-stat-value { font-family: var(--font-display); font-size: 36px; letter-spacing: 1px; line-height: 1; }
   .streak-stat-label { font-size: 11px; color: var(--muted); font-family: var(--font-mono); letter-spacing: 1px; margin-top: 4px; }
-  .streak-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .streak-grid { display: grid; grid-template-columns: repeat(7, 10px); gap: 2px; max-width: 86px; }
   .streak-dot {
-    aspect-ratio: 1; border-radius: 3px; background: rgba(255,255,255,0.06);
+    width: 10px; height: 10px; border-radius: 2px; background: rgba(255,255,255,0.06);
     transition: background 0.3s ease;
   }
   .streak-dot.filled { background: var(--green); }
   .streak-dot.filled.dim { background: rgba(0,255,135,0.35); }
-  .streak-grid-labels { display: flex; justify-content: space-between; margin-top: 4px; }
-  .streak-grid-labels span { font-size: 9px; color: var(--muted); font-family: var(--font-mono); letter-spacing: 0.5px; }
+  .streak-grid-labels { display: flex; justify-content: space-between; max-width: 86px; margin-top: 2px; }
+  .streak-grid-labels span { font-size: 8px; color: var(--muted); font-family: var(--font-mono); letter-spacing: 0.5px; }
 
   /* ── Card 3: Phase Summary ── */
   .phase-body { display: flex; flex-direction: column; gap: 14px; }
@@ -700,6 +700,100 @@
     .readiness-ring-wrap { margin: 0 auto; }
     .streak-stats { gap: 20px; }
     .phase-info-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── LGPD CONSENT MODAL ── */
+  .lgpd-overlay {
+    position: fixed; inset: 0; z-index: 10000;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px; animation: fadeUp 0.4s ease;
+  }
+  .lgpd-modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    padding: 32px; max-width: 480px; width: 100%; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+  }
+  .lgpd-modal h2 {
+    font-family: var(--font-display); font-size: 22px; letter-spacing: 1.5px; margin-bottom: 8px;
+  }
+  .lgpd-modal .lgpd-subtitle {
+    font-size: 12px; color: var(--muted); font-family: var(--font-mono); letter-spacing: 0.5px; margin-bottom: 20px;
+  }
+  .lgpd-legal {
+    font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 20px;
+    padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid var(--border);
+  }
+  .lgpd-legal a { color: var(--green); text-decoration: none; }
+  .lgpd-legal a:hover { text-decoration: underline; }
+  .lgpd-toggle-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+  .lgpd-toggle-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 14px; background: var(--bg2); border-radius: 10px; border: 1px solid var(--border);
+  }
+  .lgpd-toggle-row.locked { opacity: 0.7; }
+  .lgpd-toggle-info { flex: 1; }
+  .lgpd-toggle-name { font-size: 14px; font-weight: 600; }
+  .lgpd-toggle-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  /* Toggle switch */
+  .lgpd-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .lgpd-switch input { opacity: 0; width: 0; height: 0; }
+  .lgpd-switch .slider {
+    position: absolute; inset: 0; background: rgba(255,255,255,0.1); border-radius: 24px;
+    cursor: pointer; transition: background 0.3s;
+  }
+  .lgpd-switch .slider::before {
+    content: ''; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px;
+    background: var(--muted); border-radius: 50%; transition: transform 0.3s, background 0.3s;
+  }
+  .lgpd-switch input:checked + .slider { background: rgba(0,255,135,0.2); }
+  .lgpd-switch input:checked + .slider::before { transform: translateX(20px); background: var(--green); }
+  .lgpd-switch input:disabled + .slider { cursor: not-allowed; }
+  .lgpd-btn-accept {
+    width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; font-size: 14px;
+    letter-spacing: 0.5px; cursor: pointer; transition: opacity 0.2s;
+    background: linear-gradient(135deg, var(--green), #00c8ff); color: #000;
+  }
+  .lgpd-btn-accept:hover { opacity: 0.85; }
+  .lgpd-links { text-align: center; margin-top: 12px; }
+  .lgpd-links a { font-size: 11px; color: var(--muted); margin: 0 8px; text-decoration: none; }
+  .lgpd-links a:hover { color: var(--green); }
+
+  /* ── PRIVACY SETTINGS (inside profile page) ── */
+  .privacy-card { margin-top: 0; }
+  .privacy-card h3 { font-family: var(--font-display); font-size: 16px; letter-spacing: 1.5px; margin-bottom: 16px; }
+  .privacy-toggles { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .privacy-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn-export {
+    padding: 10px 20px; border: 1px solid var(--blue); background: none; color: var(--blue);
+    border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; transition: all 0.2s;
+  }
+  .btn-export:hover { background: rgba(59,130,246,0.1); }
+  .btn-delete-account {
+    padding: 10px 20px; border: 1px solid var(--red); background: none; color: var(--red);
+    border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; transition: all 0.2s;
+  }
+  .btn-delete-account:hover { background: rgba(239,68,68,0.1); }
+  /* Delete confirmation modal */
+  .delete-confirm-overlay {
+    position: fixed; inset: 0; z-index: 10001;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .delete-confirm-modal {
+    background: var(--surface); border: 1px solid var(--red); border-radius: 16px;
+    padding: 28px; max-width: 400px; width: 100%; text-align: center;
+  }
+  .delete-confirm-modal h3 { font-family: var(--font-display); font-size: 18px; letter-spacing: 1px; margin-bottom: 12px; color: var(--red); }
+  .delete-confirm-modal p { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+  .delete-confirm-modal .confirm-actions { display: flex; gap: 10px; }
+  .delete-confirm-modal .btn-cancel {
+    flex: 1; padding: 10px; border: 1px solid var(--border); background: none; color: var(--muted);
+    border-radius: 8px; cursor: pointer; font-size: 13px;
+  }
+  .delete-confirm-modal .btn-danger {
+    flex: 1; padding: 10px; border: none; background: var(--red); color: #fff;
+    border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700;
   }
 </style>
 </head>
@@ -1584,11 +1678,110 @@
             </div>
             <button class="btn-save" onclick="saveFMS()">SALVAR FMS</button>
           </div>
+          <!-- ── Privacy Settings (LGPD) ── -->
+          <div class="form-card privacy-card" id="privacy-settings">
+            <h3>PRIVACIDADE E DADOS</h3>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Gerencie seus consentimentos conforme a LGPD (Lei 13.709/2018). Consentimentos não essenciais podem ser revogados a qualquer momento.</p>
+            <div class="privacy-toggles" id="privacy-toggles">
+              <div class="lgpd-toggle-row locked">
+                <div class="lgpd-toggle-info">
+                  <div class="lgpd-toggle-name">Essencial</div>
+                  <div class="lgpd-toggle-desc">Autenticação, segurança e funcionamento básico.</div>
+                </div>
+                <label class="lgpd-switch"><input type="checkbox" checked disabled><span class="slider"></span></label>
+              </div>
+              <div class="lgpd-toggle-row">
+                <div class="lgpd-toggle-info">
+                  <div class="lgpd-toggle-name">Dados FMS</div>
+                  <div class="lgpd-toggle-desc">Avaliações de movimento funcional.</div>
+                </div>
+                <label class="lgpd-switch"><input type="checkbox" id="priv-fms" onchange="updatePrivacyConsent()"><span class="slider"></span></label>
+              </div>
+              <div class="lgpd-toggle-row">
+                <div class="lgpd-toggle-info">
+                  <div class="lgpd-toggle-name">Histórico de Treinos</div>
+                  <div class="lgpd-toggle-desc">Sessões, progressão e periodização.</div>
+                </div>
+                <label class="lgpd-switch"><input type="checkbox" id="priv-training" onchange="updatePrivacyConsent()"><span class="slider"></span></label>
+              </div>
+              <div class="lgpd-toggle-row">
+                <div class="lgpd-toggle-info">
+                  <div class="lgpd-toggle-name">Análise de Uso</div>
+                  <div class="lgpd-toggle-desc">Dados anônimos de melhoria.</div>
+                </div>
+                <label class="lgpd-switch"><input type="checkbox" id="priv-analytics" onchange="updatePrivacyConsent()"><span class="slider"></span></label>
+              </div>
+              <div class="lgpd-toggle-row">
+                <div class="lgpd-toggle-info">
+                  <div class="lgpd-toggle-name">Marketing</div>
+                  <div class="lgpd-toggle-desc">Novidades e recursos do AxisAI.</div>
+                </div>
+                <label class="lgpd-switch"><input type="checkbox" id="priv-marketing" onchange="updatePrivacyConsent()"><span class="slider"></span></label>
+              </div>
+            </div>
+            <div class="privacy-actions">
+              <button class="btn-export" onclick="exportUserData()">📦 EXPORTAR MEUS DADOS</button>
+              <button class="btn-delete-account" onclick="requestAccountDeletion()">🗑️ EXCLUIR MINHA CONTA</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
   </main>
+</div>
+
+<!-- ═══ LGPD CONSENT MODAL ═══ -->
+<div class="lgpd-overlay" id="lgpd-consent-modal" style="display:none;">
+  <div class="lgpd-modal">
+    <h2>PRIVACIDADE E DADOS</h2>
+    <div class="lgpd-subtitle">LEI GERAL DE PROTEÇÃO DE DADOS — LEI 13.709/2018</div>
+    <div class="lgpd-legal">
+      Seus dados são tratados conforme nossa <a href="/privacidade">Política de Privacidade</a>, em conformidade com a Lei Geral de Proteção de Dados (Lei 13.709/2018). Você pode revogar consentimentos não essenciais a qualquer momento em Configurações &rarr; Privacidade.
+    </div>
+    <div class="lgpd-toggle-list">
+      <div class="lgpd-toggle-row locked">
+        <div class="lgpd-toggle-info">
+          <div class="lgpd-toggle-name">Essencial</div>
+          <div class="lgpd-toggle-desc">Autenticação, segurança e funcionamento básico do app.</div>
+        </div>
+        <label class="lgpd-switch"><input type="checkbox" checked disabled><span class="slider"></span></label>
+      </div>
+      <div class="lgpd-toggle-row">
+        <div class="lgpd-toggle-info">
+          <div class="lgpd-toggle-name">Dados FMS</div>
+          <div class="lgpd-toggle-desc">Armazenamento de avaliações de movimento funcional.</div>
+        </div>
+        <label class="lgpd-switch"><input type="checkbox" id="lgpd-fms"><span class="slider"></span></label>
+      </div>
+      <div class="lgpd-toggle-row">
+        <div class="lgpd-toggle-info">
+          <div class="lgpd-toggle-name">Histórico de Treinos</div>
+          <div class="lgpd-toggle-desc">Registro de sessões, progressão e periodização.</div>
+        </div>
+        <label class="lgpd-switch"><input type="checkbox" id="lgpd-training"><span class="slider"></span></label>
+      </div>
+      <div class="lgpd-toggle-row">
+        <div class="lgpd-toggle-info">
+          <div class="lgpd-toggle-name">Análise de Uso</div>
+          <div class="lgpd-toggle-desc">Dados anônimos para melhorar a experiência do app.</div>
+        </div>
+        <label class="lgpd-switch"><input type="checkbox" id="lgpd-analytics"><span class="slider"></span></label>
+      </div>
+      <div class="lgpd-toggle-row">
+        <div class="lgpd-toggle-info">
+          <div class="lgpd-toggle-name">Marketing</div>
+          <div class="lgpd-toggle-desc">Comunicações sobre novidades e recursos do AxisAI.</div>
+        </div>
+        <label class="lgpd-switch"><input type="checkbox" id="lgpd-marketing"><span class="slider"></span></label>
+      </div>
+    </div>
+    <button class="lgpd-btn-accept" onclick="acceptLGPDConsent()">ACEITAR E CONTINUAR</button>
+    <div class="lgpd-links">
+      <a href="/privacidade">Política de Privacidade</a>
+      <a href="/termos">Termos de Uso</a>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1796,6 +1989,8 @@ function completeEnterApp() {
   loadAvatar();
   refreshDashboard();
   refreshChatSidebar();
+  checkLGPDConsent();
+  loadPrivacyToggles();
 }
 
 // ═══════════════════════════════════════════════
@@ -3044,6 +3239,156 @@ function refreshDashboardCards() {
   renderReadinessCard();
   renderStreakCard();
   renderPhaseCard();
+}
+
+// ═══════════════════════════════════════════════
+//  LGPD — CONSENT & PRIVACY
+// ═══════════════════════════════════════════════
+const LGPD_CONSENT_KEY = 'axisai_lgpd_consent';
+const LGPD_VERSION = '1.0';
+
+function getLGPDConsent() {
+  return JSON.parse(localStorage.getItem(LGPD_CONSENT_KEY) || 'null');
+}
+
+function saveLGPDConsent(consent) {
+  localStorage.setItem(LGPD_CONSENT_KEY, JSON.stringify(consent));
+}
+
+// Show blocking consent modal if no consent stored
+function checkLGPDConsent() {
+  const consent = getLGPDConsent();
+  if (!consent || consent.version !== LGPD_VERSION) {
+    document.getElementById('lgpd-consent-modal').style.display = 'flex';
+  }
+}
+
+// Called by "ACEITAR E CONTINUAR" button in the modal
+function acceptLGPDConsent() {
+  const consent = {
+    version: LGPD_VERSION,
+    essential: true,
+    fms_data: document.getElementById('lgpd-fms').checked,
+    training_history: document.getElementById('lgpd-training').checked,
+    analytics: document.getElementById('lgpd-analytics').checked,
+    marketing: document.getElementById('lgpd-marketing').checked,
+    date: new Date().toISOString()
+  };
+  saveLGPDConsent(consent);
+  document.getElementById('lgpd-consent-modal').style.display = 'none';
+  loadPrivacyToggles();
+  showToast('Consentimento registrado com sucesso.');
+}
+
+// Load saved consent into the Privacy Settings toggles on Profile page
+function loadPrivacyToggles() {
+  const consent = getLGPDConsent();
+  if (!consent) return;
+  const map = { 'priv-fms': 'fms_data', 'priv-training': 'training_history', 'priv-analytics': 'analytics', 'priv-marketing': 'marketing' };
+  Object.entries(map).forEach(([elId, key]) => {
+    const el = document.getElementById(elId);
+    if (el) el.checked = !!consent[key];
+  });
+}
+
+// Called when any privacy toggle changes on the Profile page
+function updatePrivacyConsent() {
+  const consent = getLGPDConsent() || { version: LGPD_VERSION, essential: true, date: new Date().toISOString() };
+  consent.fms_data = document.getElementById('priv-fms').checked;
+  consent.training_history = document.getElementById('priv-training').checked;
+  consent.analytics = document.getElementById('priv-analytics').checked;
+  consent.marketing = document.getElementById('priv-marketing').checked;
+  consent.updated_at = new Date().toISOString();
+  saveLGPDConsent(consent);
+  showToast('Preferências de privacidade atualizadas.');
+}
+
+// Export all user data from localStorage as JSON
+function exportUserData() {
+  const keys = ['axisai_user', 'axisai_profile', 'axisai_workouts', 'axisai_treinos', 'axisai_checkin', 'axisai_phase', 'axisai_lgpd_consent'];
+  const data = {};
+  keys.forEach(k => {
+    const val = localStorage.getItem(k);
+    if (val) {
+      try { data[k] = JSON.parse(val); } catch { data[k] = val; }
+    }
+  });
+  data._export_date = new Date().toISOString();
+  data._export_version = '1.0';
+
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `axisai-dados-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Dados exportados com sucesso.');
+}
+
+// Double-confirmation account deletion
+function requestAccountDeletion() {
+  // First confirmation
+  const existing = document.getElementById('delete-confirm-modal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'delete-confirm-modal';
+  overlay.className = 'delete-confirm-overlay';
+  overlay.innerHTML = `
+    <div class="delete-confirm-modal">
+      <h3>EXCLUIR MINHA CONTA</h3>
+      <p>Tem certeza de que deseja excluir sua conta? Todos os seus dados serão permanentemente removidos. Esta ação é <strong>irreversível</strong>.</p>
+      <div class="confirm-actions">
+        <button class="btn-cancel" onclick="document.getElementById('delete-confirm-modal').remove()">CANCELAR</button>
+        <button class="btn-danger" onclick="confirmAccountDeletion()">SIM, EXCLUIR</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function confirmAccountDeletion() {
+  // Second confirmation
+  const modal = document.querySelector('#delete-confirm-modal .delete-confirm-modal');
+  modal.innerHTML = `
+    <h3>CONFIRMAÇÃO FINAL</h3>
+    <p>Esta é sua última chance. Digite <strong>EXCLUIR</strong> para confirmar a exclusão permanente de todos os seus dados.</p>
+    <input type="text" id="delete-confirm-input" placeholder="Digite EXCLUIR" style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:14px;text-align:center;margin-bottom:16px;">
+    <div class="confirm-actions">
+      <button class="btn-cancel" onclick="document.getElementById('delete-confirm-modal').remove()">CANCELAR</button>
+      <button class="btn-danger" onclick="executeAccountDeletion()">CONFIRMAR EXCLUSÃO</button>
+    </div>`;
+}
+
+function executeAccountDeletion() {
+  const input = document.getElementById('delete-confirm-input');
+  if (input.value.trim() !== 'EXCLUIR') {
+    input.style.borderColor = 'var(--red)';
+    input.placeholder = 'Você precisa digitar EXCLUIR';
+    return;
+  }
+
+  // Clear all localStorage data
+  const keysToRemove = [
+    'axisai_user', 'axisai_users', 'axisai_profile', 'axisai_workouts',
+    'axisai_treinos', 'axisai_checkin', 'axisai_phase', 'axisai_lgpd_consent',
+    'axisai_onboarding_done', 'axisai_avatar'
+  ];
+  keysToRemove.forEach(k => localStorage.removeItem(k));
+
+  // Reset state
+  state.user = null;
+  state.workouts = [];
+  state.profile = null;
+  state.chatHistory = [];
+
+  // Remove modal and redirect to auth
+  document.getElementById('delete-confirm-modal').remove();
+  document.getElementById('screen-app').classList.remove('visible');
+  document.getElementById('screen-auth').style.display = 'flex';
+  showToast('Conta excluída com sucesso. Todos os dados foram removidos.');
 }
 
 // ═══════════════════════════════════════════════
