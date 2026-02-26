@@ -601,6 +601,106 @@
   .profile-big-avatar { cursor: pointer; position: relative; }
   .profile-big-avatar:hover::after { content: '📷'; position: absolute; inset: 0; background: rgba(0,0,0,0.55); border-radius: 50%; text-align: center; line-height: 80px; font-size: 22px; pointer-events: none; }
   .user-avatar { overflow: hidden; }
+
+  /* ── DASHBOARD INSIGHT CARDS ── */
+  .dashboard-cards { display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px; }
+
+  /* Card shared base */
+  .insight-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    transition: transform 0.2s;
+  }
+  .insight-card:hover { transform: translateY(-2px); }
+  .insight-card-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+  }
+  .insight-card-title {
+    font-family: var(--font-display); font-size: 16px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text);
+  }
+  .insight-card-badge {
+    font-size: 11px; font-family: var(--font-mono); font-weight: 600; letter-spacing: 0.5px;
+    padding: 4px 10px; border-radius: 20px;
+  }
+  .badge-green  { background: rgba(0,255,135,0.12); color: var(--green); }
+  .badge-amber  { background: rgba(249,115,22,0.12); color: var(--orange); }
+  .badge-red    { background: rgba(239,68,68,0.12); color: var(--red); }
+  .badge-muted  { background: rgba(107,114,128,0.12); color: var(--muted); }
+
+  /* ── Card 1: Readiness Score ── */
+  .readiness-body { display: flex; align-items: center; gap: 28px; }
+  .readiness-ring-wrap { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
+  .readiness-ring-wrap svg { width: 120px; height: 120px; transform: rotate(-90deg); }
+  .readiness-ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 8; }
+  .readiness-ring-fg {
+    fill: none; stroke-width: 8; stroke-linecap: round;
+    transition: stroke-dashoffset 1s ease, stroke 0.5s ease;
+  }
+  .readiness-score-num {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 36px; letter-spacing: 1px; line-height: 1;
+  }
+  .readiness-score-label { font-size: 10px; color: var(--muted); font-family: var(--font-mono); letter-spacing: 1px; margin-top: 2px; }
+  .readiness-detail { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .readiness-row { display: flex; align-items: center; gap: 10px; }
+  .readiness-row-icon { font-size: 14px; width: 20px; text-align: center; }
+  .readiness-row-label { font-size: 13px; color: var(--muted); width: 80px; }
+  .readiness-row-bar { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+  .readiness-row-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+  .readiness-rec { margin-top: 6px; font-size: 13px; font-weight: 600; }
+  .readiness-cta { margin-top: 8px; text-align: center; }
+  .readiness-cta p { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+  .readiness-cta button {
+    background: linear-gradient(135deg, var(--green), #00c8ff); color: #000;
+    border: none; padding: 8px 20px; border-radius: 8px; font-weight: 700; font-size: 12px;
+    cursor: pointer; letter-spacing: 0.5px; transition: opacity 0.2s;
+  }
+  .readiness-cta button:hover { opacity: 0.85; }
+
+  /* ── Card 2: Streak & Consistency ── */
+  .streak-body { display: flex; flex-direction: column; gap: 16px; }
+  .streak-stats { display: flex; gap: 32px; }
+  .streak-stat-block { display: flex; flex-direction: column; }
+  .streak-stat-value { font-family: var(--font-display); font-size: 36px; letter-spacing: 1px; line-height: 1; }
+  .streak-stat-label { font-size: 11px; color: var(--muted); font-family: var(--font-mono); letter-spacing: 1px; margin-top: 4px; }
+  .streak-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .streak-dot {
+    aspect-ratio: 1; border-radius: 3px; background: rgba(255,255,255,0.06);
+    transition: background 0.3s ease;
+  }
+  .streak-dot.filled { background: var(--green); }
+  .streak-dot.filled.dim { background: rgba(0,255,135,0.35); }
+  .streak-grid-labels { display: flex; justify-content: space-between; margin-top: 4px; }
+  .streak-grid-labels span { font-size: 9px; color: var(--muted); font-family: var(--font-mono); letter-spacing: 0.5px; }
+
+  /* ── Card 3: Phase Summary ── */
+  .phase-body { display: flex; flex-direction: column; gap: 14px; }
+  .phase-name { font-family: var(--font-display); font-size: 22px; letter-spacing: 1px; }
+  .phase-week { font-size: 13px; color: var(--muted); font-family: var(--font-mono); }
+  .phase-progress-wrap { width: 100%; }
+  .phase-progress-bar { height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+  .phase-progress-fill {
+    height: 100%; border-radius: 4px;
+    background: linear-gradient(90deg, var(--blue), var(--purple));
+    transition: width 1s ease;
+  }
+  .phase-progress-pct { font-size: 11px; color: var(--muted); font-family: var(--font-mono); margin-top: 4px; text-align: right; }
+  .phase-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .phase-info-item { display: flex; flex-direction: column; gap: 2px; }
+  .phase-info-label { font-size: 11px; color: var(--muted); font-family: var(--font-mono); letter-spacing: 0.5px; text-transform: uppercase; }
+  .phase-info-value { font-size: 14px; font-weight: 600; }
+  .phase-cta { text-align: center; margin-top: 4px; }
+  .phase-cta p { color: var(--muted); font-size: 13px; }
+
+  /* ── Dashboard cards responsive ── */
+  @media (max-width: 600px) {
+    .readiness-body { flex-direction: column; align-items: stretch; }
+    .readiness-ring-wrap { margin: 0 auto; }
+    .streak-stats { gap: 20px; }
+    .phase-info-grid { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -1064,6 +1164,59 @@
           <button class="stat-link" onclick="navigate(&#39;diagnosis&#39;)">Nova avaliação →</button>
         </div>
       </div>
+
+      <!-- ── DASHBOARD INSIGHT CARDS ── -->
+      <div class="dashboard-cards">
+
+        <!-- Card 1 — Readiness Score -->
+        <div class="insight-card" id="card-readiness">
+          <div class="insight-card-header">
+            <span class="insight-card-title">Prontidão</span>
+            <span class="insight-card-badge badge-muted" id="readiness-badge">—</span>
+          </div>
+          <div id="readiness-content">
+            <!-- filled by JS -->
+          </div>
+        </div>
+
+        <!-- Card 2 — Streak & Consistency -->
+        <div class="insight-card" id="card-streak">
+          <div class="insight-card-header">
+            <span class="insight-card-title">Consistência</span>
+            <span class="insight-card-badge badge-muted" id="streak-badge">Últimos 28 dias</span>
+          </div>
+          <div class="streak-body">
+            <div class="streak-stats">
+              <div class="streak-stat-block">
+                <div class="streak-stat-value" id="streak-count">0</div>
+                <div class="streak-stat-label">DIAS SEGUIDOS</div>
+              </div>
+              <div class="streak-stat-block">
+                <div class="streak-stat-value" id="adherence-pct">0%</div>
+                <div class="streak-stat-label">ADERÊNCIA</div>
+              </div>
+            </div>
+            <div class="streak-grid" id="streak-grid"></div>
+            <div class="streak-grid-labels">
+              <span>4 sem atrás</span>
+              <span>Hoje</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3 — Current Phase Summary -->
+        <div class="insight-card" id="card-phase">
+          <div class="insight-card-header">
+            <span class="insight-card-title">Fase Atual</span>
+            <span class="insight-card-badge badge-muted" id="phase-badge">—</span>
+          </div>
+          <div id="phase-content">
+            <!-- filled by JS -->
+          </div>
+        </div>
+
+      </div>
+
       <div class="hero-banner" id="hero-next-step">
         <div>
           <h2 id="hero-title">COMECE SEU PRIMEIRO TREINO</h2>
@@ -1962,6 +2115,7 @@ function refreshDashboard() {
     document.getElementById('hero-btn').textContent = 'PEDIR TREINO';
     document.getElementById('hero-btn').onclick = () => navigate('chat');
   }
+  refreshDashboardCards();
 }
 
 // ═══════════════════════════════════════════════
@@ -2506,6 +2660,390 @@ function displayAvatar(dataUrl) {
 function loadAvatar() {
   const saved = localStorage.getItem('axisai_avatar');
   if (saved) displayAvatar(saved);
+}
+
+// ═══════════════════════════════════════════════
+//  DASHBOARD INSIGHT CARDS
+// ═══════════════════════════════════════════════
+
+// ── Check-in helpers ──
+function getCheckinData() {
+  return JSON.parse(localStorage.getItem('axisai_checkin') || 'null');
+}
+function saveCheckinData(data) {
+  localStorage.setItem('axisai_checkin', JSON.stringify(data));
+}
+
+// ── Card 1: Readiness Score ──
+function calcReadinessScore(checkin) {
+  const sleepScore  = Math.min(checkin.sleep / 8, 1) * 100;
+  const stressScore = ((10 - checkin.stress) / 9) * 100;
+  const domsScore   = ((10 - checkin.doms) / 9) * 100;
+  const hydrationScore = (checkin.hydration / 10) * 100;
+  return {
+    total: Math.round(sleepScore * 0.35 + stressScore * 0.25 + domsScore * 0.25 + hydrationScore * 0.15),
+    sleep: Math.round(sleepScore),
+    stress: Math.round(stressScore),
+    doms: Math.round(domsScore),
+    hydration: Math.round(hydrationScore)
+  };
+}
+
+function getReadinessColor(score) {
+  if (score >= 70) return 'var(--green)';
+  if (score >= 45) return 'var(--orange)';
+  return 'var(--red)';
+}
+
+function getReadinessRec(score) {
+  if (score >= 70) return { text: 'Treinar normal', cls: 'badge-green' };
+  if (score >= 45) return { text: 'Reduzir volume 30–40%', cls: 'badge-amber' };
+  return { text: 'Descanso ativo', cls: 'badge-red' };
+}
+
+function renderReadinessCard() {
+  const container = document.getElementById('readiness-content');
+  const badge = document.getElementById('readiness-badge');
+  const checkin = getCheckinData();
+
+  // Check if checkin is from today
+  const today = new Date().toISOString().slice(0, 10);
+  const isToday = checkin && checkin.date === today;
+
+  if (!isToday) {
+    badge.textContent = 'Não avaliado';
+    badge.className = 'insight-card-badge badge-muted';
+    container.innerHTML = `
+      <div class="readiness-cta">
+        <p>Faça seu check-in diário para calcular sua prontidão.</p>
+        <button onclick="openCheckinFlow()">CHECK-IN DIÁRIO</button>
+      </div>`;
+    return;
+  }
+
+  const scores = calcReadinessScore(checkin);
+  const rec = getReadinessRec(scores.total);
+  const color = getReadinessColor(scores.total);
+  badge.textContent = rec.text;
+  badge.className = 'insight-card-badge ' + rec.cls;
+
+  const circumference = 2 * Math.PI * 48;
+  const offset = circumference - (scores.total / 100) * circumference;
+
+  const bars = [
+    { icon: '😴', label: 'Sono', value: scores.sleep, color: '#818cf8' },
+    { icon: '🧠', label: 'Estresse', value: scores.stress, color: '#f472b6' },
+    { icon: '💪', label: 'DOMS', value: scores.doms, color: '#fb923c' },
+    { icon: '💧', label: 'Hidratação', value: scores.hydration, color: '#22d3ee' }
+  ];
+
+  container.innerHTML = `
+    <div class="readiness-body">
+      <div class="readiness-ring-wrap">
+        <svg viewBox="0 0 120 120">
+          <circle class="readiness-ring-bg" cx="60" cy="60" r="48"/>
+          <circle class="readiness-ring-fg" cx="60" cy="60" r="48"
+            stroke="${color}"
+            stroke-dasharray="${circumference}"
+            stroke-dashoffset="${circumference}"
+            data-target="${offset}"/>
+        </svg>
+        <div class="readiness-score-num">
+          <span id="readiness-num" style="color:${color}">0</span>
+          <span class="readiness-score-label">SCORE</span>
+        </div>
+      </div>
+      <div class="readiness-detail">
+        ${bars.map(b => `
+          <div class="readiness-row">
+            <span class="readiness-row-icon">${b.icon}</span>
+            <span class="readiness-row-label">${b.label}</span>
+            <div class="readiness-row-bar">
+              <div class="readiness-row-fill" style="width:0%;background:${b.color}" data-width="${b.value}%"></div>
+            </div>
+          </div>`).join('')}
+        <div class="readiness-rec" style="color:${color}">${rec.text}</div>
+      </div>
+    </div>`;
+
+  // Animate on mount
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      const ring = container.querySelector('.readiness-ring-fg');
+      if (ring) ring.style.strokeDashoffset = ring.dataset.target;
+      container.querySelectorAll('.readiness-row-fill').forEach(el => {
+        el.style.width = el.dataset.width;
+      });
+      animateCounter('readiness-num', scores.total, 800);
+    }, 50);
+  });
+}
+
+function animateCounter(id, target, duration) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const start = performance.now();
+  function step(now) {
+    const progress = Math.min((now - start) / duration, 1);
+    el.textContent = Math.round(progress * target);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ── Check-in flow (simple modal) ──
+function openCheckinFlow() {
+  const existing = document.getElementById('checkin-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'checkin-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);padding:20px;';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:400px;width:100%;animation:fadeUp 0.3s ease;">
+      <h3 style="font-family:var(--font-display);font-size:20px;letter-spacing:1px;margin-bottom:20px;">CHECK-IN DIÁRIO</h3>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <label style="font-size:13px;color:var(--muted);">😴 Horas de sono
+          <input type="range" id="ci-sleep" min="0" max="12" step="0.5" value="7" style="width:100%;margin-top:4px;accent-color:var(--green);">
+          <span id="ci-sleep-val" style="font-family:var(--font-mono);font-size:12px;color:var(--text);">7h</span>
+        </label>
+        <label style="font-size:13px;color:var(--muted);">🧠 Estresse (1–10)
+          <input type="range" id="ci-stress" min="1" max="10" value="5" style="width:100%;margin-top:4px;accent-color:var(--green);">
+          <span id="ci-stress-val" style="font-family:var(--font-mono);font-size:12px;color:var(--text);">5</span>
+        </label>
+        <label style="font-size:13px;color:var(--muted);">💪 DOMS / Dor muscular (1–10)
+          <input type="range" id="ci-doms" min="1" max="10" value="3" style="width:100%;margin-top:4px;accent-color:var(--green);">
+          <span id="ci-doms-val" style="font-family:var(--font-mono);font-size:12px;color:var(--text);">3</span>
+        </label>
+        <label style="font-size:13px;color:var(--muted);">💧 Hidratação (1–10)
+          <input type="range" id="ci-hydration" min="1" max="10" value="6" style="width:100%;margin-top:4px;accent-color:var(--green);">
+          <span id="ci-hydration-val" style="font-family:var(--font-mono);font-size:12px;color:var(--text);">6</span>
+        </label>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:24px;">
+        <button onclick="submitCheckin()" style="flex:1;background:linear-gradient(135deg,var(--green),#00c8ff);color:#000;border:none;padding:10px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">SALVAR</button>
+        <button onclick="document.getElementById('checkin-modal').remove()" style="flex:1;background:none;border:1px solid var(--border);color:var(--muted);padding:10px;border-radius:8px;cursor:pointer;font-size:13px;">CANCELAR</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  // Wire up live value labels
+  ['sleep','stress','doms','hydration'].forEach(key => {
+    const input = document.getElementById('ci-' + key);
+    const label = document.getElementById('ci-' + key + '-val');
+    input.addEventListener('input', () => {
+      label.textContent = key === 'sleep' ? input.value + 'h' : input.value;
+    });
+  });
+}
+
+function submitCheckin() {
+  const data = {
+    sleep: parseFloat(document.getElementById('ci-sleep').value),
+    stress: parseInt(document.getElementById('ci-stress').value),
+    doms: parseInt(document.getElementById('ci-doms').value),
+    hydration: parseInt(document.getElementById('ci-hydration').value),
+    date: new Date().toISOString().slice(0, 10)
+  };
+  saveCheckinData(data);
+  document.getElementById('checkin-modal').remove();
+  renderReadinessCard();
+  showToast('Check-in salvo! 🎯');
+}
+
+// ── Card 2: Streak & Consistency ──
+function renderStreakCard() {
+  const allWorkouts = [...state.workouts, ...loadTreinosIA()];
+  const completedDates = new Set();
+  allWorkouts.forEach(w => {
+    if (w.completed && w.date) {
+      completedDates.add(new Date(w.date).toISOString().slice(0, 10));
+    }
+    if (w.data) {
+      completedDates.add(new Date(w.data).toISOString().slice(0, 10));
+    }
+  });
+
+  // Calculate streak (consecutive days backwards from today)
+  let streak = 0;
+  const today = new Date();
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    if (completedDates.has(key)) {
+      streak++;
+    } else if (i > 0) {
+      break;
+    }
+  }
+
+  // 28-day adherence
+  let completedLast28 = 0;
+  const days28 = [];
+  for (let i = 27; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const done = completedDates.has(key);
+    if (done) completedLast28++;
+    days28.push(done);
+  }
+  const adherence = Math.round((completedLast28 / 28) * 100);
+
+  document.getElementById('streak-count').textContent = streak;
+  document.getElementById('adherence-pct').textContent = adherence + '%';
+
+  // Render dot grid (4 rows × 7 cols)
+  const grid = document.getElementById('streak-grid');
+  grid.innerHTML = '';
+  days28.forEach((done, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'streak-dot';
+    if (done) {
+      dot.classList.add('filled');
+      if (i < 14) dot.classList.add('dim');
+    }
+    // Animate: stagger appearance
+    dot.style.opacity = '0';
+    dot.style.transition = `opacity 0.3s ease ${i * 20}ms, background 0.3s ease`;
+    grid.appendChild(dot);
+    requestAnimationFrame(() => {
+      setTimeout(() => { dot.style.opacity = '1'; }, 10);
+    });
+  });
+
+  // Update badge color based on adherence
+  const streakBadge = document.getElementById('streak-badge');
+  if (adherence >= 70) {
+    streakBadge.className = 'insight-card-badge badge-green';
+    streakBadge.textContent = adherence + '% aderência';
+  } else if (adherence >= 40) {
+    streakBadge.className = 'insight-card-badge badge-amber';
+    streakBadge.textContent = adherence + '% aderência';
+  } else {
+    streakBadge.className = 'insight-card-badge badge-muted';
+    streakBadge.textContent = 'Últimos 28 dias';
+  }
+}
+
+// ── Card 3: Current Phase Summary ──
+function getPhaseData() {
+  return JSON.parse(localStorage.getItem('axisai_phase') || 'null');
+}
+function savePhaseData(data) {
+  localStorage.setItem('axisai_phase', JSON.stringify(data));
+}
+
+function inferPhaseFromWorkouts() {
+  const treinos = loadTreinosIA();
+  if (!treinos.length) return null;
+
+  // Try to extract phase info from AI-generated workouts
+  const latest = treinos[treinos.length - 1];
+  const faseNum = latest.faseNum || 1;
+  const faseNome = latest.faseNome || 'Acumulação';
+  const planoTitulo = latest.planoTitulo || 'Plano de Treino';
+
+  // Default phase structure
+  const phases = [
+    { num: 1, name: 'Acumulação', focus: 'Alto volume, intensidade moderada', weeks: 4 },
+    { num: 2, name: 'Transmutação', focus: 'Volume moderado, intensidade alta', weeks: 3 },
+    { num: 3, name: 'Realização', focus: 'Volume baixo, intensidade máxima', weeks: 2 },
+    { num: 4, name: 'Deload', focus: 'Recuperação ativa, volume reduzido', weeks: 1 }
+  ];
+
+  const currentPhase = phases.find(p => p.num === faseNum) || phases[0];
+
+  // Estimate current week based on workout dates in this phase
+  const phaseWorkouts = treinos.filter(t => (t.faseNum || 1) === faseNum);
+  const firstDate = phaseWorkouts.length ? new Date(phaseWorkouts[0].data || phaseWorkouts[0].date || Date.now()) : new Date();
+  const daysSinceStart = Math.floor((Date.now() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
+  const currentWeek = Math.min(Math.max(Math.floor(daysSinceStart / 7) + 1, 1), currentPhase.weeks);
+
+  // Sessions remaining until deload
+  const sessionsPerWeek = parseInt(state.profile?.frequency) || 4;
+  const weeksLeft = currentPhase.weeks - currentWeek;
+  const sessionsUntilDeload = Math.max(weeksLeft * sessionsPerWeek, 0);
+
+  // Next phase
+  const nextPhaseIdx = phases.findIndex(p => p.num === faseNum) + 1;
+  const nextPhase = phases[nextPhaseIdx] || phases[0];
+
+  return {
+    name: `F${currentPhase.num} — ${currentPhase.name}`,
+    currentWeek,
+    totalWeeks: currentPhase.weeks,
+    focus: currentPhase.focus,
+    sessionsUntilDeload,
+    nextPhase: `${nextPhase.name}: ${nextPhase.focus}`,
+    planTitle: planoTitulo
+  };
+}
+
+function renderPhaseCard() {
+  const container = document.getElementById('phase-content');
+  const badge = document.getElementById('phase-badge');
+
+  // Try saved phase data, then infer from workouts
+  let phase = getPhaseData() || inferPhaseFromWorkouts();
+
+  if (!phase) {
+    badge.textContent = 'Sem plano';
+    badge.className = 'insight-card-badge badge-muted';
+    container.innerHTML = `
+      <div class="phase-cta">
+        <p>Converse com o Coach IA para receber seu plano periodizado.</p>
+      </div>`;
+    return;
+  }
+
+  const progress = Math.round((phase.currentWeek / phase.totalWeeks) * 100);
+  badge.textContent = `Semana ${phase.currentWeek}/${phase.totalWeeks}`;
+  badge.className = 'insight-card-badge badge-green';
+
+  container.innerHTML = `
+    <div class="phase-body">
+      <div>
+        <div class="phase-name">${phase.name}</div>
+        <div class="phase-week">Semana ${phase.currentWeek} de ${phase.totalWeeks}</div>
+      </div>
+      <div class="phase-progress-wrap">
+        <div class="phase-progress-bar">
+          <div class="phase-progress-fill" style="width:0%" data-width="${progress}%"></div>
+        </div>
+        <div class="phase-progress-pct">${progress}%</div>
+      </div>
+      <div class="phase-info-grid">
+        <div class="phase-info-item">
+          <span class="phase-info-label">Foco</span>
+          <span class="phase-info-value">${phase.focus}</span>
+        </div>
+        <div class="phase-info-item">
+          <span class="phase-info-label">Até deload</span>
+          <span class="phase-info-value">${phase.sessionsUntilDeload} sessões</span>
+        </div>
+        <div class="phase-info-item" style="grid-column:1/-1;">
+          <span class="phase-info-label">Próxima fase</span>
+          <span class="phase-info-value">${phase.nextPhase}</span>
+        </div>
+      </div>
+    </div>`;
+
+  // Animate progress bar
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      const fill = container.querySelector('.phase-progress-fill');
+      if (fill) fill.style.width = fill.dataset.width;
+    }, 50);
+  });
+}
+
+// ── Render all dashboard cards ──
+function refreshDashboardCards() {
+  renderReadinessCard();
+  renderStreakCard();
+  renderPhaseCard();
 }
 
 // ═══════════════════════════════════════════════
