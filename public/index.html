@@ -795,6 +795,36 @@
     flex: 1; padding: 10px; border: none; background: var(--red); color: #fff;
     border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700;
   }
+
+  /* ── PRIVACY POLICY MODAL ── */
+  .privacy-policy-overlay {
+    position: fixed; inset: 0; z-index: 10002;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px; animation: fadeUp 0.3s ease;
+  }
+  .privacy-policy-modal {
+    background: #0d1117; border: 1px solid var(--border); border-radius: 12px;
+    max-width: 680px; width: 100%; max-height: 85vh; overflow-y: auto;
+    padding: 32px; position: relative;
+  }
+  .privacy-policy-modal .pp-close {
+    position: absolute; top: 16px; right: 20px; background: none; border: none;
+    color: #888; font-size: 24px; cursor: pointer; line-height: 1; transition: color 0.2s;
+  }
+  .privacy-policy-modal .pp-close:hover { color: #fff; }
+  .privacy-policy-modal h1 {
+    font-family: var(--font-display); font-size: 24px; letter-spacing: 1.5px;
+    color: #ffffff; margin-bottom: 6px; padding-right: 32px;
+  }
+  .privacy-policy-modal h2 {
+    font-family: var(--font-display); font-size: 16px; letter-spacing: 1px;
+    color: #4A9EF5; margin-top: 24px; margin-bottom: 8px;
+  }
+  .privacy-policy-modal p {
+    color: #cccccc; font-size: 14px; line-height: 1.7; margin-bottom: 8px;
+  }
+  .privacy-policy-modal em { color: var(--muted); font-size: 12px; }
 </style>
 </head>
 <body>
@@ -1781,6 +1811,37 @@
       <a href="/privacidade">Política de Privacidade</a>
       <a href="/termos">Termos de Uso</a>
     </div>
+  </div>
+</div>
+
+<!-- ═══ PRIVACY POLICY MODAL ═══ -->
+<div class="privacy-policy-overlay" id="privacy-policy-modal" style="display:none;">
+  <div class="privacy-policy-modal">
+    <button class="pp-close" onclick="closePrivacyPolicy()" title="Fechar">&times;</button>
+    <h1>Política de Privacidade — AxisAI</h1>
+    <p><em>Versão 1.0 | Fevereiro 2026 | Em conformidade com a Lei nº 13.709/2018 (LGPD)</em></p>
+    <h2>1. Controlador dos Dados</h2>
+    <p>Responsável: Rico Baldon | E-mail: privacidade@axisai.app</p>
+    <h2>2. Dados Coletados</h2>
+    <p>Coletamos: nome, e-mail, perfil físico (idade, peso, altura, objetivo), resultados de avaliação FMS, check-in diário (sono, estresse, DOMS, hidratação), histórico de treinos e dados de uso do app. Dados de saúde são tratados como dados sensíveis (Art. 5º, II da LGPD) e exigem consentimento específico.</p>
+    <h2>3. Como Usamos seus Dados</h2>
+    <p>Seus dados são usados para gerar treinos personalizados via IA (API Anthropic), calcular seu score de prontidão diário, monitorar progresso e melhorar o produto. Nenhum dado identificador (nome, e-mail) é enviado à API de IA — apenas dados funcionais anonimizados.</p>
+    <h2>4. Compartilhamento</h2>
+    <p>Não vendemos dados. Compartilhamos apenas com fornecedores essenciais: Anthropic (geração de treinos por IA), Supabase (banco de dados) e Vercel (hospedagem). Todos com cláusulas contratuais de proteção de dados.</p>
+    <h2>5. Seus Direitos (Art. 18 da LGPD)</h2>
+    <p>Você pode a qualquer momento: confirmar o tratamento, acessar seus dados, corrigir informações, revogar consentimentos, solicitar portabilidade ou exclusão completa. Acesse em Configurações → Privacidade ou envie e-mail para privacidade@axisai.app. Prazo de resposta: 15 dias úteis.</p>
+    <h2>6. Retenção</h2>
+    <p>Dados são mantidos enquanto a conta estiver ativa. Ao excluir a conta, todos os dados pessoais são removidos em até 30 dias, exceto obrigações legais.</p>
+    <h2>7. Segurança</h2>
+    <p>Utilizamos HTTPS/TLS 1.3, autenticação via Supabase Auth, Row Level Security no banco de dados e isolamento de dados por usuário.</p>
+    <h2>8. Armazenamento Local</h2>
+    <p>Usamos localStorage para: consentimento LGPD (axisai_lgpd_consent), perfil, check-in diário, histórico de treinos e fase atual. Não usamos cookies de rastreamento.</p>
+    <h2>9. Menores de Idade</h2>
+    <p>O AxisAI é destinado exclusivamente a maiores de 18 anos.</p>
+    <h2>10. Alterações</h2>
+    <p>Mudanças substanciais serão notificadas dentro do app. O uso continuado implica aceite das novas condições.</p>
+    <h2>11. Contato e DPO</h2>
+    <p>E-mail: privacidade@axisai.app | Autoridade Nacional: anpd.gov.br</p>
   </div>
 </div>
 
@@ -3390,6 +3451,41 @@ function executeAccountDeletion() {
   document.getElementById('screen-auth').style.display = 'flex';
   showToast('Conta excluída com sucesso. Todos os dados foram removidos.');
 }
+
+// ═══════════════════════════════════════════════
+//  PRIVACY POLICY MODAL
+// ═══════════════════════════════════════════════
+function openPrivacyPolicy() {
+  document.getElementById('privacy-policy-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closePrivacyPolicy() {
+  document.getElementById('privacy-policy-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// ESC key closes privacy policy
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && document.getElementById('privacy-policy-modal').style.display === 'flex') {
+    closePrivacyPolicy();
+  }
+});
+
+// Auto-wire any element with text "Política de Privacidade" or class "open-privacy"
+document.addEventListener('click', function(e) {
+  const target = e.target.closest('a, button, [id="btn-privacy"], .open-privacy');
+  if (!target) return;
+  if (target.id === 'btn-privacy' || target.classList.contains('open-privacy')) {
+    e.preventDefault();
+    openPrivacyPolicy();
+    return;
+  }
+  if (target.tagName === 'A' && target.getAttribute('href') === '/privacidade') {
+    e.preventDefault();
+    openPrivacyPolicy();
+  }
+});
 
 // ═══════════════════════════════════════════════
 //  TOAST
