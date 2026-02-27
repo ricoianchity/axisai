@@ -1845,6 +1845,43 @@
   </div>
 </div>
 
+<!-- ═══ TERMS OF USE MODAL ═══ -->
+<div class="privacy-policy-overlay" id="terms-modal" style="display:none;">
+  <div class="privacy-policy-modal">
+    <button class="pp-close" onclick="closeTerms()" title="Fechar">&times;</button>
+    <h1>Termos de Uso — AxisAI</h1>
+    <p><em>Versão 1.0 | Fevereiro 2026</em></p>
+    <h2>1. Aceitação</h2>
+    <p>Ao utilizar o AxisAI, você declara ter lido, entendido e concordado com estes Termos de Uso. O uso do aplicativo é condicionado à aceitação integral destes termos.</p>
+    <h2>2. Descrição do Serviço</h2>
+    <p>O AxisAI é um aplicativo de coaching de performance que utiliza inteligência artificial para gerar planos de treino personalizados com base em avaliação funcional (FMS), perfil do usuário e dados de prontidão diária, seguindo a metodologia MBSC/CFSC.</p>
+    <h2>3. Elegibilidade</h2>
+    <p>O uso é permitido exclusivamente a maiores de 18 anos. Ao se cadastrar, você confirma ter idade mínima exigida e capacidade legal para celebrar este contrato.</p>
+    <h2>4. Saúde e Responsabilidade Médica</h2>
+    <p><strong>IMPORTANTE:</strong> O AxisAI não substitui avaliação médica, fisioterapêutica ou nutricional. Os treinos gerados são recomendações baseadas em dados fornecidos pelo próprio usuário. Antes de iniciar qualquer programa de exercícios, consulte um profissional de saúde habilitado. O AxisAI e seus responsáveis não se responsabilizam por lesões, agravamentos de condições preexistentes ou qualquer dano à saúde decorrente do uso do aplicativo.</p>
+    <h2>5. Uso Correto</h2>
+    <p>Você se compromete a: fornecer informações verdadeiras no cadastro e avaliações; utilizar o app apenas para fins pessoais e lícitos; não compartilhar sua conta com terceiros; não tentar acessar dados de outros usuários; não utilizar o app para fins comerciais sem autorização prévia.</p>
+    <h2>6. Propriedade Intelectual</h2>
+    <p>Todo o conteúdo do AxisAI — incluindo interface, algoritmos, metodologia de prescrição, textos e design — é de propriedade exclusiva do AxisAI e protegido por lei. É proibida a reprodução, distribuição ou uso comercial sem autorização expressa por escrito.</p>
+    <h2>7. Dados e Privacidade</h2>
+    <p>O tratamento dos seus dados pessoais é regido pela nossa Política de Privacidade, disponível no aplicativo. Ao usar o AxisAI, você consente com o tratamento descrito naquele documento.</p>
+    <h2>8. Disponibilidade do Serviço</h2>
+    <p>O AxisAI é oferecido "como está". Não garantimos disponibilidade ininterrupta do serviço. Podemos realizar manutenções, atualizações ou encerrar funcionalidades sem aviso prévio, desde que sem prejuízo aos dados do usuário.</p>
+    <h2>9. Planos e Pagamento</h2>
+    <p>O acesso ao AxisAI pode ser gratuito (beta) ou pago, conforme plano vigente. Condições de cobrança, cancelamento e reembolso serão detalhadas no momento da contratação de plano pago.</p>
+    <h2>10. Suspensão e Encerramento</h2>
+    <p>Reservamo-nos o direito de suspender ou encerrar contas que violem estes Termos, com ou sem aviso prévio. Em caso de encerramento por nossa iniciativa sem justa causa, os dados do usuário serão preservados por 30 dias para exportação.</p>
+    <h2>11. Limitação de Responsabilidade</h2>
+    <p>Na máxima extensão permitida por lei, o AxisAI não se responsabiliza por danos indiretos, incidentais ou consequentes decorrentes do uso ou incapacidade de uso do aplicativo.</p>
+    <h2>12. Alterações nos Termos</h2>
+    <p>Podemos atualizar estes Termos a qualquer momento. Mudanças substanciais serão notificadas dentro do app com antecedência mínima de 15 dias. O uso continuado após a vigência das alterações implica aceite.</p>
+    <h2>13. Lei Aplicável e Foro</h2>
+    <p>Estes Termos são regidos pelas leis brasileiras. Fica eleito o foro da Comarca de São Paulo/SP para dirimir quaisquer conflitos decorrentes deste instrumento.</p>
+    <h2>14. Contato</h2>
+    <p>Dúvidas sobre estes Termos: privacidade@axisai.app</p>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -3465,25 +3502,39 @@ function closePrivacyPolicy() {
   document.body.style.overflow = '';
 }
 
-// ESC key closes privacy policy
+// ── Terms of Use ──
+function openTerms() {
+  document.getElementById('terms-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeTerms() {
+  document.getElementById('terms-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// ESC key closes privacy policy or terms modal
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape' && document.getElementById('privacy-policy-modal').style.display === 'flex') {
-    closePrivacyPolicy();
-  }
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('privacy-policy-modal').style.display === 'flex') closePrivacyPolicy();
+  if (document.getElementById('terms-modal').style.display === 'flex') closeTerms();
 });
 
-// Auto-wire any element with text "Política de Privacidade" or class "open-privacy"
+// Auto-wire Privacy Policy and Terms of Use links/buttons
 document.addEventListener('click', function(e) {
-  const target = e.target.closest('a, button, [id="btn-privacy"], .open-privacy');
+  const target = e.target.closest('a, button, [id="btn-privacy"], [id="btn-terms"], .open-privacy, .open-terms');
   if (!target) return;
   if (target.id === 'btn-privacy' || target.classList.contains('open-privacy')) {
-    e.preventDefault();
-    openPrivacyPolicy();
-    return;
+    e.preventDefault(); openPrivacyPolicy(); return;
+  }
+  if (target.id === 'btn-terms' || target.classList.contains('open-terms')) {
+    e.preventDefault(); openTerms(); return;
   }
   if (target.tagName === 'A' && target.getAttribute('href') === '/privacidade') {
-    e.preventDefault();
-    openPrivacyPolicy();
+    e.preventDefault(); openPrivacyPolicy(); return;
+  }
+  if (target.tagName === 'A' && target.getAttribute('href') === '/termos') {
+    e.preventDefault(); openTerms();
   }
 });
 
