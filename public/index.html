@@ -1992,8 +1992,8 @@
 //  SUPABASE CLIENT
 // ═══════════════════════════════════════════════
 var supabase = window.supabase.createClient(
-  'SUPABASE_URL_AQUI',
-  'SUPABASE_ANON_KEY_AQUI'
+  'https://grufyjppfnzsufcrizww.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdydWZ5anBwZm56c3VmY3Jpend3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyMTc4NTEsImV4cCI6MjA4Nzc5Mzg1MX0.hzpGyi7z5t5lKSA2DN-ZiWsp0QPq4XrnAu9J-1yQktg'
 );
 
 // ═══════════════════════════════════════════════
@@ -2068,25 +2068,30 @@ async function loadUserData(userId) {
 
 async function initApp() {
   renderFMSGrid();
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
-    const u = session.user;
-    const savedName = JSON.parse(localStorage.getItem('axisai_user') || '{}').name || u.email.split('@')[0];
-    state.user = { name: savedName, email: u.email, id: u.id };
-    localStorage.setItem('axisai_user', JSON.stringify(state.user));
-    await loadUserData(u.id);
-    loadWorkouts();
-    loadProfile();
-    enterApp();
-  } else {
-    // Fallback: verificar localStorage para modo offline
-    const saved = localStorage.getItem('axisai_user');
-    if (saved) {
-      state.user = JSON.parse(saved);
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const u = session.user;
+      const savedName = JSON.parse(localStorage.getItem('axisai_user') || '{}').name || u.email.split('@')[0];
+      state.user = { name: savedName, email: u.email, id: u.id };
+      localStorage.setItem('axisai_user', JSON.stringify(state.user));
+      await loadUserData(u.id);
       loadWorkouts();
       loadProfile();
       enterApp();
+    } else {
+      // Fallback: verificar localStorage para modo offline
+      const saved = localStorage.getItem('axisai_user');
+      if (saved) {
+        state.user = JSON.parse(saved);
+        loadWorkouts();
+        loadProfile();
+        enterApp();
+      }
     }
+  } catch (e) {
+    console.error('Session error:', e);
+    // Auth screen is shown by default — nothing extra to do
   }
 }
 
@@ -2216,7 +2221,8 @@ async function doLogin() {
   const pass  = document.getElementById('login-pass').value;
   if (!email || !pass) return showToast('Preencha email e senha.', true);
   const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-  if (error) return showToast('Email ou senha incorretos.', true);
+  if (error) return showToast(error.message || 'Erro ao fazer login.', true);
+  if (!data?.user) return showToast('Erro inesperado. Tente novamente.', true);
   state.user = { name: data.user.email.split('@')[0], email: data.user.email, id: data.user.id };
   localStorage.setItem('axisai_user', JSON.stringify(state.user));
   enterApp();
@@ -2230,6 +2236,7 @@ async function doRegister() {
   if (pass.length < 6) return showToast('Senha deve ter ao menos 6 caracteres.', true);
   const { data, error } = await supabase.auth.signUp({ email, password: pass });
   if (error) return showToast(error.message || 'Erro ao criar conta.', true);
+  if (!data?.user) return showToast('Verifique seu e-mail para confirmar o cadastro.', false);
   state.user = { name, email, id: data.user?.id };
   localStorage.setItem('axisai_user', JSON.stringify(state.user));
   // Salvar nome no perfil
