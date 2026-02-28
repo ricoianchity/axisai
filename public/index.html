@@ -710,7 +710,7 @@
     padding: 20px; animation: fadeUp 0.4s ease;
   }
   .lgpd-modal {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    background: #0d1117; border: 1px solid var(--border); border-radius: 20px;
     padding: 32px; max-width: 480px; width: 100%; max-height: 90vh; overflow-y: auto;
     box-shadow: 0 40px 80px rgba(0,0,0,0.6);
   }
@@ -1763,54 +1763,54 @@
 </div>
 
 <!-- ═══ LGPD CONSENT MODAL ═══ -->
-<div class="lgpd-overlay" id="lgpd-consent-modal" style="display:none;">
-  <div class="lgpd-modal">
+<div class="lgpd-overlay" id="lgpd-consent-modal" style="display:none;" onclick="return false;">
+  <div class="lgpd-modal" onclick="event.stopPropagation()">
     <h2>PRIVACIDADE E DADOS</h2>
     <div class="lgpd-subtitle">LEI GERAL DE PROTEÇÃO DE DADOS — LEI 13.709/2018</div>
     <div class="lgpd-legal">
-      Seus dados são tratados conforme nossa <a href="/privacidade">Política de Privacidade</a>, em conformidade com a Lei Geral de Proteção de Dados (Lei 13.709/2018). Você pode revogar consentimentos não essenciais a qualquer momento em Configurações &rarr; Privacidade.
+      Seus dados são tratados conforme nossa Política de Privacidade, em conformidade com a Lei Geral de Proteção de Dados (Lei 13.709/2018). Você pode revogar consentimentos não essenciais a qualquer momento em Configurações &rarr; Privacidade.
     </div>
     <div class="lgpd-toggle-list">
       <div class="lgpd-toggle-row locked">
         <div class="lgpd-toggle-info">
           <div class="lgpd-toggle-name">Essencial</div>
-          <div class="lgpd-toggle-desc">Autenticação, segurança e funcionamento básico do app.</div>
+          <div class="lgpd-toggle-desc">autenticação e funcionamento</div>
         </div>
         <label class="lgpd-switch"><input type="checkbox" checked disabled><span class="slider"></span></label>
       </div>
       <div class="lgpd-toggle-row">
         <div class="lgpd-toggle-info">
           <div class="lgpd-toggle-name">Dados FMS</div>
-          <div class="lgpd-toggle-desc">Armazenamento de avaliações de movimento funcional.</div>
+          <div class="lgpd-toggle-desc">prescrição personalizada</div>
         </div>
         <label class="lgpd-switch"><input type="checkbox" id="lgpd-fms"><span class="slider"></span></label>
       </div>
       <div class="lgpd-toggle-row">
         <div class="lgpd-toggle-info">
           <div class="lgpd-toggle-name">Histórico de Treinos</div>
-          <div class="lgpd-toggle-desc">Registro de sessões, progressão e periodização.</div>
+          <div class="lgpd-toggle-desc">progresso e periodização</div>
         </div>
         <label class="lgpd-switch"><input type="checkbox" id="lgpd-training"><span class="slider"></span></label>
       </div>
       <div class="lgpd-toggle-row">
         <div class="lgpd-toggle-info">
           <div class="lgpd-toggle-name">Análise de Uso</div>
-          <div class="lgpd-toggle-desc">Dados anônimos para melhorar a experiência do app.</div>
+          <div class="lgpd-toggle-desc">melhoria do produto</div>
         </div>
         <label class="lgpd-switch"><input type="checkbox" id="lgpd-analytics"><span class="slider"></span></label>
       </div>
       <div class="lgpd-toggle-row">
         <div class="lgpd-toggle-info">
           <div class="lgpd-toggle-name">Marketing</div>
-          <div class="lgpd-toggle-desc">Comunicações sobre novidades e recursos do AxisAI.</div>
+          <div class="lgpd-toggle-desc">novidades e promoções</div>
         </div>
         <label class="lgpd-switch"><input type="checkbox" id="lgpd-marketing"><span class="slider"></span></label>
       </div>
     </div>
     <button class="lgpd-btn-accept" onclick="acceptLGPDConsent()">ACEITAR E CONTINUAR</button>
     <div class="lgpd-links">
-      <a href="/privacidade">Política de Privacidade</a>
-      <a href="/termos">Termos de Uso</a>
+      <a href="#" onclick="openPrivacyPolicy(); return false;">Política de Privacidade</a>
+      <a href="#" onclick="openTerms(); return false;">Termos de Uso</a>
     </div>
   </div>
 </div>
@@ -2132,7 +2132,7 @@ function enterApp() {
   completeEnterApp();
 }
 
-function completeEnterApp() {
+async function completeEnterApp() {
   document.getElementById('screen-onboarding').style.display = 'none';
   document.getElementById('screen-app').classList.add('visible');
   const name = state.user?.name || 'Atleta';
@@ -2147,7 +2147,7 @@ function completeEnterApp() {
   loadAvatar();
   refreshDashboard();
   refreshChatSidebar();
-  checkLGPDConsent();
+  await checkLGPDConsent();
   loadPrivacyToggles();
 }
 
@@ -3449,12 +3449,27 @@ async function saveLGPDConsent(consent) {
   await saveData('user_consents', payload, LGPD_CONSENT_KEY);
 }
 
-// Show blocking consent modal if no consent stored
-function checkLGPDConsent() {
+// Show blocking consent modal if no consent stored (checks localStorage then Supabase)
+async function checkLGPDConsent() {
   const consent = getLGPDConsent();
-  if (!consent || consent.version !== LGPD_VERSION) {
-    document.getElementById('lgpd-consent-modal').style.display = 'flex';
+  if (consent && consent.version === LGPD_VERSION) return;
+
+  // Secondary check: Supabase (only if user is authenticated)
+  if (state.user?.id) {
+    try {
+      const { data } = await supabase.from('user_consents')
+        .select('*').eq('user_id', state.user.id).maybeSingle();
+      if (data) {
+        localStorage.setItem(LGPD_CONSENT_KEY, JSON.stringify(data));
+        return;
+      }
+    } catch (e) {
+      console.warn('Supabase consent check offline:', e);
+    }
   }
+
+  // No valid consent found — show blocking modal
+  document.getElementById('lgpd-consent-modal').style.display = 'flex';
 }
 
 // Called by "ACEITAR E CONTINUAR" button in the modal
@@ -3473,6 +3488,17 @@ async function acceptLGPDConsent() {
   loadPrivacyToggles();
   showToast('Consentimento registrado com sucesso.');
 }
+
+// Prevent ESC and background-click dismissal while consent modal is visible
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('lgpd-consent-modal');
+    if (modal && modal.style.display !== 'none') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }
+}, true);
 
 // Load saved consent into the Privacy Settings toggles on Profile page
 function loadPrivacyToggles() {
