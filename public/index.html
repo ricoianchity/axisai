@@ -826,6 +826,7 @@
   }
   .privacy-policy-modal em { color: var(--muted); font-size: 12px; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -1886,6 +1887,14 @@
 
 <script>
 // ═══════════════════════════════════════════════
+//  SUPABASE CLIENT
+// ═══════════════════════════════════════════════
+var supabase = window.supabase.createClient(
+  'SUPABASE_URL_AQUI',
+  'SUPABASE_ANON_KEY_AQUI'
+);
+
+// ═══════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════
 const state = { user: null, workouts: [], profile: null, chatHistory: [], toeTouch: null };
@@ -1915,12 +1924,49 @@ const FMS_TESTS = [
 // ═══════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('axisai_user');
-  if (saved) { state.user = JSON.parse(saved); enterApp(); }
-  loadWorkouts();
-  loadProfile();
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+
+async function loadUserData(userId) {
+  const [profile, checkin, phase, messages] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', userId).single(),
+    supabase.from('checkins').select('*').eq('user_id', userId).eq('date', today()).single(),
+    supabase.from('training_phases').select('*').eq('user_id', userId).order('started_at', { ascending: false }).limit(1).single(),
+    supabase.from('chat_messages').select('*').eq('user_id', userId).order('created_at', { ascending: true }).limit(20)
+  ]);
+  if (profile.data)   { state.profile     = profile.data;   localStorage.setItem('axisai_profile', JSON.stringify(profile.data)); }
+  if (checkin.data)   { state.checkin     = checkin.data;   localStorage.setItem('axisai_checkin', JSON.stringify(checkin.data)); }
+  if (phase.data)     { state.phase       = phase.data;     localStorage.setItem('axisai_phase', JSON.stringify(phase.data)); }
+  if (messages.data)  { state.chatHistory = messages.data.map(m => ({ role: m.role, content: m.content })); }
+}
+
+async function initApp() {
   renderFMSGrid();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    const u = session.user;
+    const savedName = JSON.parse(localStorage.getItem('axisai_user') || '{}').name || u.email.split('@')[0];
+    state.user = { name: savedName, email: u.email, id: u.id };
+    localStorage.setItem('axisai_user', JSON.stringify(state.user));
+    await loadUserData(u.id);
+    loadWorkouts();
+    loadProfile();
+    enterApp();
+  } else {
+    // Fallback: verificar localStorage para modo offline
+    const saved = localStorage.getItem('axisai_user');
+    if (saved) {
+      state.user = JSON.parse(saved);
+      loadWorkouts();
+      loadProfile();
+      enterApp();
+    }
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  initApp();
 });
 
 // Build FMS grid dynamically to avoid repetition and <br/> issues
@@ -2020,6 +2066,18 @@ document.addEventListener('click', function(e) {
 });
 
 // ═══════════════════════════════════════════════
+//  SUPABASE SAVE HELPER (com fallback offline)
+// ═══════════════════════════════════════════════
+async function saveData(table, data, localKey) {
+  localStorage.setItem(localKey, JSON.stringify(data)); // fallback imediato
+  try {
+    await supabase.from(table).upsert(data);
+  } catch (e) {
+    console.warn('Supabase offline, dado salvo localmente:', e);
+  }
+}
+
+// ═══════════════════════════════════════════════
 //  AUTH
 // ═══════════════════════════════════════════════
 function switchTab(tab) {
@@ -2028,35 +2086,37 @@ function switchTab(tab) {
   document.getElementById('tab-register').style.display = tab === 'register' ? 'block' : 'none';
 }
 
-function doLogin() {
+async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-pass').value;
   if (!email || !pass) return showToast('Preencha email e senha.', true);
-  const users = JSON.parse(localStorage.getItem('axisai_users') || '[]');
-  const found = users.find(u => u.email === email && u.pass === pass);
-  if (!found) return showToast('Email ou senha incorretos.', true);
-  state.user = { name: found.name, email: found.email };
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+  if (error) return showToast('Email ou senha incorretos.', true);
+  state.user = { name: data.user.email.split('@')[0], email: data.user.email, id: data.user.id };
   localStorage.setItem('axisai_user', JSON.stringify(state.user));
   enterApp();
 }
 
-function doRegister() {
+async function doRegister() {
   const name = document.getElementById('reg-name').value.trim();
   const email = document.getElementById('reg-email').value.trim();
   const pass = document.getElementById('reg-pass').value;
   if (!name || !email || !pass) return showToast('Preencha todos os campos.', true);
   if (pass.length < 6) return showToast('Senha deve ter ao menos 6 caracteres.', true);
-  const users = JSON.parse(localStorage.getItem('axisai_users') || '[]');
-  if (users.find(u => u.email === email)) return showToast('Email já cadastrado.', true);
-  users.push({ name, email, pass });
-  localStorage.setItem('axisai_users', JSON.stringify(users));
-  state.user = { name, email };
+  const { data, error } = await supabase.auth.signUp({ email, password: pass });
+  if (error) return showToast(error.message || 'Erro ao criar conta.', true);
+  state.user = { name, email, id: data.user?.id };
   localStorage.setItem('axisai_user', JSON.stringify(state.user));
+  // Salvar nome no perfil
+  if (data.user?.id) {
+    await supabase.from('profiles').upsert({ id: data.user.id, name });
+  }
   enterApp();
   showToast('Conta criada com sucesso!');
 }
 
-function doLogout() {
+async function doLogout() {
+  await supabase.auth.signOut();
   localStorage.removeItem('axisai_user');
   state.user = null;
   document.getElementById('screen-auth').style.display = 'flex';
@@ -2264,7 +2324,7 @@ function _skipFms() {
   setTimeout(() => _finishWizard(), 2000);
 }
 
-function _finishWizard() {
+async function _finishWizard() {
   const equipment = [...document.querySelectorAll('.w-equipment:checked')].map(e => e.value);
   const newData = {
     age:         document.getElementById('w-age').value,
@@ -2302,8 +2362,9 @@ function _finishWizard() {
     }
   });
   state.profile = merged;
-  localStorage.setItem('axisai_profile', JSON.stringify(merged));
   localStorage.setItem('axisai_onboarding_done', '1');
+  const profilePayload = { ...merged, id: state.user?.id };
+  await saveData('profiles', profilePayload, 'axisai_profile');
   loadProfile();
   completeEnterApp();
 }
@@ -2419,6 +2480,12 @@ function loadTreinosIA() {
 }
 function saveTreinosIA(treinos) {
   localStorage.setItem('axisai_treinos', JSON.stringify(treinos));
+  if (state.user?.id && treinos.length > 0) {
+    const newest = treinos[0];
+    supabase.from('workouts').insert({ ...newest, user_id: state.user.id }).catch(e => {
+      console.warn('Supabase offline, workout salvo localmente:', e);
+    });
+  }
 }
 function deleteTreinoIA(id) {
   const treinos = loadTreinosIA().filter(t => t.id !== id);
@@ -2561,6 +2628,10 @@ async function sendMessage() {
   input.value = ''; input.style.height = '44px';
   appendMsg('user', text);
   state.chatHistory.push({ role: 'user', content: text });
+  // Persistir mensagem do usuário no Supabase
+  if (state.user?.id) {
+    supabase.from('chat_messages').insert({ user_id: state.user.id, role: 'user', content: text }).catch(e => console.warn('chat_messages insert error:', e));
+  }
 
   const typingId = 'typing-' + Date.now();
   const box = document.getElementById('chat-messages');
@@ -2676,14 +2747,31 @@ CARRIES: Goblet→Farmer→Suitcase→Waiter's BU→OH Carry.
 POWER JUMPS: Drop Squat→Box Jump→Jump Sq Stick→Continuous→MB/WV Jump Sq→Shuttle. Lateral: Alt SL Balance→SL Drop Sq→SL Lat Bound Stick→@45° Stick→@45° Mini-bounce→Continuous→Vert Jump.
 POWER MED BALL: Chest Pass: TK No Hinge→TK Dynamic→Standing→2-Point→Sprint Start. Side Toss: ½KN→Standing→Stepping→Lat Bound→Shuffle/Crossover.
 TGU: ¼ No Wt→½ No Wt→½ w/Wt→¾ w/Wt→Full w/Wt.
-SPRINT/SKIP: Supine Banded Hip Flex→SA Plank Slider Hip Flex→½KN Hip Flex→Linear Skip→Lateral Skip→High Knee Run→SL Walk→SL Skip.`;
+SPRINT/SKIP: Supine Banded Hip Flex→SA Plank Slider Hip Flex→½KN Hip Flex→Linear Skip→Lateral Skip→High Knee Run→SL Walk→SL Skip.
+
+FORMATO OBRIGATÓRIO DE EXERCÍCIOS:
+Nome em inglês (Nome popular em português): descrição curta de execução.
+Exemplo: Wall Slides (Deslize na Parede): costas na parede, braços deslizam para cima mantendo contato.
+Sempre usar este formato. Nunca omitir o nome em português.
+
+VERIFICAÇÃO ANTI-REDUNDÂNCIA: Antes de finalizar qualquer treino, verificar se algum exercício se repete ou se dois exercícios treinam o mesmo padrão motor no mesmo bloco ou sessão. Se sim, substituir um deles por variação complementar.
+
+TERMINOLOGIA OBRIGATÓRIA: Proibido usar: "omoplata" (usar "escápula"), "músculo da coxa" (usar quadríceps/isquiotibiais), "barriga da perna" (usar gastrocnêmio/sóleo). Sempre usar nomenclatura anatômica correta e atual.`;
 
     const systemPrompt = CORE_PROMPT + profileCtx + fmsCtx + flagCtx + (needsReference ? REF_TABLES : '');
 
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2048, system: systemPrompt, messages: state.chatHistory })
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2048,
+        system: systemPrompt,
+        messages: state.chatHistory,
+        checkin: state.checkin || null,
+        profile: state.profile || null,
+        fmsLatest: state.fmsLatest || null
+      })
     });
     const data = await response.json();
     const reply = data.content?.[0]?.text || 'Desculpe, não consegui processar sua mensagem.';
@@ -2692,6 +2780,10 @@ SPRINT/SKIP: Supine Banded Hip Flex→SA Plank Slider Hip Flex→½KN Hip Flex�
     const cleanReply = reply.replace(/<AXIS_WORKOUT>[\s\S]*?<\/AXIS_WORKOUT>/g, '').trim();
     appendMsg('bot', cleanReply);
     state.chatHistory.push({ role: 'assistant', content: reply });
+    // Persistir resposta do assistente no Supabase
+    if (state.user?.id) {
+      supabase.from('chat_messages').insert({ user_id: state.user.id, role: 'assistant', content: reply }).catch(e => console.warn('chat_messages insert error:', e));
+    }
     if (axisMatch) {
       try { renderWorkoutConfirmCard(JSON.parse(axisMatch[1].trim())); }
       catch(e) { console.warn('AXIS_WORKOUT parse error', e); }
@@ -2857,7 +2949,7 @@ function loadProfile() {
   }
 }
 
-function saveProfile(silent = false) {
+async function saveProfile(silent = false) {
   const p = {
     age: document.getElementById('p-age')?.value || state.profile?.age,
     weight: document.getElementById('p-weight')?.value || state.profile?.weight,
@@ -2876,7 +2968,8 @@ function saveProfile(silent = false) {
     turnoTrabalho: document.getElementById('p-turno')?.value          || state.profile?.turnoTrabalho || '',
   };
   state.profile = { ...state.profile, ...p };
-  localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
+  const profilePayload = { ...state.profile, id: state.user?.id };
+  await saveData('profiles', profilePayload, 'axisai_profile');
   refreshChatSidebar();
   if (!silent) showToast('Perfil salvo com sucesso! ✅');
 }
@@ -2963,8 +3056,9 @@ function loadAvatar() {
 function getCheckinData() {
   return JSON.parse(localStorage.getItem('axisai_checkin') || 'null');
 }
-function saveCheckinData(data) {
-  localStorage.setItem('axisai_checkin', JSON.stringify(data));
+async function saveCheckinData(data) {
+  const payload = { ...data, user_id: state.user?.id, date: today() };
+  await saveData('checkins', payload, 'axisai_checkin');
 }
 
 // ── Card 1: Readiness Score ──
@@ -3224,8 +3318,9 @@ function renderStreakCard() {
 function getPhaseData() {
   return JSON.parse(localStorage.getItem('axisai_phase') || 'null');
 }
-function savePhaseData(data) {
-  localStorage.setItem('axisai_phase', JSON.stringify(data));
+async function savePhaseData(data) {
+  const payload = { ...data, user_id: state.user?.id, started_at: data.started_at || new Date().toISOString() };
+  await saveData('training_phases', payload, 'axisai_phase');
 }
 
 function inferPhaseFromWorkouts() {
@@ -3349,8 +3444,9 @@ function getLGPDConsent() {
   return JSON.parse(localStorage.getItem(LGPD_CONSENT_KEY) || 'null');
 }
 
-function saveLGPDConsent(consent) {
-  localStorage.setItem(LGPD_CONSENT_KEY, JSON.stringify(consent));
+async function saveLGPDConsent(consent) {
+  const payload = { ...consent, user_id: state.user?.id };
+  await saveData('user_consents', payload, LGPD_CONSENT_KEY);
 }
 
 // Show blocking consent modal if no consent stored
@@ -3362,7 +3458,7 @@ function checkLGPDConsent() {
 }
 
 // Called by "ACEITAR E CONTINUAR" button in the modal
-function acceptLGPDConsent() {
+async function acceptLGPDConsent() {
   const consent = {
     version: LGPD_VERSION,
     essential: true,
@@ -3372,7 +3468,7 @@ function acceptLGPDConsent() {
     marketing: document.getElementById('lgpd-marketing').checked,
     date: new Date().toISOString()
   };
-  saveLGPDConsent(consent);
+  await saveLGPDConsent(consent);
   document.getElementById('lgpd-consent-modal').style.display = 'none';
   loadPrivacyToggles();
   showToast('Consentimento registrado com sucesso.');
@@ -3390,14 +3486,14 @@ function loadPrivacyToggles() {
 }
 
 // Called when any privacy toggle changes on the Profile page
-function updatePrivacyConsent() {
+async function updatePrivacyConsent() {
   const consent = getLGPDConsent() || { version: LGPD_VERSION, essential: true, date: new Date().toISOString() };
   consent.fms_data = document.getElementById('priv-fms').checked;
   consent.training_history = document.getElementById('priv-training').checked;
   consent.analytics = document.getElementById('priv-analytics').checked;
   consent.marketing = document.getElementById('priv-marketing').checked;
   consent.updated_at = new Date().toISOString();
-  saveLGPDConsent(consent);
+  await saveLGPDConsent(consent);
   showToast('Preferências de privacidade atualizadas.');
 }
 

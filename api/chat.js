@@ -18,6 +18,39 @@ export default async function handler(req) {
   try {
     const body = await req.json();
 
+    // ALTERAÇÃO 1 — Extrair dados do body da requisição
+    const { messages, checkin, profile, fmsLatest, ...rest } = body;
+
+    // ALTERAÇÃO 2 — Construir contexto de prontidão
+    let readinessContext = '';
+    if (checkin && checkin.readiness_score) {
+      const score = checkin.readiness_score;
+      const directive = score >= 70
+        ? 'Treinar normal — volume e intensidade conforme planejado'
+        : score >= 45
+        ? 'Reduzir volume 30-40% — manter técnica, cortar séries'
+        : 'Descanso ativo — mobilidade e trabalho leve apenas';
+
+      readinessContext = `
+READINESS SCORE HOJE: ${score}/100
+- Sono: ${checkin.sleep}h (peso 35%)
+- Estresse: ${checkin.stress}/10 (peso 25%)
+- DOMS: ${checkin.doms}/10 (peso 25%)
+- Hidratação: ${checkin.hydration}L (peso 15%)
+DIRETRIZ DE PRESCRIÇÃO: ${directive}`;
+    }
+
+    // ALTERAÇÃO 3 — Injetar contexto no system prompt
+    const systemSuffix = `${readinessContext}
+
+PERFIL DO USUÁRIO:
+${profile ? JSON.stringify(profile) : 'Não disponível'}
+
+ÚLTIMA AVALIAÇÃO FMS:
+${fmsLatest ? JSON.stringify(fmsLatest) : 'Não disponível'}`;
+
+    const updatedSystem = (rest.system || '') + systemSuffix;
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -25,7 +58,7 @@ export default async function handler(req) {
         'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...rest, messages, system: updatedSystem }),
     });
 
     const data = await response.json();
