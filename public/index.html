@@ -759,6 +759,54 @@
   .lgpd-links a { font-size: 11px; color: var(--muted); margin: 0 8px; text-decoration: none; }
   .lgpd-links a:hover { color: var(--green); }
 
+  /* ── FMS PENDING ALERT ── */
+  .fms-pending-alert {
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.4);
+    border-radius: 12px; padding: 14px 18px; margin-bottom: 16px;
+    cursor: pointer; width: 100%; color: #ef4444; transition: background 0.2s;
+  }
+  .fms-pending-alert:hover { background: rgba(239,68,68,0.15); }
+  .fms-pending-icon { font-size: 22px; flex-shrink: 0; }
+  .fms-pending-title { font-family: var(--font-display); font-size: 15px; letter-spacing: 1px; }
+  .fms-pending-desc { font-size: 12px; margin-top: 2px; opacity: 0.85; }
+
+  /* ── FMS RESULTS CARDS ── */
+  .fms-results-section { margin-bottom: 24px; }
+  .fms-results-header {
+    font-family: var(--font-display); font-size: 16px; letter-spacing: 1.5px;
+    margin-bottom: 12px; color: var(--text);
+  }
+  .fms-result-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px;
+  }
+  .fms-result-dot {
+    width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; margin-top: 4px;
+  }
+  .fms-result-dot.green  { background: var(--green); box-shadow: 0 0 6px rgba(0,255,135,0.5); }
+  .fms-result-dot.yellow { background: #f59e0b;      box-shadow: 0 0 6px rgba(245,158,11,0.4); }
+  .fms-result-dot.red    { background: #ef4444;      box-shadow: 0 0 6px rgba(239,68,68,0.4); }
+  .fms-result-dot.muted  { background: var(--muted); }
+  .fms-result-body { flex: 1; }
+  .fms-result-names { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+  .fms-result-en { font-family: var(--font-display); font-size: 14px; letter-spacing: 0.5px; }
+  .fms-result-pt { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+  .fms-result-score { font-size: 20px; font-weight: 700; font-family: var(--font-mono); margin-left: auto; flex-shrink: 0; }
+  .fms-result-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .fms-result-na { font-size: 12px; color: var(--muted); font-style: italic; }
+  .fms-total-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; margin-top: 4px; text-align: center;
+  }
+  .fms-total-score { font-family: var(--font-display); font-size: 36px; letter-spacing: 2px; line-height: 1; }
+  .fms-total-label { font-size: 11px; color: var(--muted); font-family: var(--font-mono); margin-top: 4px; }
+  .fms-total-class { font-size: 13px; font-weight: 600; margin-top: 8px; padding: 6px 14px; border-radius: 20px; display: inline-block; }
+  .fms-total-class.green  { background: rgba(0,255,135,0.1); color: var(--green); }
+  .fms-total-class.yellow { background: rgba(245,158,11,0.1); color: #f59e0b; }
+  .fms-total-class.red    { background: rgba(239,68,68,0.1);  color: #ef4444; }
+  .fms-result-date { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
   /* ── PRIVACY SETTINGS (inside profile page) ── */
   .privacy-card { margin-top: 0; }
   .privacy-card h3 { font-family: var(--font-display); font-size: 16px; letter-spacing: 1.5px; margin-bottom: 16px; }
@@ -1269,6 +1317,16 @@
         <h1>OLÁ, <span id="greeting-name">RERER</span> 👊</h1>
         <p>Vamos otimizar sua performance hoje.</p>
       </div>
+
+      <!-- ── FMS Pending Evaluation Alert ── -->
+      <div id="fms-pending-alert" class="fms-pending-alert" style="display:none;" onclick="navigate('diagnosis')">
+        <span class="fms-pending-icon">⚠️</span>
+        <div>
+          <div class="fms-pending-title">AVALIAÇÃO PENDENTE</div>
+          <div class="fms-pending-desc">Você ainda não realizou sua avaliação funcional. Clique aqui para iniciar →</div>
+        </div>
+      </div>
+
       <div class="stats-grid">
         <div class="stat-card green">
           <div class="stat-icon">🛡️</div>
@@ -1435,6 +1493,10 @@
         <h1>AVALIAÇÃO FMS</h1>
         <p>Envie fotos de frente e de lado para cada movimento. A análise considera sua postura e padrões de movimento.</p>
       </div>
+
+      <!-- ── FMS Results (populated from anamnesis data) ── -->
+      <div id="fms-results-container"></div>
+
       <div class="fms-grid" id="fms-grid-container"><div class="fms-card">
       <div style="margin-bottom:14px;">
         <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">Deep Overhead Squat</p>
@@ -1897,7 +1959,25 @@ var supabase = window.supabase.createClient(
 // ═══════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════
-const state = { user: null, workouts: [], profile: null, chatHistory: [], toeTouch: null };
+const state = { user: null, workouts: [], profile: null, chatHistory: [], toeTouch: null, fmsLatest: null };
+
+// ── FMS movement definitions for results rendering ──
+const FMS_RESULT_DEFS = [
+  { id: 'dos', nameEn: 'Deep Squat', namePt: 'Agachamento Profundo',
+    desc: { 3: 'Execução completa: torso paralelo à tíbia, joelhos alinhados, barra acima dos pés', 2: 'Execução com limitação: necessita de elevação de calcanhares ou compensação de tronco', 1: 'Incapaz de realizar mesmo com compensação', 0: 'Dor durante o movimento' } },
+  { id: 'hs', nameEn: 'Hurdle Step', namePt: 'Passada com Obstáculo',
+    desc: { 3: 'Quadril, joelho e tornozelo alinhados, pelve e coluna estáveis', 2: 'Perda de alinhamento ou contato do pé com o obstáculo', 1: 'Contato com o obstáculo ou perda de equilíbrio', 0: 'Dor durante o movimento' } },
+  { id: 'il', nameEn: 'Inline Lunge', namePt: 'Avanço em Linha',
+    desc: { 3: 'Bastão mantido vertical, joelho toca atrás do calcanhar, sem perda de equilíbrio', 2: 'Movimento realizado com perda de estabilidade ou desvio do bastão', 1: 'Incapaz de manter posição ou equilíbrio', 0: 'Dor durante o movimento' } },
+  { id: 'sm', nameEn: 'Shoulder Mobility', namePt: 'Mobilidade de Ombro',
+    desc: { 3: 'Punhos a menos de 1 palmo de distância', 2: 'Punhos entre 1 e 1,5 palmo de distância', 1: 'Punhos a mais de 1,5 palmo de distância', 0: 'Dor durante o movimento ou no clearing test' } },
+  { id: 'aslr', nameEn: 'Active Straight Leg Raise', namePt: 'Elevação Ativa da Perna Estendida',
+    desc: { 3: 'Tornozelo ultrapassa a linha média da coxa oposta', 2: 'Tornozelo entre joelho e linha média da coxa oposta', 1: 'Tornozelo abaixo do joelho da perna oposta', 0: 'Dor durante o movimento' } },
+  { id: 'tspu', nameEn: 'Trunk Stability Push-Up', namePt: 'Estabilidade de Tronco',
+    desc: { 3: 'Executa push-up completo sem queda de quadril (polegar na testa para homens, no queixo para mulheres)', 2: 'Executa push-up com polegar no queixo (homens) ou clavícula (mulheres)', 1: 'Incapaz de realizar push-up na posição mínima', 0: 'Dor durante o movimento ou no clearing test' } },
+  { id: 'rs', nameEn: 'Rotary Stability', namePt: 'Estabilidade Rotatória',
+    desc: { 3: 'Extensão/flexão unilateral correta com coluna paralela ao solo', 2: 'Realiza o padrão apenas em diagonal (braço e perna opostos)', 1: 'Incapaz de realizar o padrão sem perda de equilíbrio', 0: 'Dor durante o movimento ou no clearing test' } },
+];
 
 // FMS test definitions for dynamic rendering
 const FMS_TESTS = [
@@ -2351,6 +2431,7 @@ async function _finishWizard() {
     newData.fms       = _wizardFmsData.fms;
     newData.toeTouch  = _wizardFmsData.toeTouch;
     newData.riskFlags = _wizardFmsData.riskFlags;
+    setFmsLatest(_wizardFmsData.fms);
     _wizardFmsData = null;
   }
   const existing = JSON.parse(localStorage.getItem('axisai_profile') || '{}');
@@ -2382,6 +2463,7 @@ function navigate(page) {
   });
   closeSidebar();
   if (page === 'workouts') renderWorkouts();
+  if (page === 'diagnosis') renderFmsResults();
 }
 
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('mobile-open'); document.getElementById('overlay').classList.toggle('mobile-open'); }
@@ -2470,6 +2552,7 @@ function refreshDashboard() {
     document.getElementById('hero-btn').onclick = () => navigate('chat');
   }
   refreshDashboardCards();
+  refreshPendingAlert();
 }
 
 // ═══════════════════════════════════════════════
@@ -2924,6 +3007,26 @@ function runDiagnosis() {
 //  PROFILE
 // ═══════════════════════════════════════════════
 function loadProfile() {
+  // Restore fmsLatest from dedicated localStorage key
+  if (!state.fmsLatest) {
+    const savedFms = localStorage.getItem('axisai_fms_latest');
+    if (savedFms) {
+      try { state.fmsLatest = JSON.parse(savedFms); } catch(e) {}
+    }
+  }
+  // Bootstrap from profile if no dedicated entry yet
+  if (!state.fmsLatest) {
+    const profileRaw = localStorage.getItem('axisai_profile');
+    if (profileRaw) {
+      try {
+        const prof = JSON.parse(profileRaw);
+        if (prof.fms && Object.keys(prof.fms).length > 0) {
+          state.fmsLatest = { fms: prof.fms, date: null };
+        }
+      } catch(e) {}
+    }
+  }
+
   const saved = localStorage.getItem('axisai_profile');
   if (saved) {
     state.profile = JSON.parse(saved);
@@ -2993,9 +3096,94 @@ function saveFMS() {
   if (fms.tt === 'negative') flags.push('toe_touch_negative');
   state.profile.riskFlags = flags.length > 0 ? flags : ['none'];
 
+  setFmsLatest(state.profile.fms);
   saveProfile(true);
   refreshDashboard();
   showToast('FMS salvo! ' + (flags.length > 0 ? flags.length + ' flag(s) ⚠️' : 'Sem disfunções ✅'));
+}
+
+// ═══════════════════════════════════════════════
+//  FMS RESULTS
+// ═══════════════════════════════════════════════
+async function setFmsLatest(fms, date) {
+  state.fmsLatest = { fms, date: date || new Date().toISOString() };
+  if (state.user?.id) {
+    await saveData('fms_assessments', { user_id: state.user.id, fms, date: state.fmsLatest.date }, 'axisai_fms_latest');
+  } else {
+    localStorage.setItem('axisai_fms_latest', JSON.stringify(state.fmsLatest));
+  }
+  renderFmsResults();
+  refreshPendingAlert();
+}
+
+function _fmsScoreColor(score) {
+  if (score === null || score === undefined) return 'muted';
+  if (score === 3) return 'green';
+  if (score === 2) return 'yellow';
+  return 'red'; // 0 or 1
+}
+
+function renderFmsResults() {
+  const container = document.getElementById('fms-results-container');
+  if (!container) return;
+  if (!state.fmsLatest?.fms) { container.innerHTML = ''; return; }
+
+  const fms  = state.fmsLatest.fms;
+  const date = state.fmsLatest.date
+    ? new Date(state.fmsLatest.date).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' })
+    : '';
+
+  // Sum scored movements (excludes tspu/rs which are not in anamnesis)
+  const scoredIds = ['dos','hs','il','sm','aslr'];
+  const scores = scoredIds.map(id => fms[id] ?? null);
+  const total  = scores.reduce((sum, s) => sum + (s ?? 0), 0);
+  const max    = scoredIds.length * 3; // 15
+
+  let classLabel, classColor;
+  if (total >= 12)      { classLabel = 'Padrões funcionais — baixo risco de lesão'; classColor = 'green'; }
+  else if (total >= 9)  { classLabel = 'Atenção — assimetrias ou limitações presentes'; classColor = 'yellow'; }
+  else                  { classLabel = 'Alto risco — disfunções de movimento identificadas'; classColor = 'red'; }
+
+  const cardsHtml = FMS_RESULT_DEFS.map(def => {
+    const score = fms[def.id] ?? null;
+    const isNA  = score === null;
+    const color = isNA ? 'muted' : _fmsScoreColor(score);
+    const descText = isNA
+      ? `<div class="fms-result-na">Não avaliado nesta versão</div>`
+      : `<div class="fms-result-desc">${score} — ${def.desc[score]}</div>`;
+    const scoreDisplay = isNA ? '—' : score;
+    const scoreStyle   = isNA ? 'color:var(--muted)' : `color:${color === 'green' ? 'var(--green)' : color === 'yellow' ? '#f59e0b' : '#ef4444'}`;
+    return `<div class="fms-result-card">
+      <div class="fms-result-dot ${color}"></div>
+      <div class="fms-result-body">
+        <div class="fms-result-names">
+          <span class="fms-result-en">${def.nameEn}</span>
+          <span class="fms-result-pt">${def.namePt}</span>
+          <span class="fms-result-score" style="${scoreStyle}">${scoreDisplay}</span>
+        </div>
+        ${descText}
+      </div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = `<div class="fms-results-section">
+    <div class="fms-results-header">RESULTADO DA AVALIAÇÃO</div>
+    ${cardsHtml}
+    <div class="fms-total-card">
+      <div class="fms-total-score" style="color:${classColor === 'green' ? 'var(--green)' : classColor === 'yellow' ? '#f59e0b' : '#ef4444'}">${total}</div>
+      <div class="fms-total-label">PONTOS / ${max} (5 DE 7 MOVIMENTOS AVALIADOS)</div>
+      <div class="fms-total-class ${classColor}">${classLabel}</div>
+      ${date ? `<div class="fms-result-date">Avaliação realizada em ${date}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function refreshPendingAlert() {
+  const el = document.getElementById('fms-pending-alert');
+  if (!el) return;
+  const hasData = state.fmsLatest?.fms &&
+    ['dos','hs','il','sm','aslr'].some(k => state.fmsLatest.fms[k] !== null && state.fmsLatest.fms[k] !== undefined);
+  el.style.display = hasData ? 'none' : 'flex';
 }
 
 // ═══════════════════════════════════════════════
