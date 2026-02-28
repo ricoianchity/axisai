@@ -2019,6 +2019,11 @@ async function loadUserData(userId) {
   if (checkin.data)   { state.checkin     = checkin.data;   localStorage.setItem('axisai_checkin', JSON.stringify(checkin.data)); }
   if (phase.data)     { state.phase       = phase.data;     localStorage.setItem('axisai_phase', JSON.stringify(phase.data)); }
   if (messages.data)  { state.chatHistory = messages.data.map(m => ({ role: m.role, content: m.content })); }
+
+  // Role check — set after profile is loaded
+  const role = state.profile?.role || 'client';
+  state.role = role;
+  document.body.setAttribute('data-role', role);
 }
 
 async function initApp() {
@@ -3072,6 +3077,7 @@ async function saveProfile(silent = false) {
   };
   state.profile = { ...state.profile, ...p };
   const profilePayload = { ...state.profile, id: state.user?.id };
+  delete profilePayload.role; // never overwrite role from client-side profile save
   await saveData('profiles', profilePayload, 'axisai_profile');
   refreshChatSidebar();
   if (!silent) showToast('Perfil salvo com sucesso! ✅');
