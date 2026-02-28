@@ -347,8 +347,30 @@
   .ex-tag { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px; font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
   .session-card-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
   .btn-start-soon { padding: 5px 12px; background: none; border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.2); border-radius: 8px; font-size: 11px; font-weight: 700; cursor: not-allowed; font-family: var(--font-body); letter-spacing: 0.5px; white-space: nowrap; }
-  .session-card-body { display: none; padding: 14px 18px 18px; border-top: 1px solid var(--border); font-size: 13px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
+  .session-card-body { display: none; border-top: 1px solid var(--border); }
   .session-card-body.open { display: block; animation: fadeUp 0.25s ease; }
+
+  /* ── WORKOUT BLOCKS ── */
+  .workout-blocks { display:flex; flex-direction:column; gap:10px; padding:14px 18px 18px; }
+  .wb-card { border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .wb-card-header { display:flex; align-items:center; gap:10px; padding:11px 14px; border-left:3px solid transparent; }
+  .wb-block-emoji { font-size:15px; line-height:1; flex-shrink:0; }
+  .wb-block-name  { font-family:var(--font-display); font-size:12px; letter-spacing:1.5px; color:var(--text); flex:1; }
+  .wb-block-dur   { font-family:var(--font-mono); font-size:11px; color:var(--muted); white-space:nowrap; }
+  .wb-card-body   { padding:10px 14px 12px; display:flex; flex-direction:column; gap:2px; }
+  .wb-subsection  { margin-top:10px; }
+  .wb-subsection:first-child { margin-top:0; }
+  .wb-sub-label   { font-family:var(--font-mono); font-size:10px; letter-spacing:2px; color:#64748B; text-transform:uppercase; margin-bottom:5px; padding-bottom:4px; border-bottom:1px solid var(--border); }
+  .wb-exercise    { display:flex; align-items:baseline; justify-content:space-between; gap:8px; padding:3px 0; }
+  .wb-ex-name     { font-size:13px; font-weight:500; color:var(--text); }
+  .wb-ex-sets     { font-family:var(--font-mono); font-size:11px; color:#94A3B8; white-space:nowrap; flex-shrink:0; }
+  .wb-rest        { display:inline-flex; align-items:center; gap:5px; font-family:var(--font-mono); font-size:11px; color:var(--muted); background:rgba(255,255,255,0.05); border-radius:6px; padding:3px 8px; margin:4px 0; width:fit-content; }
+  .wb-note        { font-size:12px; color:var(--muted); line-height:1.6; padding:2px 0; }
+  .wb-fallback    { padding:14px 18px; white-space:pre-wrap; font-size:13px; line-height:1.8; word-break:break-word; }
+  .wb-footer      { display:flex; gap:8px; align-items:center; padding:10px 14px 14px; border-top:1px solid var(--border); }
+  .btn-complete-session { padding:7px 14px; background:rgba(0,255,135,0.1); border:1px solid rgba(0,255,135,0.3); color:var(--green); border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--font-body); letter-spacing:0.5px; transition:background 0.2s; white-space:nowrap; }
+  .btn-complete-session:hover    { background:rgba(0,255,135,0.2); }
+  .btn-complete-session:disabled { opacity:0.4; cursor:default; background:rgba(0,255,135,0.05); }
 
   .fms-info-btn { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; line-height: 1; flex-shrink: 0; padding: 0; }
   .fms-info-btn:hover { border-color: var(--green); color: var(--green); }
@@ -2613,7 +2635,7 @@ function renderWorkouts() {
                 <button onclick="event.stopPropagation();deleteTreinoIA(${t.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;" title="Excluir">🗑️</button>
               </div>
             </div>
-            <div class="session-card-body" id="scb-${t.id}">${sanitizarMensagem(t.conteudo||'').replace(/\n/g,'<br>')}</div>
+            <div class="session-card-body" id="scb-${t.id}">${renderWorkoutBlocks(t.conteudo, t.id, isDone)}</div>
           </div>`;
         });
         if (multiWeek) html += `</div>`;
@@ -2659,7 +2681,7 @@ function renderWorkouts() {
             <button onclick="event.stopPropagation();deleteTreinoIA(${t.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;" title="Excluir">🗑️</button>
           </div>
         </div>
-        <div class="session-card-body" id="scb-${t.id}">${sanitizarMensagem(t.conteudo||'').replace(/\n/g,'<br>')}</div>
+        <div class="session-card-body" id="scb-${t.id}">${renderWorkoutBlocks(t.conteudo, t.id, t.concluida || t.completed)}</div>
       </div>`;
     });
     html += `</div></div>`;
@@ -2838,6 +2860,183 @@ function _extractExercisePreview(conteudo) {
     }
   }
   return result;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  WORKOUT BLOCK RENDERER
+// ══════════════════════════════════════════════════════════════════════════════
+function renderWorkoutBlocks(conteudo, treinoId, isDone) {
+  if (!conteudo) return '<div class="wb-fallback">Sem conteúdo.</div>';
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function _esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function stripMd(s) {
+    return s.replace(/\*\*/g,'').replace(/\*/g,'').replace(/^#+\s*/,'').trim();
+  }
+
+  // ── Block definitions ──────────────────────────────────────────────────────
+  const BLOCKS = [
+    { re: /PILLAR\s*PREP/i,              color:'#3B82F6', emoji:'🔵', label:'PILLAR PREP'  },
+    { re: /FOR[ÇC]A|POWER|HIPERTROFIA/i, color:'#F97316', emoji:'🟠', label:'FORÇA'        },
+    { re: /ESD|CONDICIONAMENTO/i,         color:'#22C55E', emoji:'🟢', label:'ESD'          },
+  ];
+
+  function matchBlock(raw) {
+    const c = stripMd(raw);
+    for (const b of BLOCKS) if (b.re.test(c)) return b;
+    return null;
+  }
+
+  // ── Segment the text into named blocks ─────────────────────────────────────
+  const segments = [];
+  let cur = null;
+  for (const raw of conteudo.split('\n')) {
+    const def = matchBlock(raw);
+    if (def) {
+      if (cur) segments.push(cur);
+      const clean = stripMd(raw);
+      const dur   = (clean.match(/\(([^)]+)\)/) || [])[1] || null;
+      cur = { def, duration: dur, lines: [] };
+    } else if (cur) {
+      cur.lines.push(raw);
+    }
+  }
+  if (cur) segments.push(cur);
+
+  // ── Fallback: no blocks found — plain pre-wrap ─────────────────────────────
+  if (!segments.length) {
+    return `<div class="wb-fallback">${_esc(conteudo)}</div>`;
+  }
+
+  // ── Exercise name / sets splitter ──────────────────────────────────────────
+  function splitEx(body) {
+    // "Name — 3×8" or "Name — 3 séries" (explicit separator)
+    const sep = body.match(/^(.*?)\s*[-—·]\s*(\d.*)$/);
+    if (sep) return { name: sep[1].trim(), sets: sep[2].trim() };
+    // "Ring Row 10x" or "IT-Band 30s" (trailing qty)
+    const end = body.match(/^(.*)\s+(\d+[x×]\d*|\d+\s*(?:séries?|sets?|rep[s.]?|min|seg))$/i);
+    if (end) return { name: end[1].trim(), sets: end[2].trim() };
+    return { name: body, sets: null };
+  }
+
+  // ── Render the lines inside one block ─────────────────────────────────────
+  function renderLines(lines) {
+    let out = '';
+    let curSub  = null;   // current sub-section name (null = no wrapper yet)
+    let subBuf  = [];     // buffered row HTML
+
+    function flushSub() {
+      if (!subBuf.length && curSub === null) return;
+      if (curSub !== null) {
+        out += `<div class="wb-subsection">`;
+        out += `<div class="wb-sub-label">${_esc(curSub.toUpperCase())}</div>`;
+        subBuf.forEach(l => out += l);
+        out += `</div>`;
+      } else {
+        subBuf.forEach(l => out += l);
+      }
+      curSub = null;
+      subBuf = [];
+    }
+
+    for (const rawLine of lines) {
+      const line  = rawLine.trim();
+      if (!line || /^[-=]{3,}$/.test(line)) continue;
+      const clean = stripMd(line);
+      if (!clean) continue;
+
+      // skip stray block header lines
+      if (matchBlock(line)) continue;
+
+      // ── 1. Rest intervals (check BEFORE bold detection) ───────────────────
+      const isRest = /descanso|REST\b|entre\s+(?:séries|exerc|set)|⏱/i.test(clean);
+      if (isRest) {
+        const label = clean.replace(/^[*_⏱\s]+/, '').replace(/⏱/g, '').trim();
+        subBuf.push(`<div class="wb-rest">⏱ ${_esc(label)}</div>`);
+        continue;
+      }
+
+      // ── 2. Sub-section header ─────────────────────────────────────────────
+      // Bold-only line **like this** or known sub-section keyword
+      const isBoldOnly = /^\*\*[^*]+\*\*\s*$/.test(line.trim());
+      const isKnownSub = /^(Foam Rolling|Mobilidade|Ativa[çc]|Aquecimento|Din[âa]mico|Tri.?[Ss]et|Straight Set|Bloco|Circuito|Finaliza|Cool|Alongamento)/i.test(clean);
+      if (isBoldOnly || isKnownSub) {
+        flushSub();
+        curSub = clean.replace(/\(.*?\)/g, '').trim();
+        continue;
+      }
+
+      // ── 3. Exercise line: A1., A1 , 1., •, -, * ──────────────────────────
+      const exMatch = clean.match(/^([A-Z]\d+\.?\s+|[A-Z][.)]\s+|\d+[.)]\s+|[•·\-*]\s+)(.*)/);
+      if (exMatch) {
+        const prefix        = exMatch[1].trimEnd();
+        const body          = exMatch[2].replace(/\*\*/g, '').trim();
+        const { name, sets } = splitEx(body);
+        subBuf.push(
+          `<div class="wb-exercise">` +
+          `<span class="wb-ex-name">${_esc(prefix + ' ' + name)}</span>` +
+          (sets ? `<span class="wb-ex-sets">${_esc(sets)}</span>` : '') +
+          `</div>`
+        );
+        continue;
+      }
+
+      // ── 4. Plain note / BPM / observation ────────────────────────────────
+      subBuf.push(`<div class="wb-note">${_esc(clean)}</div>`);
+    }
+    flushSub();
+    return out;
+  }
+
+  // ── Assemble final HTML ────────────────────────────────────────────────────
+  let html = '<div class="workout-blocks">';
+  segments.forEach(({ def, duration, lines }) => {
+    const durLabel = duration ? ` · ${duration}` : '';
+    html += `<div class="wb-card">`;
+    html +=   `<div class="wb-card-header" style="border-left-color:${def.color};background:${def.color}18;">`;
+    html +=     `<span class="wb-block-emoji">${def.emoji}</span>`;
+    html +=     `<span class="wb-block-name">${def.label}</span>`;
+    html +=     `<span class="wb-block-dur">${_esc(durLabel)}</span>`;
+    html +=   `</div>`;
+    html +=   `<div class="wb-card-body">${renderLines(lines)}</div>`;
+    html += `</div>`;
+  });
+
+  // ── Footer ─────────────────────────────────────────────────────────────────
+  html += `<div class="wb-footer">`;
+  if (isDone) {
+    html += `<button class="btn-complete-session" disabled>✓ Sessão Concluída</button>`;
+  } else {
+    html += `<button class="btn-complete-session" onclick="event.stopPropagation();completarTreinoIA(${treinoId})">✓ Concluir Sessão</button>`;
+  }
+  html += `<button class="btn-start-soon" disabled title="Em breve">▶ Iniciar Treino</button>`;
+  html += `</div>`;
+
+  html += '</div>';
+  return html;
+}
+
+// ── Mark a treinoIA session as completed ───────────────────────────────────
+async function completarTreinoIA(id) {
+  const treinos = loadTreinosIA();
+  const t = treinos.find(x => x.id === id);
+  if (!t) return;
+  t.concluida  = true;
+  t.completed  = true;
+  t.completedAt = new Date().toISOString();
+  localStorage.setItem('axisai_treinos', JSON.stringify(treinos));
+  if (state.user?.id) {
+    supabase.from('workouts')
+      .update({ concluida: true })
+      .eq('id', id)
+      .eq('user_id', state.user.id)
+      .catch(e => console.warn('completarTreinoIA:', e));
+  }
+  renderWorkouts();
+  refreshDashboard();
+  showToast('Sessão concluída! 💪');
 }
 
 // ── AXIS WORKOUT CONFIRM SYSTEM ──
