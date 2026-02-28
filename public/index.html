@@ -310,6 +310,46 @@
   .fase-body { display:flex; flex-direction:column; gap:8px; margin-bottom:8px; }
   .fase-body.collapsed { display:none; }
 
+  /* ── WORKOUT TAB — PHASE GROUPING v2 ── */
+  .phase-group { margin-bottom: 28px; }
+  .phase-header-bar {
+    background: rgba(74,158,245,0.1); border-left: 3px solid #4a9ef5;
+    border-radius: 0 10px 10px 0; padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none; margin-bottom: 8px; transition: background 0.2s;
+  }
+  .phase-header-bar:hover { background: rgba(74,158,245,0.17); }
+  .phase-header-left  { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .phase-header-name  { font-family: var(--font-display); font-size: 14px; letter-spacing: 1px; }
+  .phase-header-meta  { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+  .phase-progress-wrap { margin-bottom: 14px; }
+  .phase-progress-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; margin-bottom: 5px; }
+  .phase-progress-fill { height: 100%; background: var(--green); border-radius: 2px; transition: width 0.4s ease; }
+  .phase-progress-label { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+  .week-group { margin-bottom: 12px; }
+  .week-label { font-size: 10px; font-family: var(--font-mono); color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; padding-left: 2px; }
+  /* Session card */
+  .session-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 8px; transition: border-color 0.2s; }
+  .session-card:hover { border-color: rgba(74,158,245,0.3); }
+  .session-card.completed { border-color: rgba(0,255,135,0.2); background: rgba(0,255,135,0.02); }
+  .session-card-header { padding: 14px 18px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+  .session-status-dot { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .session-status-dot.pending { background: rgba(59,130,246,0.15); }
+  .session-status-dot.done    { background: rgba(0,255,135,0.12); }
+  .session-info { flex: 1; min-width: 0; }
+  .session-title-row { font-weight: 600; font-size: 15px; margin-bottom: 5px; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .s-badge { padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; font-family: var(--font-mono); letter-spacing: 0.5px; white-space: nowrap; }
+  .s-badge-phase   { background: rgba(74,158,245,0.15);  color: #4a9ef5; }
+  .s-badge-week    { background: rgba(168,85,247,0.15);  color: var(--purple); }
+  .s-badge-done    { background: rgba(0,255,135,0.15);   color: var(--green); }
+  .s-badge-pending { background: rgba(59,130,246,0.12);  color: var(--blue); }
+  .session-preview { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 3px; }
+  .ex-tag { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px; font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+  .session-card-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+  .btn-start-soon { padding: 5px 12px; background: none; border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.2); border-radius: 8px; font-size: 11px; font-weight: 700; cursor: not-allowed; font-family: var(--font-body); letter-spacing: 0.5px; white-space: nowrap; }
+  .session-card-body { display: none; padding: 14px 18px 18px; border-top: 1px solid var(--border); font-size: 13px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
+  .session-card-body.open { display: block; animation: fadeUp 0.25s ease; }
+
   .fms-info-btn { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; line-height: 1; flex-shrink: 0; padding: 0; }
   .fms-info-btn:hover { border-color: var(--green); color: var(--green); }
   .fms-info-panel { display: none; margin-top: 10px; padding: 12px; background: var(--bg2,var(--bg)); border-radius: 8px; border: 1px solid var(--border); font-size: 12px; color: var(--muted); line-height: 1.6; }
@@ -2483,47 +2523,214 @@ function saveWorkouts() { localStorage.setItem('axisai_workouts', JSON.stringify
 function renderWorkouts() {
   const c = document.getElementById('all-workouts');
   const treinosIA = loadTreinosIA();
+
+  // ── CHANGE 4: Empty state ─────────────────────────────────────────────────
   if (!state.workouts.length && !treinosIA.length) {
-    c.innerHTML = `<div class="empty-state"><div class="empty-icon">🏋️</div><div class="empty-title">NENHUM TREINO AINDA</div><div class="empty-desc">Converse com o Coach IA para receber seu plano personalizado.</div><button class="btn-action" onclick="navigate('chat')">PEDIR TREINO</button></div>`;
+    c.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">🏋️</div>
+      <div class="empty-title">NENHUM TREINO AINDA</div>
+      <div class="empty-desc">Converse com o coach IA para gerar seu primeiro plano.</div>
+      <button class="btn-action" onclick="navigate('chat')">FALAR COM O COACH →</button>
+    </div>`;
     return;
   }
+
   let html = '';
-  // Sessões avulsas (tipo='sessao')
-  const avulsos = treinosIA.filter(t => t.tipo === 'sessao' || !t.tipo);
-  // Sessões de plano (tipo='plano_sessao')
+
+  // ─── TREINOS IA ───────────────────────────────────────────────────────────
+  const avulsos     = treinosIA.filter(t => t.tipo === 'sessao' || !t.tipo);
   const planoSessoes = treinosIA.filter(t => t.tipo === 'plano_sessao');
-  // Agrupar planos por planoTitulo
+
+  // Group: planoTitulo → faseNum → semanaNum (or sequential week)
   const planos = {};
   planoSessoes.forEach(t => {
-    const key = t.planoTitulo || 'Plano';
-    if (!planos[key]) planos[key] = {};
-    const fKey = t.faseNum || 1;
-    if (!planos[key][fKey]) planos[key][fKey] = { nome: t.faseNome || `Fase ${fKey}`, sessoes: [] };
-    planos[key][fKey].sessoes.push(t);
+    const pKey = t.planoTitulo || 'Plano';
+    if (!planos[pKey]) planos[pKey] = {};
+    const fKey = String(t.faseNum || 1);
+    if (!planos[pKey][fKey]) planos[pKey][fKey] = { nome: t.faseNome || `Fase ${fKey}`, sessoes: [] };
+    planos[pKey][fKey].sessoes.push(t);
   });
-  // Render planos
+
+  // ── CHANGE 1 + 2 + 3: Render each plan's phase groups ────────────────────
   Object.entries(planos).forEach(([planoTitulo, fases]) => {
-    html += `<div style="margin-bottom:20px;"><div style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:4px;">📋 ${planoTitulo}</div>`;
-    Object.entries(fases).sort((a,b)=>a[0]-b[0]).forEach(([fNum, fase]) => {
-      const fId = 'fase-' + Date.now() + '-' + fNum;
-      html += `<div class="fase-header" onclick="toggleFaseBody('${fId}')"><span class="fase-titulo">FASE ${fNum} — ${fase.nome.toUpperCase()}</span><span class="fase-toggle-icon">▼</span></div><div class="fase-body" id="${fId}">`;
-      fase.sessoes.forEach(t => {
-        html += `<div class="treino-card"><div class="treino-card-header"><div><div class="treino-card-title" style="display:flex;align-items:center;gap:8px;">${t.titulo} <span class="cat-badge cat-${t.categoria||'fullbody'}">${t.categoria||'fullbody'}</span></div><div class="treino-card-meta">${t.data} · Coach IA</div></div><div style="display:flex;gap:8px;align-items:center;"><button class="btn-ver-treino" onclick="toggleTreino('tb-${t.id}',this)">▼ Ver</button><button onclick="deleteTreinoIA(${t.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;" title="Excluir">🗑️</button></div></div><div class="treino-card-body" id="tb-${t.id}">${sanitizarMensagem(t.conteudo||'').replace(/\n/g,'<br>')}</div></div>`;
+    html += `<div style="margin-bottom:8px;"><div style="font-family:var(--font-display);font-size:17px;letter-spacing:1px;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border);">📋 ${planoTitulo}</div>`;
+    Object.entries(fases).sort((a,b) => Number(a[0]) - Number(b[0])).forEach(([fNum, fase]) => {
+      const fId = `pg-ia-f${fNum}-${planoTitulo.replace(/\s/g,'').slice(0,8)}`;
+      const total = fase.sessoes.length;
+      const done  = fase.sessoes.filter(s => s.concluida || s.completed).length;
+      const pct   = total ? Math.round(done / total * 100) : 0;
+
+      // Sub-group by semanaNum (if set) or derive sequentially (3 sessions / week)
+      const semanas = {};
+      fase.sessoes.forEach((s, idx) => {
+        const sKey = String(s.semanaNum || Math.floor(idx / 3) + 1);
+        if (!semanas[sKey]) semanas[sKey] = [];
+        semanas[sKey].push(s);
       });
-      html += `</div>`;
+
+      html += `<div class="phase-group">
+        <div class="phase-header-bar" onclick="toggleFaseBody('${fId}')">
+          <div class="phase-header-left">
+            <span class="phase-header-name">FASE ${fNum} — ${fase.nome.toUpperCase()}</span>
+            <span class="phase-header-meta">${total} sessões · ${pct}% concluído</span>
+          </div>
+          <span class="fase-toggle-icon">▼</span>
+        </div>
+        <div class="phase-progress-wrap">
+          <div class="phase-progress-bar"><div class="phase-progress-fill" style="width:${pct}%"></div></div>
+          <div class="phase-progress-label">${done} de ${total} sessões concluídas</div>
+        </div>
+        <div class="fase-body" id="${fId}">`;
+
+      Object.entries(semanas).sort((a,b) => Number(a[0]) - Number(b[0])).forEach(([semNum, sessoes]) => {
+        const multiWeek = Object.keys(semanas).length > 1;
+        if (multiWeek) html += `<div class="week-group"><div class="week-label">Semana ${semNum}</div>`;
+        sessoes.forEach(t => {
+          const preview  = _extractExercisePreview(t.conteudo);
+          const tags     = preview.slice(0, 3).map(e => `<span class="ex-tag">${e}</span>`).join('');
+          const isDone   = t.concluida || t.completed;
+          html += `<div class="session-card ${isDone ? 'completed' : ''}">
+            <div class="session-card-header" onclick="toggleSessionCard('scb-${t.id}')">
+              <div class="session-status-dot ${isDone ? 'done' : 'pending'}">${isDone ? '✅' : '🏋️'}</div>
+              <div class="session-info">
+                <div class="session-title-row">
+                  ${t.titulo}
+                  <span class="s-badge s-badge-phase">F${fNum}</span>
+                  <span class="s-badge s-badge-week">Sem ${semNum}</span>
+                  ${isDone ? '<span class="s-badge s-badge-done">✓ FEITO</span>' : ''}
+                </div>
+                <div class="session-preview">${tags || '<span class="ex-tag" style="opacity:0.45;">Abrir para ver exercícios</span>'}</div>
+              </div>
+              <div class="session-card-actions">
+                <button class="btn-start-soon" disabled title="Em breve">▶ Iniciar Treino</button>
+                <button onclick="event.stopPropagation();deleteTreinoIA(${t.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;" title="Excluir">🗑️</button>
+              </div>
+            </div>
+            <div class="session-card-body" id="scb-${t.id}">${sanitizarMensagem(t.conteudo||'').replace(/\n/g,'<br>')}</div>
+          </div>`;
+        });
+        if (multiWeek) html += `</div>`;
+      });
+      html += `</div></div>`;
     });
     html += `</div>`;
   });
-  // Render sessões avulsas
+
+  // ── SESSÕES AVULSAS ───────────────────────────────────────────────────────
   if (avulsos.length) {
-    if (Object.keys(planos).length) html += `<div style="margin:20px 0 12px;font-family:var(--font-display);font-size:14px;letter-spacing:1px;color:var(--muted);">SESSÕES AVULSAS</div>`;
-    html += avulsos.map(t => `<div class="treino-card"><div class="treino-card-header"><div><div class="treino-card-title" style="display:flex;align-items:center;gap:8px;">🤖 ${t.titulo} <span class="cat-badge cat-${t.categoria||'fullbody'}">${t.categoria||'fullbody'}</span></div><div class="treino-card-meta">${t.data} · Coach IA</div></div><div style="display:flex;gap:8px;align-items:center;"><button class="btn-ver-treino" onclick="toggleTreino('tb-${t.id}',this)">▼ Ver treino completo</button><button onclick="deleteTreinoIA(${t.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;" title="Excluir">🗑️</button></div></div><div class="treino-card-body" id="tb-${t.id}">${sanitizarMensagem(t.conteudo||'').replace(/\n/g,'<br>')}</div></div>`).join('');
+    const aTotal = avulsos.length;
+    const aDone  = avulsos.filter(s => s.concluida || s.completed).length;
+    const aPct   = aTotal ? Math.round(aDone / aTotal * 100) : 0;
+    html += `<div class="phase-group">
+      <div class="phase-header-bar" onclick="toggleFaseBody('avulsos-grp')">
+        <div class="phase-header-left">
+          <span class="phase-header-name">SESSÕES AVULSAS</span>
+          <span class="phase-header-meta">${aTotal} sessões · Coach IA</span>
+        </div>
+        <span class="fase-toggle-icon">▼</span>
+      </div>
+      <div class="phase-progress-wrap">
+        <div class="phase-progress-bar"><div class="phase-progress-fill" style="width:${aPct}%"></div></div>
+        <div class="phase-progress-label">${aDone} de ${aTotal} sessões concluídas</div>
+      </div>
+      <div class="fase-body" id="avulsos-grp">`;
+    avulsos.forEach(t => {
+      const preview = _extractExercisePreview(t.conteudo);
+      const tags    = preview.slice(0, 3).map(e => `<span class="ex-tag">${e}</span>`).join('');
+      html += `<div class="session-card">
+        <div class="session-card-header" onclick="toggleSessionCard('scb-${t.id}')">
+          <div class="session-status-dot pending">🤖</div>
+          <div class="session-info">
+            <div class="session-title-row">
+              ${t.titulo}
+              <span class="s-badge s-badge-phase cat-${t.categoria||'fullbody'}">${(t.categoria||'IA').toUpperCase()}</span>
+            </div>
+            <div class="session-preview">${tags}</div>
+          </div>
+          <div class="session-card-actions">
+            <button class="btn-start-soon" disabled title="Em breve">▶ Iniciar Treino</button>
+            <button onclick="event.stopPropagation();deleteTreinoIA(${t.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;" title="Excluir">🗑️</button>
+          </div>
+        </div>
+        <div class="session-card-body" id="scb-${t.id}">${sanitizarMensagem(t.conteudo||'').replace(/\n/g,'<br>')}</div>
+      </div>`;
+    });
+    html += `</div></div>`;
   }
-  // Treinos manuais (state.workouts)
+
+  // ─── STATE.WORKOUTS ───────────────────────────────────────────────────────
   if (state.workouts.length) {
-    if (treinosIA.length) html += `<div style="margin:20px 0 12px;font-family:var(--font-display);font-size:14px;letter-spacing:1px;color:var(--muted);">OUTROS TREINOS</div>`;
-    html += state.workouts.map((w,i) => `<div class="workout-card ${w.completed?'completed':''}"><div class="workout-icon ${w.completed?'completed':'pending'}">${w.completed?'✅':'🏋️'}</div><div class="workout-info"><div class="workout-title">${w.title}</div><div class="workout-meta">${w.phase||'Fase 1'} · ${new Date(w.date).toLocaleDateString('pt-BR')}</div></div><span class="workout-badge ${w.completed?'badge-done':'badge-pending'}">${w.completed?'FEITO':'PENDENTE'}</span>${!w.completed?`<button onclick="completeWorkout(${i})" style="margin-left:8px;padding:6px 14px;border:1px solid var(--green);background:none;color:var(--green);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;">MARCAR FEITO</button>`:''}<button onclick="deleteWorkout(${i})" style="margin-left:4px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;" title="Excluir">🗑️</button></div>`).join('');
+    if (treinosIA.length) html += `<div style="margin:24px 0 12px;font-family:var(--font-display);font-size:14px;letter-spacing:1px;color:var(--muted);">OUTROS TREINOS</div>`;
+
+    // CHANGE 1: Group by phase, then week
+    const phaseGroups = {};
+    state.workouts.forEach((w, idx) => {
+      const pKey = w.phase || 'Sessões Avulsas';
+      if (!phaseGroups[pKey]) phaseGroups[pKey] = [];
+      phaseGroups[pKey].push({ ...w, _idx: idx });
+    });
+
+    Object.entries(phaseGroups).forEach(([phaseName, wks]) => {
+      const total = wks.length;
+      const done  = wks.filter(w => w.completed).length;
+      const pct   = total ? Math.round(done / total * 100) : 0;
+      const pgId  = 'pg-sw-' + phaseName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
+
+      // Sub-group by week field if available
+      const weekGroups = {};
+      wks.forEach(w => {
+        const wKey = String(w.week || 1);
+        if (!weekGroups[wKey]) weekGroups[wKey] = [];
+        weekGroups[wKey].push(w);
+      });
+
+      html += `<div class="phase-group">
+        <div class="phase-header-bar" onclick="toggleFaseBody('${pgId}')">
+          <div class="phase-header-left">
+            <span class="phase-header-name">${phaseName.toUpperCase()}</span>
+            <span class="phase-header-meta">${total} sessões · ${pct}% concluído</span>
+          </div>
+          <span class="fase-toggle-icon">▼</span>
+        </div>
+        <div class="phase-progress-wrap">
+          <div class="phase-progress-bar"><div class="phase-progress-fill" style="width:${pct}%"></div></div>
+          <div class="phase-progress-label">${done} de ${total} sessões concluídas</div>
+        </div>
+        <div class="fase-body" id="${pgId}">`;
+
+      Object.entries(weekGroups).sort((a,b) => Number(a[0]) - Number(b[0])).forEach(([weekNum, weekWks]) => {
+        const multiWeek = Object.keys(weekGroups).length > 1;
+        if (multiWeek) html += `<div class="week-group"><div class="week-label">Semana ${weekNum}</div>`;
+        weekWks.forEach(w => {
+          const i = w._idx;
+          html += `<div class="session-card ${w.completed ? 'completed' : ''}">
+            <div class="session-card-header" onclick="void(0)">
+              <div class="session-status-dot ${w.completed ? 'done' : 'pending'}">${w.completed ? '✅' : '🏋️'}</div>
+              <div class="session-info">
+                <div class="session-title-row">
+                  ${w.title}
+                  ${w.completed
+                    ? '<span class="s-badge s-badge-done">✓ FEITO</span>'
+                    : '<span class="s-badge s-badge-pending">PENDENTE</span>'}
+                </div>
+                <div style="font-size:12px;color:var(--muted);font-family:var(--font-mono);margin-top:3px;">${new Date(w.date).toLocaleDateString('pt-BR')}</div>
+              </div>
+              <div class="session-card-actions">
+                <button class="btn-start-soon" disabled title="Em breve">▶ Iniciar Treino</button>
+                <div style="display:flex;gap:6px;align-items:center;">
+                  ${!w.completed ? `<button onclick="event.stopPropagation();completeWorkout(${i})" style="padding:4px 10px;border:1px solid var(--green);background:none;color:var(--green);border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;">MARCAR FEITO</button>` : ''}
+                  <button onclick="event.stopPropagation();deleteWorkout(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;" title="Excluir">🗑️</button>
+                </div>
+              </div>
+            </div>
+          </div>`;
+        });
+        if (multiWeek) html += `</div>`;
+      });
+      html += `</div></div>`;
+    });
   }
+
   c.innerHTML = html;
 }
 
@@ -2587,8 +2794,43 @@ function toggleFaseBody(id) {
   const body = document.getElementById(id);
   if (!body) return;
   body.classList.toggle('collapsed');
-  const header = body.previousElementSibling;
-  if (header) { const icon = header.querySelector('.fase-toggle-icon'); if (icon) icon.textContent = body.classList.contains('collapsed') ? '▶' : '▼'; }
+  // Walk up to the phase-header-bar sibling (may be separated by progress-wrap)
+  let el = body.previousElementSibling;
+  while (el && !el.classList.contains('phase-header-bar') && !el.classList.contains('fase-header')) el = el.previousElementSibling;
+  if (el) { const icon = el.querySelector('.fase-toggle-icon'); if (icon) icon.textContent = body.classList.contains('collapsed') ? '▶' : '▼'; }
+}
+
+// Toggle expanded body of a session card (new session-card-body pattern)
+function toggleSessionCard(bodyId) {
+  const body = document.getElementById(bodyId);
+  if (!body) return;
+  body.classList.toggle('open');
+}
+
+// Extract first N exercise names from AI-generated workout text for preview tags
+function _extractExercisePreview(conteudo) {
+  if (!conteudo) return [];
+  const result = [];
+  for (const raw of conteudo.split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    // Skip markdown section headers and pure decorative lines
+    if (/^\*\*/.test(line) || /^#+\s/.test(line) || /^-{3,}$/.test(line) || /^={3,}$/.test(line)) continue;
+    // Match lettered/numbered/bullet exercise lines: "A1. Name", "1. Name", "• Name", "- Name"
+    const m = line.match(/^(?:[A-Z]\d*[.)]\s+|[\d]+[.)]\s+|[•\-*]\s+)([A-ZÀ-ÚA-Za-zà-ú][^·•×xX\d\n]{3,44}?)(?:\s*[-—:·]|\s+\d+\s*[×xX]|\s*$)/);
+    if (m) {
+      let name = m[1].replace(/\*\*/g, '').replace(/\s{2,}/g, ' ').trim();
+      // Strip trailing filler words
+      name = name.replace(/\s*(séries?|series?|repetições?|reps?|min|seg|sets?)\s*$/i, '').trim();
+      // Skip section labels mistaken as exercises
+      if (/^(aquecimento|protocolo|bloco|fase|semana|descanso|observa|nota|carga|tempo|principal|complementar|finalizaç)/i.test(name)) continue;
+      if (name.length >= 4 && name.length <= 45) {
+        result.push(name);
+        if (result.length >= 6) break;
+      }
+    }
+  }
+  return result;
 }
 
 // ── AXIS WORKOUT CONFIRM SYSTEM ──
