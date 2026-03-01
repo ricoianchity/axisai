@@ -3136,7 +3136,7 @@ function renderWorkoutBlocks(conteudo, treinoId, isDone) {
             const body = m[2].trim();
             const { name: exName, sets: setsLabel } = splitEx(body);
             const reps = parseInt((setsLabel || body).match(/(\d+)/)?.[1]) || 1;
-            tabExs.push({ code, name: exName, setsLabel: setsLabel || body, numSeries, reps, group: groupName, restText });
+            tabExs.push({ code, name: exName, setsLabel: setsLabel, numSeries, reps, group: groupName, restText });
           });
           continue;
         }
