@@ -1457,6 +1457,9 @@
           <div id="readiness-content">
             <!-- filled by JS -->
           </div>
+          <div id="readiness-history">
+            <!-- 7-day history filled by JS -->
+          </div>
         </div>
 
         <!-- Card 2 — Streak & Consistency -->
@@ -2056,7 +2059,7 @@ var supabase = window.supabase.createClient(
 // ═══════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════
-const state = { user: null, workouts: [], profile: null, chatHistory: [], toeTouch: null, fmsLatest: null };
+const state = { user: null, workouts: [], profile: null, chatHistory: [], toeTouch: null, fmsLatest: null, readiness: null };
 
 // ── FMS movement definitions for results rendering ──
 const FMS_RESULT_DEFS = [
@@ -2106,16 +2109,18 @@ function today() {
 }
 
 async function loadUserData(userId) {
-  const [profile, checkin, phase, messages] = await Promise.all([
+  const [profile, checkin, phase, messages, readiness] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', userId).single(),
     supabase.from('checkins').select('*').eq('user_id', userId).eq('date', today()).single(),
     supabase.from('training_phases').select('*').eq('user_id', userId).order('started_at', { ascending: false }).limit(1).single(),
-    supabase.from('chat_messages').select('*').eq('user_id', userId).order('created_at', { ascending: true }).limit(20)
+    supabase.from('chat_messages').select('*').eq('user_id', userId).order('created_at', { ascending: true }).limit(20),
+    supabase.from('readiness_logs').select('*').eq('user_id', userId).eq('date', today()).single()
   ]);
   if (profile.data)   { state.profile     = profile.data;   localStorage.setItem('axisai_profile', JSON.stringify(profile.data)); }
   if (checkin.data)   { state.checkin     = checkin.data;   localStorage.setItem('axisai_checkin', JSON.stringify(checkin.data)); }
   if (phase.data)     { state.phase       = phase.data;     localStorage.setItem('axisai_phase', JSON.stringify(phase.data)); }
   if (messages.data)  { state.chatHistory = messages.data.map(m => ({ role: m.role, content: m.content })); }
+  if (readiness.data) { state.readiness   = readiness.data; }
 
   // Role check — set after profile is loaded
   const role = state.profile?.role || 'client';
@@ -3614,9 +3619,30 @@ VERIFICAÇÃO ANTI-REDUNDÂNCIA: Antes de finalizar qualquer treino, verificar s
 
 TERMINOLOGIA OBRIGATÓRIA: Proibido usar: "omoplata" (usar "escápula"), "músculo da coxa" (usar quadríceps/isquiotibiais), "barriga da perna" (usar gastrocnêmio/sóleo). Sempre usar nomenclatura anatômica correta e atual.`;
 
-    const systemPrompt = CORE_PROMPT + profileCtx + fmsCtx + flagCtx + (needsReference ? REF_TABLES : '');
+    // ── PRONTIDÃO: contexto injetado diretamente no system prompt ──
+    let readinessCtx = '';
+    const rdToday = state.readiness;
+    if (rdToday && rdToday.readiness_score != null) {
+      const rdBand = getReadinessBand(rdToday.readiness_score);
+      const rdNotes = rdToday.notes ? `\nObservações: ${rdToday.notes}` : '';
+      readinessCtx = `\n\n## PRONTIDÃO DO ATLETA (hoje)
+Score: ${rdToday.readiness_score}/100 (${rdBand.label})
+- Qualidade do sono: ${rdToday.sleep_quality}/5
+- Nível de energia: ${rdToday.energy_level}/5
+- Dor muscular: ${rdToday.muscle_soreness}/5
+- Nível de estresse: ${rdToday.stress_level}/5${rdNotes}
 
-    console.log('[chat] Enviando para /api/chat:', { messages: state.chatHistory.length, model: 'claude-sonnet-4-20250514' });
+INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino de hoje com base neste score:
+- Prontidão Alta (70-100): treino normal conforme fase planejada
+- Prontidão Moderada (40-69): reduza volume em 20%, mantenha intensidade ou reduza levemente, priorize movimentos de menor impacto articular
+- Prontidão Baixa (0-39): sessão de recuperação ativa ou técnica — sem trabalho de alta intensidade, foque em mobilidade, ativação e movimentos do padrão de baixo risco do FMS do atleta`;
+    } else {
+      readinessCtx = '\n\nSem dados de prontidão hoje — prescreva com base no histórico recente e no planejamento de fase.';
+    }
+
+    const systemPrompt = CORE_PROMPT + profileCtx + fmsCtx + flagCtx + readinessCtx + (needsReference ? REF_TABLES : '');
+
+    console.log('[chat] Enviando para /api/chat:', { messages: state.chatHistory.length, model: 'claude-sonnet-4-20250514', readinessScore: rdToday?.readiness_score ?? 'n/a' });
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3625,6 +3651,7 @@ TERMINOLOGIA OBRIGATÓRIA: Proibido usar: "omoplata" (usar "escápula"), "múscu
         max_tokens: 2048,
         system: systemPrompt,
         messages: state.chatHistory,
+        readiness: state.readiness || null,
         checkin: state.checkin || null,
         profile: state.profile || null,
         fmsLatest: state.fmsLatest || null
@@ -4032,7 +4059,7 @@ function loadAvatar() {
 //  DASHBOARD INSIGHT CARDS
 // ═══════════════════════════════════════════════
 
-// ── Check-in helpers ──
+// ── Check-in helpers (legacy — mantém escrita em 'checkins' para compatibilidade) ──
 function getCheckinData() {
   return JSON.parse(localStorage.getItem('axisai_checkin') || 'null');
 }
@@ -4041,43 +4068,27 @@ async function saveCheckinData(data) {
   await saveData('checkins', payload, 'axisai_checkin');
 }
 
+// ── Readiness Score (nova fórmula, escala 1-5) ──
+function calculateReadinessScore({ sleep_quality, energy_level, muscle_soreness, stress_level }) {
+  const soreness_inverted = 6 - muscle_soreness;
+  const stress_inverted   = 6 - stress_level;
+  const raw = (sleep_quality + energy_level + soreness_inverted + stress_inverted) / 4;
+  return Math.round((raw / 5) * 100);
+}
+
+function getReadinessBand(score) {
+  if (score >= 70) return { label: 'Alta',     color: 'var(--green)',  cls: 'badge-green' };
+  if (score >= 40) return { label: 'Moderada', color: 'var(--orange)', cls: 'badge-amber' };
+  return              { label: 'Baixa',    color: 'var(--red)',    cls: 'badge-red'   };
+}
+
 // ── Card 1: Readiness Score ──
-function calcReadinessScore(checkin) {
-  const sleepScore  = Math.min(checkin.sleep / 8, 1) * 100;
-  const stressScore = ((10 - checkin.stress) / 9) * 100;
-  const domsScore   = ((10 - checkin.doms) / 9) * 100;
-  const hydrationScore = (checkin.hydration / 10) * 100;
-  return {
-    total: Math.round(sleepScore * 0.35 + stressScore * 0.25 + domsScore * 0.25 + hydrationScore * 0.15),
-    sleep: Math.round(sleepScore),
-    stress: Math.round(stressScore),
-    doms: Math.round(domsScore),
-    hydration: Math.round(hydrationScore)
-  };
-}
-
-function getReadinessColor(score) {
-  if (score >= 70) return 'var(--green)';
-  if (score >= 45) return 'var(--orange)';
-  return 'var(--red)';
-}
-
-function getReadinessRec(score) {
-  if (score >= 70) return { text: 'Treinar normal', cls: 'badge-green' };
-  if (score >= 45) return { text: 'Reduzir volume 30–40%', cls: 'badge-amber' };
-  return { text: 'Descanso ativo', cls: 'badge-red' };
-}
-
 function renderReadinessCard() {
   const container = document.getElementById('readiness-content');
-  const badge = document.getElementById('readiness-badge');
-  const checkin = getCheckinData();
+  const badge     = document.getElementById('readiness-badge');
+  const r         = state.readiness;
 
-  // Check if checkin is from today
-  const today = new Date().toISOString().slice(0, 10);
-  const isToday = checkin && checkin.date === today;
-
-  if (!isToday) {
+  if (!r) {
     badge.textContent = 'Não avaliado';
     badge.className = 'insight-card-badge badge-muted';
     container.innerHTML = `
@@ -4085,24 +4096,27 @@ function renderReadinessCard() {
         <p>Faça seu check-in diário para calcular sua prontidão.</p>
         <button onclick="openCheckinFlow()">CHECK-IN DIÁRIO</button>
       </div>`;
+    renderReadinessHistory();
     return;
   }
 
-  const scores = calcReadinessScore(checkin);
-  const rec = getReadinessRec(scores.total);
-  const color = getReadinessColor(scores.total);
-  badge.textContent = rec.text;
-  badge.className = 'insight-card-badge ' + rec.cls;
+  const score = r.readiness_score;
+  const band  = getReadinessBand(score);
+  badge.textContent = band.label;
+  badge.className   = 'insight-card-badge ' + band.cls;
 
   const circumference = 2 * Math.PI * 48;
-  const offset = circumference - (scores.total / 100) * circumference;
+  const offset        = circumference - (score / 100) * circumference;
 
+  // Barras: sleep e energy diretos; soreness e stress invertidos (quanto maior, pior)
   const bars = [
-    { icon: '😴', label: 'Sono', value: scores.sleep, color: '#818cf8' },
-    { icon: '🧠', label: 'Estresse', value: scores.stress, color: '#f472b6' },
-    { icon: '💪', label: 'DOMS', value: scores.doms, color: '#fb923c' },
-    { icon: '💧', label: 'Hidratação', value: scores.hydration, color: '#22d3ee' }
+    { icon: '😴', label: 'Sono',    value: (r.sleep_quality   / 5) * 100, color: '#818cf8' },
+    { icon: '⚡',  label: 'Energia', value: (r.energy_level    / 5) * 100, color: '#22d3ee' },
+    { icon: '💪', label: 'Dor',     value: ((6 - r.muscle_soreness) / 5) * 100, color: '#fb923c' },
+    { icon: '🧠', label: 'Estresse',value: ((6 - r.stress_level)    / 5) * 100, color: '#f472b6' }
   ];
+
+  const recText = score >= 70 ? 'Treinar normal' : score >= 40 ? 'Reduzir volume 20%' : 'Recuperação ativa';
 
   container.innerHTML = `
     <div class="readiness-body">
@@ -4110,13 +4124,13 @@ function renderReadinessCard() {
         <svg viewBox="0 0 120 120">
           <circle class="readiness-ring-bg" cx="60" cy="60" r="48"/>
           <circle class="readiness-ring-fg" cx="60" cy="60" r="48"
-            stroke="${color}"
+            stroke="${band.color}"
             stroke-dasharray="${circumference}"
             stroke-dashoffset="${circumference}"
             data-target="${offset}"/>
         </svg>
         <div class="readiness-score-num">
-          <span id="readiness-num" style="color:${color}">0</span>
+          <span id="readiness-num" style="color:${band.color}">0</span>
           <span class="readiness-score-label">SCORE</span>
         </div>
       </div>
@@ -4129,11 +4143,13 @@ function renderReadinessCard() {
               <div class="readiness-row-fill" style="width:0%;background:${b.color}" data-width="${b.value}%"></div>
             </div>
           </div>`).join('')}
-        <div class="readiness-rec" style="color:${color}">${rec.text}</div>
+        <div class="readiness-rec" style="color:${band.color}">${recText}</div>
+        <div style="margin-top:8px;text-align:right;">
+          <button onclick="openCheckinFlow()" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font-mono);letter-spacing:0.5px;">✏️ EDITAR</button>
+        </div>
       </div>
     </div>`;
 
-  // Animate on mount
   requestAnimationFrame(() => {
     setTimeout(() => {
       const ring = container.querySelector('.readiness-ring-fg');
@@ -4141,9 +4157,48 @@ function renderReadinessCard() {
       container.querySelectorAll('.readiness-row-fill').forEach(el => {
         el.style.width = el.dataset.width;
       });
-      animateCounter('readiness-num', scores.total, 800);
+      animateCounter('readiness-num', score, 800);
     }, 50);
   });
+
+  renderReadinessHistory();
+}
+
+async function renderReadinessHistory() {
+  if (!state.user?.id) return;
+  const histEl = document.getElementById('readiness-history');
+  if (!histEl) return;
+
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+  const fromDate = sevenDaysAgo.toISOString().slice(0, 10);
+
+  const { data, error } = await supabase
+    .from('readiness_logs')
+    .select('date, readiness_score')
+    .eq('user_id', state.user.id)
+    .gte('date', fromDate)
+    .order('date', { ascending: true });
+
+  if (error || !data || data.length === 0) {
+    histEl.innerHTML = '';
+    return;
+  }
+
+  const badges = data.map(d => {
+    const band = getReadinessBand(d.readiness_score);
+    const dayLabel = new Date(d.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short' });
+    return `<div title="${d.date}: ${d.readiness_score}/100" style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+      <div style="width:28px;height:28px;border-radius:50%;background:${band.color};opacity:0.85;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#000;">${d.readiness_score}</div>
+      <span style="font-size:9px;color:var(--muted);font-family:var(--font-mono);">${dayLabel}</span>
+    </div>`;
+  }).join('');
+
+  histEl.innerHTML = `
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
+      <div style="font-size:10px;color:var(--muted);font-family:var(--font-mono);letter-spacing:1px;margin-bottom:8px;">ÚLTIMOS 7 DIAS</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">${badges}</div>
+    </div>`;
 }
 
 function animateCounter(id, target, duration) {
@@ -4158,34 +4213,76 @@ function animateCounter(id, target, duration) {
   requestAnimationFrame(step);
 }
 
-// ── Check-in flow (simple modal) ──
+// ── Check-in de Prontidão (readiness_logs) ──
+function _updateCheckinPreview() {
+  const vals = {
+    sleep_quality:   parseInt(document.getElementById('ci-sleep').value),
+    energy_level:    parseInt(document.getElementById('ci-energy').value),
+    muscle_soreness: parseInt(document.getElementById('ci-soreness').value),
+    stress_level:    parseInt(document.getElementById('ci-stress').value)
+  };
+  const score = calculateReadinessScore(vals);
+  const band  = getReadinessBand(score);
+  const el    = document.getElementById('ci-score-preview');
+  if (el) {
+    el.textContent = score + '/100';
+    el.style.color = band.color;
+  }
+  const lbl = document.getElementById('ci-score-label');
+  if (lbl) { lbl.textContent = band.label; lbl.style.color = band.color; }
+}
+
 function openCheckinFlow() {
   const existing = document.getElementById('checkin-modal');
   if (existing) existing.remove();
 
+  // Pré-preenche com valores do dia se já existe
+  const r = state.readiness;
+  const defaults = {
+    sleep_quality:   r ? r.sleep_quality   : 3,
+    energy_level:    r ? r.energy_level    : 3,
+    muscle_soreness: r ? r.muscle_soreness : 2,
+    stress_level:    r ? r.stress_level    : 2,
+    notes:           r ? (r.notes || '')   : ''
+  };
+
+  const sliders = [
+    { key: 'sleep',   field: 'sleep_quality',   icon: '😴', label: 'Qualidade do sono', hint: '1 = péssimo · 5 = ótimo' },
+    { key: 'energy',  field: 'energy_level',    icon: '⚡',  label: 'Nível de energia',  hint: '1 = sem energia · 5 = energizado' },
+    { key: 'soreness',field: 'muscle_soreness', icon: '💪', label: 'Dor muscular',       hint: '1 = sem dor · 5 = muito dolorido' },
+    { key: 'stress',  field: 'stress_level',    icon: '🧠', label: 'Nível de estresse',  hint: '1 = calmo · 5 = muito estressado' }
+  ];
+
   const modal = document.createElement('div');
   modal.id = 'checkin-modal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);padding:20px;';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);padding:20px;';
   modal.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:400px;width:100%;animation:fadeUp 0.3s ease;">
-      <h3 style="font-family:var(--font-display);font-size:20px;letter-spacing:1px;margin-bottom:20px;">CHECK-IN DIÁRIO</h3>
-      <div style="display:flex;flex-direction:column;gap:16px;">
-        <label style="font-size:13px;color:var(--muted);">😴 Horas de sono
-          <input type="range" id="ci-sleep" min="0" max="12" step="0.5" value="7" style="width:100%;margin-top:4px;accent-color:var(--green);">
-          <span id="ci-sleep-val" style="font-family:var(--font-mono);font-size:12px;color:var(--text);">7h</span>
-        </label>
-        <label style="font-size:13px;color:var(--muted);">🧠 Estresse (1–10)
-          <input type="range" id="ci-stress" min="1" max="10" value="5" style="width:100%;margin-top:4px;accent-color:var(--green);">
-          <span id="ci-stress-val" style="font-family:var(--font-mono);font-size:12px;color:var(--text);">5</span>
-        </label>
-        <label style="font-size:13px;color:var(--muted);">💪 DOMS / Dor muscular (1–10)
-          <input type="range" id="ci-doms" min="1" max="10" value="3" style="width:100%;margin-top:4px;accent-color:var(--green);">
-          <span id="ci-doms-val" style="font-family:var(--font-mono);font-size:12px;color:var(--text);">3</span>
-        </label>
-        <label style="font-size:13px;color:var(--muted);">💧 Hidratação (1–10)
-          <input type="range" id="ci-hydration" min="1" max="10" value="6" style="width:100%;margin-top:4px;accent-color:var(--green);">
-          <span id="ci-hydration-val" style="font-family:var(--font-mono);font-size:12px;color:var(--text);">6</span>
-        </label>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:420px;width:100%;animation:fadeUp 0.3s ease;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <h3 style="font-family:var(--font-display);font-size:20px;letter-spacing:1px;">${r ? 'EDITAR CHECK-IN' : 'CHECK-IN DIÁRIO'}</h3>
+        <div style="text-align:right;">
+          <div id="ci-score-preview" style="font-family:var(--font-display);font-size:28px;letter-spacing:1px;line-height:1;">—</div>
+          <div id="ci-score-label" style="font-size:10px;font-family:var(--font-mono);letter-spacing:1px;">PRONTIDÃO</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:18px;">
+        ${sliders.map(s => `
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+              <span style="font-size:13px;color:var(--muted);">${s.icon} ${s.label}</span>
+              <span id="ci-${s.key}-val" style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text);">${defaults[s.field]}</span>
+            </div>
+            <input type="range" id="ci-${s.key}" min="1" max="5" step="1" value="${defaults[s.field]}"
+              style="width:100%;accent-color:var(--green);">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:var(--font-mono);margin-top:2px;">
+              <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">${s.hint}</div>
+          </div>`).join('')}
+        <div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:4px;">📝 Observações (opcional)</div>
+          <textarea id="ci-notes" rows="2" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-size:13px;resize:none;" placeholder="Ex: pernas doloridas do treino anterior...">${defaults.notes}</textarea>
+        </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:24px;">
         <button onclick="submitCheckin()" style="flex:1;background:linear-gradient(135deg,var(--green),#00c8ff);color:#000;border:none;padding:10px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">SALVAR</button>
@@ -4194,28 +4291,54 @@ function openCheckinFlow() {
     </div>`;
   document.body.appendChild(modal);
 
-  // Wire up live value labels
-  ['sleep','stress','doms','hydration'].forEach(key => {
+  // Live labels + score preview
+  ['sleep','energy','soreness','stress'].forEach(key => {
     const input = document.getElementById('ci-' + key);
     const label = document.getElementById('ci-' + key + '-val');
     input.addEventListener('input', () => {
-      label.textContent = key === 'sleep' ? input.value + 'h' : input.value;
+      label.textContent = input.value;
+      _updateCheckinPreview();
     });
   });
+  _updateCheckinPreview();
 }
 
-function submitCheckin() {
-  const data = {
-    sleep: parseFloat(document.getElementById('ci-sleep').value),
-    stress: parseInt(document.getElementById('ci-stress').value),
-    doms: parseInt(document.getElementById('ci-doms').value),
-    hydration: parseInt(document.getElementById('ci-hydration').value),
-    date: new Date().toISOString().slice(0, 10)
+async function submitCheckin() {
+  if (!state.user?.id) { showToast('Erro: usuário não autenticado.'); return; }
+
+  const vals = {
+    sleep_quality:   parseInt(document.getElementById('ci-sleep').value),
+    energy_level:    parseInt(document.getElementById('ci-energy').value),
+    muscle_soreness: parseInt(document.getElementById('ci-soreness').value),
+    stress_level:    parseInt(document.getElementById('ci-stress').value)
   };
-  saveCheckinData(data);
+  const notes         = (document.getElementById('ci-notes')?.value || '').trim();
+  const readiness_score = calculateReadinessScore(vals);
+
+  const payload = {
+    user_id: state.user.id,
+    date:    today(),
+    ...vals,
+    readiness_score,
+    notes:   notes || null
+  };
+
+  const { data, error } = await supabase
+    .from('readiness_logs')
+    .upsert(payload, { onConflict: 'user_id,date' })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[checkin] Erro ao salvar readiness_logs:', error);
+    showToast('Erro ao salvar check-in. Tente novamente.');
+    return;
+  }
+
+  state.readiness = data;
   document.getElementById('checkin-modal').remove();
   renderReadinessCard();
-  showToast('Check-in salvo! 🎯');
+  showToast('Check-in salvo! Score: ' + readiness_score + '/100');
 }
 
 // ── Card 2: Streak & Consistency ──
