@@ -399,6 +399,14 @@
   .wb-tab-panel   { padding:4px 0; }
   .wb-tab-group-label { font-size:11px; font-weight:700; color:rgba(249,115,22,0.65); text-transform:uppercase; letter-spacing:0.06em; padding:8px 14px 2px; font-family:var(--font-mono); }
 
+  /* Pillar Prep mini exercise cards */
+  .pillar-group        { margin-bottom:10px; }
+  .pillar-group-label  { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:rgba(59,130,246,0.75); font-family:var(--font-mono); padding:2px 0 6px; }
+  .pillar-ex-list      { display:flex; flex-direction:column; gap:4px; }
+  .pillar-ex-card      { display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:6px 12px; }
+  .pillar-ex-name      { font-size:13px; color:var(--text); }
+  .pillar-ex-sets      { font-size:11px; color:#64748B; font-family:var(--font-mono); white-space:nowrap; background:rgba(255,255,255,0.04); border-radius:4px; padding:2px 8px; flex-shrink:0; }
+
   .fms-info-btn { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; line-height: 1; flex-shrink: 0; padding: 0; }
   .fms-info-btn:hover { border-color: var(--green); color: var(--green); }
   .fms-info-panel { display: none; margin-top: 10px; padding: 12px; background: var(--bg2,var(--bg)); border-radius: 8px; border: 1px solid var(--border); font-size: 12px; color: var(--muted); line-height: 1.6; }
@@ -3072,7 +3080,32 @@ function renderWorkoutBlocks(conteudo, treinoId, isDone) {
         continue;
       }
 
-      // ── 2. Sub-section header ─────────────────────────────────────────────
+      // ── 2a. Pillar Prep inline group: "Foam Rolling (2min): ex1, ex2, ..." ──
+      const pillarGroup = !isStrength && clean.match(/^(Foam\s+Rolling|Mobilidade|Ativa[çc]\w*|Aquecimento|Din[âa]mico|Alongamento|Cool\s*Down)[^:]*:\s*(.+)/i);
+      if (pillarGroup) {
+        flushSub();
+        const secName = pillarGroup[1];
+        const timeM   = clean.match(/\(([^)]+)\)/);
+        const timeStr = timeM ? ` · ${timeM[1]}` : '';
+        const exItems = pillarGroup[2].split(/,\s*/).map(s => s.trim().replace(/\.$/, '')).filter(Boolean);
+        let grp = `<div class="pillar-group">`;
+        grp += `<div class="pillar-group-label">${_esc(secName)}${_esc(timeStr)}</div>`;
+        grp += `<div class="pillar-ex-list">`;
+        exItems.forEach(ex => {
+          const m    = ex.match(/^(.*?)\s+(\d+.+)$/);
+          const name = m ? m[1].trim() : ex;
+          const pres = m ? m[2].trim() : null;
+          grp += `<div class="pillar-ex-card">`;
+          grp += `<span class="pillar-ex-name">${_esc(name)}</span>`;
+          if (pres) grp += `<span class="pillar-ex-sets">${_esc(pres)}</span>`;
+          grp += `</div>`;
+        });
+        grp += `</div></div>`;
+        subBuf.push(grp);
+        continue;
+      }
+
+      // ── 2b. Sub-section header ────────────────────────────────────────────
       const isBoldOnly = /^\*\*[^*]+\*\*\s*$/.test(line.trim());
       const isKnownSub = /^(Foam Rolling|Mobilidade|Ativa[çc]|Aquecimento|Din[âa]mico|Tri.?[Ss]et|Straight Set|Bloco|Circuito|Finaliza|Cool|Alongamento)/i.test(clean);
       if (isBoldOnly || isKnownSub) {
