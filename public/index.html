@@ -2110,8 +2110,12 @@ async function loadUserData(userId) {
 async function initApp() {
   renderFMSGrid();
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error('Session error:', error);
+      return;
+    }
+    if (session?.user) {
       const u = session.user;
       const savedName = JSON.parse(localStorage.getItem('axisai_user') || '{}').name || u.email.split('@')[0];
       state.user = { name: savedName, email: u.email, id: u.id };
@@ -2120,24 +2124,33 @@ async function initApp() {
       loadWorkouts();
       loadProfile();
       enterApp();
-    } else {
-      // Fallback: verificar localStorage para modo offline
-      const saved = localStorage.getItem('axisai_user');
-      if (saved) {
-        state.user = JSON.parse(saved);
-        loadWorkouts();
-        loadProfile();
-        enterApp();
-      }
     }
+    // else: no valid session — auth screen shown by default
   } catch (e) {
-    console.error('Session error:', e);
+    console.error('initApp error:', e);
     // Auth screen is shown by default — nothing extra to do
   }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
   initApp();
+});
+
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' && session?.user) {
+    const u = session.user;
+    const savedName = JSON.parse(localStorage.getItem('axisai_user') || '{}').name || u.email.split('@')[0];
+    state.user = { name: savedName, email: u.email, id: u.id };
+    localStorage.setItem('axisai_user', JSON.stringify(state.user));
+    await loadUserData(u.id);
+    loadWorkouts();
+    loadProfile();
+    enterApp();
+  } else if (event === 'SIGNED_OUT') {
+    state.user = null;
+    document.getElementById('screen-auth').style.display = 'flex';
+    document.getElementById('screen-app').classList.remove('visible');
+  }
 });
 
 // Build FMS grid dynamically to avoid repetition and <br/> issues
@@ -2278,14 +2291,14 @@ async function doRegister() {
   const { data, error } = await supabase.auth.signUp({ email, password: pass });
   if (error) return showToast(error.message || 'Erro ao criar conta.', true);
   if (!data?.user) return showToast('Verifique seu e-mail para confirmar o cadastro.', false);
-  state.user = { name, email, id: data.user?.id };
-  localStorage.setItem('axisai_user', JSON.stringify(state.user));
+  // Store name in localStorage so onAuthStateChange can use it
+  localStorage.setItem('axisai_user', JSON.stringify({ name, email, id: data.user.id }));
   // Salvar nome no perfil
   if (data.user?.id) {
     await supabase.from('profiles').upsert({ id: data.user.id, name });
   }
-  enterApp();
-  showToast('Conta criada com sucesso!');
+  // onAuthStateChange (SIGNED_IN) will handle entering the app once session is confirmed
+  showToast('Conta criada! Verifique seu e-mail para continuar.');
 }
 
 async function doLogout() {
@@ -3326,14 +3339,14 @@ async function sendMessage() {
 
   try {
     const p = state.profile;
-    const profileCtx = p ? `\n\n## PERFIL DO USUÁRIO\nIdade: ${p.age||'?'} | Peso: ${p.weight||'?'}kg | Altura: ${p.height||'?'}cm | Sexo: ${p.sex||'?'} | Nível: ${p.level||'?'} | Objetivo: ${p.goal||'?'} | Local: ${p.gym||'?'} | Frequência: ${p.frequency||'?'}/semana | Tempo/sessão: ${p.sessionTime||'?'} | Equipamentos: ${(p.equipment||[]).join(', ')||'?'} | Lesões: ${p.injuries||'Nenhuma'} | PAR-Q cardíaco: ${p.parq==='yes'?'Sim — recomendado acompanhamento médico':'Não'}.\nProfissão: ${p.profissao||'?'} | Jornada: ${p.horasTrabalho||'?'}h/dia | Perfil postural: ${p.perfilPostural||'?'}${p.perfilPostural==='Misto'?' ('+( p.horasSentado||'?')+'h sentado)':''} | Estresse ocupacional: ${p.estresseOcup||'?'} | Turno: ${p.turnoTrabalho||'?'}.` : '\n\n## PERFIL\nNão preenchido — pergunte dados essenciais.';
+    const profileCtx = p ? `\n\n## PERFIL DO USUÁRIO\nIdade: ${p.age||'?'} | Peso: ${p.weight||'?'}kg | Altura: ${p.height||'?'}cm | Sexo: ${p.sex||'?'} | Nível: ${p.level||'?'} | Objetivo: ${p.goal||'?'} | Local: ${p.gym||'?'} | Frequência: ${p.frequency||'?'}/semana | Tempo/sessão: ${p.sessionTime||'?'} | Equipamentos: ${(Array.isArray(p.equipment) ? p.equipment : []).join(', ')||'?'} | Lesões: ${p.injuries||'Nenhuma'} | PAR-Q cardíaco: ${p.parq==='yes'?'Sim — recomendado acompanhamento médico':'Não'}.\nProfissão: ${p.profissao||'?'} | Jornada: ${p.horasTrabalho||'?'}h/dia | Perfil postural: ${p.perfilPostural||'?'}${p.perfilPostural==='Misto'?' ('+( p.horasSentado||'?')+'h sentado)':''} | Estresse ocupacional: ${p.estresseOcup||'?'} | Turno: ${p.turnoTrabalho||'?'}.` : '\n\n## PERFIL\nNão preenchido — pergunte dados essenciais.';
     const fmsTotal = p?.fms ? (p.fms.dos??0)+(p.fms.il??0)+(p.fms.hs??0)+(p.fms.sm??0)+(p.fms.aslr??0) : null;
-    const fmsFlags = (p?.riskFlags||[]).filter(f=>f!=='none');
+    const fmsFlags = (Array.isArray(p?.riskFlags) ? p.riskFlags : []).filter(f=>f!=='none');
     const fmsFlagMap = { squat_dysfunction:'Deep Squat ≤1', lunge_dysfunction:'Inline Lunge ≤1', hip_instability:'Hurdle Step ≤1', shoulder_restriction:'Shoulder Mobility ≤1', hamstring_restriction:'ASLR ≤1', toe_touch_negative:'Toe Touch negativo' };
     const _ttLabel = p?.fms?.tt === 'positive' ? 'Sim' : p?.fms?.tt === 'negative' ? 'Não' : '?';
     const fmsCtx = p?.fms ? `\n\n## SCORES FMS\nFMS Total: ${fmsTotal}/15 | DOS: ${p.fms.dos??'?'} | IL: ${p.fms.il??'?'} | HS: ${p.fms.hs??'?'} | SM: ${p.fms.sm??'?'} | ASLR: ${p.fms.aslr??'?'} | Toe Touch: ${_ttLabel}\nFlags: ${fmsFlags.length>0?fmsFlags.map(f=>fmsFlagMap[f]||f).join(', '):'Nenhuma'}` : '';
     const flagMap = { shoulder_restriction:'Restrição de Ombro', hamstring_restriction:'Restrição de Isquiotibiais', hip_instability:'Instabilidade de Quadril', squat_dysfunction:'Disfunção de Agachamento', lunge_dysfunction:'Disfunção de Avanço', apt:'APT/Hiperlordose', rib_flare:'Costelas Abertas', knee_valgus:'Valgo de Joelho', toe_touch_negative:'Toe Touch Negativo' };
-    const activeFlags = (p?.riskFlags || []).filter(f => f !== 'none');
+    const activeFlags = (Array.isArray(p?.riskFlags) ? p.riskFlags : []).filter(f => f !== 'none');
     const flagCtx = activeFlags.length > 0 ? `\n\n## FLAGS ATIVAS\n${activeFlags.map(f => '⚠️ ' + (flagMap[f]||f)).join('\n')}` : '\n\n## FLAGS\nNenhuma disfunção.';
 
     // ── DETECT if user is requesting a workout/prescription ──
@@ -3474,6 +3487,7 @@ TERMINOLOGIA OBRIGATÓRIA: Proibido usar: "omoplata" (usar "escápula"), "múscu
       catch(e) { console.warn('AXIS_WORKOUT parse error', e); }
     }
   } catch (err) {
+    console.error('sendMessage error:', err);
     document.getElementById(typingId)?.remove();
     appendMsg('bot', 'Não consegui conectar ao servidor. Verifique sua conexão.');
   }
