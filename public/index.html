@@ -2838,8 +2838,8 @@ function saveTreinosIA(treinos) {
   localStorage.setItem('axisai_treinos', JSON.stringify(treinos));
   if (state.user?.id && treinos.length > 0) {
     const newest = treinos[0];
-    supabase.from('workouts').insert({ ...newest, user_id: state.user.id }).catch(e => {
-      console.warn('Supabase offline, workout salvo localmente:', e);
+    supabase.from('workouts').insert({ ...newest, user_id: state.user.id }).then(({ error }) => {
+      if (error) console.warn('Supabase offline, workout salvo localmente:', error);
     });
   }
 }
@@ -3330,7 +3330,7 @@ async function sendMessage() {
   state.chatHistory.push({ role: 'user', content: text });
   // Persistir mensagem do usuário no Supabase
   if (state.user?.id) {
-    supabase.from('chat_messages').insert({ user_id: state.user.id, role: 'user', content: text }).catch(e => console.warn('chat_messages insert error:', e));
+    supabase.from('chat_messages').insert({ user_id: state.user.id, role: 'user', content: text }).then(({ error }) => { if (error) console.warn('chat_messages insert error:', error); });
   }
 
   const typingId = 'typing-' + Date.now();
@@ -3489,7 +3489,7 @@ TERMINOLOGIA OBRIGATÓRIA: Proibido usar: "omoplata" (usar "escápula"), "múscu
     state.chatHistory.push({ role: 'assistant', content: reply });
     // Persistir resposta do assistente no Supabase
     if (state.user?.id) {
-      supabase.from('chat_messages').insert({ user_id: state.user.id, role: 'assistant', content: reply }).catch(e => console.warn('chat_messages insert error:', e));
+      supabase.from('chat_messages').insert({ user_id: state.user.id, role: 'assistant', content: reply }).then(({ error }) => { if (error) console.warn('chat_messages insert error:', error); });
     }
     if (axisMatch) {
       try {
