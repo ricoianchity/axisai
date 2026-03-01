@@ -391,6 +391,14 @@
   .wb-vol-total   { display:flex; align-items:center; gap:6px; padding:8px 2px 2px; font-size:12px; color:#64748B; font-family:var(--font-mono); border-top:1px solid var(--border); margin-top:4px; }
   .wb-vol-value   { color:#F97316; font-weight:700; }
 
+  /* Exercise tabs */
+  .wb-tab-bar     { display:flex; flex-wrap:wrap; gap:5px; padding:8px 12px 8px; border-bottom:1px solid rgba(255,255,255,0.07); }
+  .wb-tab-btn     { background:transparent; border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.45); padding:4px 14px; border-radius:20px; cursor:pointer; font-size:12px; font-weight:700; font-family:var(--font-mono); transition:all 0.15s; }
+  .wb-tab-btn:hover:not(.active) { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.75); }
+  .wb-tab-btn.active { background:rgba(249,115,22,0.15); border-color:#f97316; color:#f97316; }
+  .wb-tab-panel   { padding:4px 0; }
+  .wb-tab-group-label { font-size:11px; font-weight:700; color:rgba(249,115,22,0.65); text-transform:uppercase; letter-spacing:0.06em; padding:8px 14px 2px; font-family:var(--font-mono); }
+
   .fms-info-btn { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; line-height: 1; flex-shrink: 0; padding: 0; }
   .fms-info-btn:hover { border-color: var(--green); color: var(--green); }
   .fms-info-panel { display: none; margin-top: 10px; padding: 12px; background: var(--bg2,var(--bg)); border-radius: 8px; border: 1px solid var(--border); font-size: 12px; color: var(--muted); line-height: 1.6; }
@@ -3095,20 +3103,121 @@ function renderWorkoutBlocks(conteudo, treinoId, isDone) {
   segments.forEach(({ def, duration, lines }) => {
     const durLabel   = duration ? ` · ${duration}` : '';
     const isStrength = def.strength;
-    const bodyContent = renderLines(lines, isStrength);
-    // CHANGE 4 — volume summary at bottom of strength block
-    const volRow = isStrength
-      ? `<div class="wb-vol-total" data-vol-block="${treinoId}">` +
-          `Volume total: <span class="wb-vol-value">0</span> kg` +
-        `</div>`
-      : '';
+
     html += `<div class="wb-card">`;
     html +=   `<div class="wb-card-header" style="border-left-color:${def.color};background:${def.color}18;">`;
     html +=     `<span class="wb-block-emoji">${def.emoji}</span>`;
     html +=     `<span class="wb-block-name">${def.label}</span>`;
     html +=     `<span class="wb-block-dur">${_esc(durLabel)}</span>`;
     html +=   `</div>`;
-    html +=   `<div class="wb-card-body">${bodyContent}${volRow}</div>`;
+
+    if (isStrength) {
+      // ── Parse exercises for per-exercise tab UI ──────────────────────────
+      const tabExs = [];
+      for (const rawLine of lines) {
+        const line  = rawLine.trim();
+        if (!line) continue;
+        const clean = stripMd(line);
+        if (!clean || matchBlock(rawLine)) continue;
+
+        // TRI-SET format: "TRI-SET A (3 séries): A1 Ex 8 reps, A2 Ex 10 reps ... Descanso ..."
+        const tsHead = clean.match(/^(TRI.?SET\s+[A-Z])\s*\((\d+)\s*s[eé]ries?\):\s*(.*)/i);
+        if (tsHead) {
+          const groupName = tsHead[1];
+          const numSeries = parseInt(tsHead[2]) || 3;
+          let rem = tsHead[3];
+          const restM = rem.match(/[.\s]+Descanso\s+(.*)$/i);
+          const restText = restM ? restM[1].trim() : null;
+          if (restM) rem = rem.slice(0, restM.index).trim();
+          rem.split(/,\s*(?=[A-Z]\d+\s)/).forEach(p => {
+            const m = p.trim().match(/^([A-Z]\d+)\s+(.*)/);
+            if (!m) return;
+            const code = m[1];
+            const body = m[2].trim();
+            const { name: exName, sets: setsLabel } = splitEx(body);
+            const reps = parseInt((setsLabel || body).match(/(\d+)/)?.[1]) || 1;
+            tabExs.push({ code, name: exName, setsLabel: setsLabel || body, numSeries, reps, group: groupName, restText });
+          });
+          continue;
+        }
+
+        // Straight-set line: "1. Squat 4x8" or "A1 Squat 4x8"
+        const exM = clean.match(/^([A-Z]\d+\.?\s*|[A-Z][.)]\s+|\d+[.)]\s+)(.*)/);
+        if (exM) {
+          const code = exM[1].trim().replace(/[.)]\s*$/, '');
+          const body = exM[2].replace(/\*\*/g, '').trim();
+          const { name: exName, sets: setsLabel } = splitEx(body);
+          const { count: numSeries, reps } = parseSeries(setsLabel);
+          tabExs.push({ code, name: exName, setsLabel, numSeries, reps, group: null, restText: null });
+        }
+      }
+
+      if (tabExs.length > 0) {
+        // ── Build tab bar + panels ─────────────────────────────────────────
+        let tabBar = '<div class="wb-tab-bar">';
+        let panels = '';
+        tabExs.forEach((ex, i) => {
+          const thisIdx = exIdx++;
+          const panelId = `wp-${treinoId}-${thisIdx}`;
+          const isFirst = i === 0;
+          tabBar += `<button class="wb-tab-btn${isFirst ? ' active' : ''}" ` +
+            `data-panel="${panelId}" ` +
+            `onclick="event.stopPropagation();switchExTab(${treinoId},'${panelId}')">` +
+            `${_esc(ex.code)}</button>`;
+          let setRows = '';
+          for (let s = 1; s <= ex.numSeries; s++) {
+            const loadKey  = `${treinoId}_ex${thisIdx}_s${s}`;
+            const checkKey = `${treinoId}_ex${thisIdx}_s${s}_done`;
+            const savedVal = cargas[loadKey] !== undefined ? String(cargas[loadKey]) : '';
+            const checked  = cargas[checkKey] ? 'checked' : '';
+            setRows += `<div class="load-row">` +
+              `<span class="serie-label">Série ${s}</span>` +
+              `<input type="number" class="load-input" placeholder="kg" value="${_esc(savedVal)}" ` +
+                `data-reps="${ex.reps}" ` +
+                `oninput="saveLoadInput(${treinoId},${thisIdx},${s},this.value)">` +
+              `<label class="load-check-label">` +
+                `<input type="checkbox" class="load-check" ${checked} ` +
+                  `onchange="saveLoadCheck(${treinoId},${thisIdx},${s},this.checked)"> Concluída` +
+              `</label>` +
+            `</div>`;
+          }
+          const groupLabel = ex.group ? `<div class="wb-tab-group-label">${_esc(ex.group)}</div>` : '';
+          const restNote   = ex.restText
+            ? `<div class="wb-rest-wrap"><div class="wb-rest">⏱ ${_esc(ex.restText)}</div></div>`
+            : '';
+          panels += `<div class="wb-tab-panel${isFirst ? ' active' : ''}" id="${panelId}"${isFirst ? '' : ' style="display:none"'}>` +
+            groupLabel +
+            `<div class="exercise-card">` +
+              `<div class="exercise-header with-sets">` +
+                `<span class="exercise-label">${_esc(ex.code)}</span>` +
+                `<div class="exercise-info">` +
+                  `<div class="exercise-name">${_esc(ex.name)}</div>` +
+                  (ex.setsLabel ? `<div class="exercise-meta">${_esc(ex.setsLabel)}</div>` : '') +
+                `</div>` +
+              `</div>` +
+              `<div class="exercise-sets">${setRows}</div>` +
+            `</div>` +
+            restNote +
+          `</div>`;
+        });
+        tabBar += '</div>';
+        html += `<div class="wb-card-body" data-vol-block="${treinoId}">` +
+          tabBar + panels +
+          `<div class="wb-vol-total">Carga total da sessão: <span class="wb-vol-value">0</span> kg</div>` +
+        `</div>`;
+      } else {
+        // Fallback: flat render
+        const bodyContent = renderLines(lines, true);
+        html += `<div class="wb-card-body" data-vol-block="${treinoId}">` +
+          bodyContent +
+          `<div class="wb-vol-total">Carga total da sessão: <span class="wb-vol-value">0</span> kg</div>` +
+        `</div>`;
+      }
+    } else {
+      const bodyContent = renderLines(lines, false);
+      html += `<div class="wb-card-body">${bodyContent}</div>`;
+    }
+
     html += `</div>`;
   });
 
@@ -3164,7 +3273,7 @@ async function completarTreinoIA(id) {
       .update({ concluida: true, load_data: loadData })
       .eq('id', id)
       .eq('user_id', state.user.id)
-      .catch(e => console.warn('completarTreinoIA:', e));
+      .then(({ error }) => { if (error) console.warn('completarTreinoIA:', error); });
   }
   renderWorkouts();
   refreshDashboard();
@@ -3189,6 +3298,20 @@ function saveLoadCheck(treinoId, exIdx, serieIdx, checked) {
   const cargas = JSON.parse(localStorage.getItem('axisai_cargas') || '{}');
   cargas[`${treinoId}_ex${exIdx}_s${serieIdx}_done`] = checked;
   localStorage.setItem('axisai_cargas', JSON.stringify(cargas));
+}
+
+// ── Switch active exercise tab ─────────────────────────────────────────────
+function switchExTab(treinoId, panelId) {
+  const container = document.querySelector(`[data-vol-block="${treinoId}"]`);
+  if (!container) return;
+  container.querySelectorAll('.wb-tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.panel === panelId);
+  });
+  container.querySelectorAll('.wb-tab-panel').forEach(p => {
+    const active = p.id === panelId;
+    p.style.display = active ? '' : 'none';
+    p.classList.toggle('active', active);
+  });
 }
 
 // ── Recalculate and display total volume for strength block ───────────────
