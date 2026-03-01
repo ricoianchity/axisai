@@ -2111,10 +2111,10 @@ function today() {
 async function loadUserData(userId) {
   const [profile, checkin, phase, messages, readiness] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', userId).single(),
-    supabase.from('checkins').select('*').eq('user_id', userId).eq('date', today()).single(),
+    supabase.from('checkins').select('*').eq('user_id', userId).eq('date', today()).maybeSingle(),
     supabase.from('training_phases').select('*').eq('user_id', userId).order('started_at', { ascending: false }).limit(1).single(),
     supabase.from('chat_messages').select('*').eq('user_id', userId).order('created_at', { ascending: true }).limit(20),
-    supabase.from('readiness_logs').select('*').eq('user_id', userId).eq('date', today()).single()
+    supabase.from('readiness_logs').select('*').eq('user_id', userId).eq('date', today()).maybeSingle()
   ]);
   if (profile.data)   { state.profile     = profile.data;   localStorage.setItem('axisai_profile', JSON.stringify(profile.data)); }
   if (checkin.data)   { state.checkin     = checkin.data;   localStorage.setItem('axisai_checkin', JSON.stringify(checkin.data)); }
@@ -2300,6 +2300,11 @@ async function doLogin() {
   if (!data?.user) return showToast('Erro inesperado. Tente novamente.', true);
   state.user = { name: data.user.email.split('@')[0], email: data.user.email, id: data.user.id };
   localStorage.setItem('axisai_user', JSON.stringify(state.user));
+  // Carregar dados ANTES de entrar no app — evita estado parcial no dashboard
+  // (sem isto, state.readiness fica null e o modal de check-in abre indevidamente)
+  await loadUserData(data.user.id);
+  loadWorkouts();
+  loadProfile();
   enterApp();
 }
 
@@ -2325,7 +2330,12 @@ async function doRegister() {
 async function doLogout() {
   await supabase.auth.signOut();
   localStorage.removeItem('axisai_user');
-  state.user = null;
+  state.user        = null;
+  state.readiness   = null;
+  state.profile     = null;
+  state.workouts    = [];
+  state.chatHistory = [];
+  state.fmsLatest   = null;
   document.getElementById('screen-auth').style.display = 'flex';
   document.getElementById('screen-app').classList.remove('visible');
 }
@@ -2356,6 +2366,34 @@ async function completeEnterApp() {
   refreshChatSidebar();
   await checkLGPDConsent();
   loadPrivacyToggles();
+  // Auto-spawn check-in: só aparece se autenticado + sem check-in hoje
+  setTimeout(checkAndShowReadinessModal, 600);
+}
+
+// Exibe o modal de check-in automaticamente se o usuário ainda não fez hoje.
+// NUNCA chama openCheckinFlow() fora deste guard de autenticação.
+async function checkAndShowReadinessModal() {
+  if (!state.user?.id) return;                         // sessão não confirmada
+  if (state.readiness) return;                         // já fez check-in hoje (carregado por loadUserData)
+  if (document.getElementById('checkin-modal')) return; // modal já aberto (previne duplo-spawn)
+
+  // Confirmação no banco — evita abrir modal se o dado ainda não chegou via loadUserData
+  const { data, error } = await supabase
+    .from('readiness_logs')
+    .select('id')
+    .eq('user_id', state.user.id)
+    .eq('date', today())
+    .maybeSingle();
+
+  if (error) {
+    // Tabela inexistente ou RLS bloqueando — não interromper o usuário
+    console.warn('[readiness] checkAndShowReadinessModal:', error.code, error.message);
+    return;
+  }
+
+  if (!data) {
+    openCheckinFlow(); // abre SOMENTE se: autenticado + tabela OK + sem registro hoje
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -4304,7 +4342,18 @@ function openCheckinFlow() {
 }
 
 async function submitCheckin() {
-  if (!state.user?.id) { showToast('Erro: usuário não autenticado.'); return; }
+  // Guard 1: sessão em memória
+  if (!state.user?.id) {
+    showToast('Sessão expirada. Faça login novamente.');
+    return;
+  }
+
+  // Guard 2: confirmar sessão ativa no Supabase
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.id) {
+    showToast('Sessão expirada. Faça login novamente.');
+    return;
+  }
 
   const vals = {
     sleep_quality:   parseInt(document.getElementById('ci-sleep').value),
@@ -4312,15 +4361,15 @@ async function submitCheckin() {
     muscle_soreness: parseInt(document.getElementById('ci-soreness').value),
     stress_level:    parseInt(document.getElementById('ci-stress').value)
   };
-  const notes         = (document.getElementById('ci-notes')?.value || '').trim();
+  const notes           = (document.getElementById('ci-notes')?.value || '').trim();
   const readiness_score = calculateReadinessScore(vals);
 
   const payload = {
-    user_id: state.user.id,
+    user_id: session.user.id,   // usa ID da sessão ativa, não do state (mais seguro)
     date:    today(),
     ...vals,
     readiness_score,
-    notes:   notes || null
+    notes: notes || null
   };
 
   const { data, error } = await supabase
@@ -4330,8 +4379,17 @@ async function submitCheckin() {
     .single();
 
   if (error) {
-    console.error('[checkin] Erro ao salvar readiness_logs:', error);
-    showToast('Erro ao salvar check-in. Tente novamente.');
+    // Log diagnóstico completo para facilitar debugging
+    console.error('[readiness] Erro Supabase:', error.code, '|', error.message);
+    console.error('[readiness] Detalhes:', error.details, '| Hint:', error.hint);
+
+    // Mensagem amigável por código de erro
+    let msg = 'Erro ao salvar check-in.';
+    if (error.code === '42P01')  msg = 'Tabela readiness_logs não encontrada — rode a migration no Supabase.';
+    else if (error.code === '42501' || error.code === 'PGRST301') msg = 'Sem permissão — verifique as policies RLS da tabela readiness_logs.';
+    else if (error.code === '23505') msg = 'Registro duplicado — tente recarregar a página.';
+    else if (error.message)      msg = 'Erro: ' + error.message;
+    showToast(msg);
     return;
   }
 
