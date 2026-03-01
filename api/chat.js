@@ -21,41 +21,43 @@ export default async function handler(req) {
   try {
     const body = await req.json();
 
-    // ALTERAÇÃO 1 — Extrair dados do body da requisição
-    const { messages, checkin, profile, fmsLatest, ...rest } = body;
+    // Extrair dados do body
+    const { messages, readiness, checkin, profile, fmsLatest, ...rest } = body;
 
-    // TEMP DEBUG — remove after fix
-    console.log('[api/chat] model:', rest.model, '| messages:', messages?.length);
+    console.log('[api/chat] model:', rest.model, '| messages:', messages?.length, '| readiness_score:', readiness?.readiness_score ?? 'n/a');
 
-    // ALTERAÇÃO 2 — Construir contexto de prontidão
+    // Construir contexto de prontidão — usa 'readiness' (novo) se disponível, senão tenta 'checkin' legacy
     let readinessContext = '';
-    if (checkin && checkin.readiness_score) {
-      const score = checkin.readiness_score;
+    if (readiness && readiness.readiness_score != null) {
+      const score = readiness.readiness_score;
+      const band  = score >= 70 ? 'Alta' : score >= 40 ? 'Moderada' : 'Baixa';
       const directive = score >= 70
-        ? 'Treinar normal — volume e intensidade conforme planejado'
-        : score >= 45
-        ? 'Reduzir volume 30-40% — manter técnica, cortar séries'
-        : 'Descanso ativo — mobilidade e trabalho leve apenas';
+        ? 'Treinar normal — volume e intensidade conforme fase planejada'
+        : score >= 40
+        ? 'Reduzir volume em 20%, manter intensidade ou reduzir levemente, priorizar movimentos de menor impacto articular'
+        : 'Sessão de recuperação ativa ou técnica — sem trabalho de alta intensidade, focar em mobilidade, ativação e movimentos do padrão de baixo risco do FMS';
 
-      readinessContext = `
-READINESS SCORE HOJE: ${score}/100
-- Sono: ${checkin.sleep}h (peso 35%)
-- Estresse: ${checkin.stress}/10 (peso 25%)
-- DOMS: ${checkin.doms}/10 (peso 25%)
-- Hidratação: ${checkin.hydration}L (peso 15%)
-DIRETRIZ DE PRESCRIÇÃO: ${directive}`;
+      const notesLine = readiness.notes ? `\nObservações: ${readiness.notes}` : '';
+
+      readinessContext = `\n\n## PRONTIDÃO DO ATLETA (hoje)
+Score: ${score}/100 (${band})
+- Qualidade do sono: ${readiness.sleep_quality}/5
+- Nível de energia: ${readiness.energy_level}/5
+- Dor muscular: ${readiness.muscle_soreness}/5
+- Nível de estresse: ${readiness.stress_level}/5${notesLine}
+
+INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino de hoje com base neste score:
+- Prontidão Alta (70-100): treino normal conforme fase planejada
+- Prontidão Moderada (40-69): reduza volume em 20%, mantenha intensidade ou reduza levemente, priorize movimentos de menor impacto articular
+- Prontidão Baixa (0-39): sessão de recuperação ativa ou técnica — sem trabalho de alta intensidade, foque em mobilidade, ativação e movimentos do padrão de baixo risco do FMS do atleta`;
+    } else {
+      readinessContext = '\n\nSem dados de prontidão hoje — prescreva com base no histórico recente e no planejamento de fase.';
     }
 
-    // ALTERAÇÃO 3 — Injetar contexto no system prompt
-    const systemSuffix = `${readinessContext}
-
-PERFIL DO USUÁRIO:
-${profile ? JSON.stringify(profile) : 'Não disponível'}
-
-ÚLTIMA AVALIAÇÃO FMS:
-${fmsLatest ? JSON.stringify(fmsLatest) : 'Não disponível'}`;
-
-    const updatedSystem = (rest.system || '') + systemSuffix;
+    // O system prompt já vem completo do frontend (inclui perfil, FMS e readiness).
+    // Apenas garantimos que o contexto de prontidão está presente se o frontend não o incluiu
+    // (compatibilidade com versões antigas do cliente).
+    const updatedSystem = rest.system ? rest.system : readinessContext;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
