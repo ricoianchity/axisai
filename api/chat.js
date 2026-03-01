@@ -15,9 +15,6 @@ export default async function handler(req) {
     return new Response('Method not allowed', { status: 405 });
   }
 
-  // TEMP DEBUG — remove after fix
-  console.log('[api/chat] called. ANTHROPIC_API_KEY exists:', !!process.env.ANTHROPIC_API_KEY);
-
   try {
     const body = await req.json();
 
