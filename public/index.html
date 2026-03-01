@@ -2898,6 +2898,7 @@ function _extractExercisePreview(conteudo) {
 //  WORKOUT BLOCK RENDERER  v2 — exercise mini-cards + load inputs
 // ══════════════════════════════════════════════════════════════════════════════
 function renderWorkoutBlocks(conteudo, treinoId, isDone) {
+  console.log('[renderWorkoutBlocks] treinoId:', treinoId, '| conteudo:', conteudo);
   if (!conteudo) return '<div class="wb-fallback">Sem conteúdo.</div>';
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -2937,6 +2938,7 @@ function renderWorkoutBlocks(conteudo, treinoId, isDone) {
   }
   if (cur) segments.push(cur);
 
+  console.log('[renderWorkoutBlocks] segments encontrados:', segments.length, segments.map(s => s.def.label));
   if (!segments.length) {
     return `<div class="wb-fallback">${_esc(conteudo)}</div>`;
   }
@@ -3458,6 +3460,7 @@ TERMINOLOGIA OBRIGATÓRIA: Proibido usar: "omoplata" (usar "escápula"), "múscu
 
     const systemPrompt = CORE_PROMPT + profileCtx + fmsCtx + flagCtx + (needsReference ? REF_TABLES : '');
 
+    console.log('[chat] Enviando para /api/chat:', { messages: state.chatHistory.length, model: 'claude-sonnet-4-20250514' });
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3471,7 +3474,13 @@ TERMINOLOGIA OBRIGATÓRIA: Proibido usar: "omoplata" (usar "escápula"), "múscu
         fmsLatest: state.fmsLatest || null
       })
     });
+    console.log('[chat] Resposta HTTP status:', response.status, response.ok);
     const data = await response.json();
+    if (!response.ok) {
+      console.error('[chat] Erro da API:', response.status, data);
+    } else {
+      console.log('[chat] API data recebida:', data);
+    }
     const reply = data.content?.[0]?.text || 'Desculpe, não consegui processar sua mensagem.';
     document.getElementById(typingId)?.remove();
     const axisMatch = reply.match(/<AXIS_WORKOUT>([\s\S]*?)<\/AXIS_WORKOUT>/);
@@ -3483,8 +3492,18 @@ TERMINOLOGIA OBRIGATÓRIA: Proibido usar: "omoplata" (usar "escápula"), "múscu
       supabase.from('chat_messages').insert({ user_id: state.user.id, role: 'assistant', content: reply }).catch(e => console.warn('chat_messages insert error:', e));
     }
     if (axisMatch) {
-      try { renderWorkoutConfirmCard(JSON.parse(axisMatch[1].trim())); }
-      catch(e) { console.warn('AXIS_WORKOUT parse error', e); }
+      try {
+        renderWorkoutConfirmCard(JSON.parse(axisMatch[1].trim()));
+      } catch(e) {
+        // AI sometimes outputs literal newlines inside JSON string values — escape them and retry
+        console.warn('[chat] AXIS_WORKOUT parse error, tentando corrigir newlines:', e.message);
+        try {
+          const fixed = axisMatch[1].trim().replace(/\r?\n/g, '\\n');
+          renderWorkoutConfirmCard(JSON.parse(fixed));
+        } catch(e2) {
+          console.error('[chat] AXIS_WORKOUT parse falhou após correção:', e2.message, axisMatch[1].slice(0, 300));
+        }
+      }
     }
   } catch (err) {
     console.error('sendMessage error:', err);

@@ -62,6 +62,9 @@ ${fmsLatest ? JSON.stringify(fmsLatest) : 'Não disponível'}`;
     });
 
     const data = await response.json();
+    if (!response.ok) {
+      console.error('[api/chat] Anthropic error:', response.status, JSON.stringify(data));
+    }
 
     return new Response(JSON.stringify(data), {
       status: response.status,
