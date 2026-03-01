@@ -15,11 +15,17 @@ export default async function handler(req) {
     return new Response('Method not allowed', { status: 405 });
   }
 
+  // TEMP DEBUG — remove after fix
+  console.log('[api/chat] called. ANTHROPIC_API_KEY exists:', !!process.env.ANTHROPIC_API_KEY);
+
   try {
     const body = await req.json();
 
     // ALTERAÇÃO 1 — Extrair dados do body da requisição
     const { messages, checkin, profile, fmsLatest, ...rest } = body;
+
+    // TEMP DEBUG — remove after fix
+    console.log('[api/chat] model:', rest.model, '| messages:', messages?.length);
 
     // ALTERAÇÃO 2 — Construir contexto de prontidão
     let readinessContext = '';
