@@ -1811,24 +1811,24 @@
       </div>
       <div class="fms-photo-row">
     <div class="fms-photo-col">
-      <div class="fms-photo-label">FRENTE</div>
-      <div class="upload-zone fms-upload-mini" id="fms-zone-il-front" onclick="document.getElementById(&#39;fms-input-il-front&#39;).click()">
-        <input type="file" id="fms-input-il-front" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-il-front&#39;,&#39;fms-prev-il-front&#39;,&#39;fms-icon-il-front&#39;)">
-        <img id="fms-prev-il-front" class="upload-preview" style="display:none">
+      <div class="fms-photo-label">LADO ESQ</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-il-lado-esq" onclick="document.getElementById(&#39;fms-input-il-lado-esq&#39;).click()">
+        <input type="file" id="fms-input-il-lado-esq" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-il-lado-esq&#39;,&#39;fms-prev-il-lado-esq&#39;,&#39;fms-icon-il-lado-esq&#39;)">
+        <img id="fms-prev-il-lado-esq" class="upload-preview" style="display:none">
         <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
-        <div class="upload-icon" id="fms-icon-il-front">📷</div>
-        <div class="upload-label">Foto</div>
+        <div class="upload-icon" id="fms-icon-il-lado-esq">📷</div>
+        <div class="upload-label">Perna E à frente</div>
         <div class="upload-hint">PNG · JPG</div>
       </div>
     </div>
     <div class="fms-photo-col">
-      <div class="fms-photo-label">LADO</div>
-      <div class="upload-zone fms-upload-mini" id="fms-zone-il-side" onclick="document.getElementById(&#39;fms-input-il-side&#39;).click()">
-        <input type="file" id="fms-input-il-side" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-il-side&#39;,&#39;fms-prev-il-side&#39;,&#39;fms-icon-il-side&#39;)">
-        <img id="fms-prev-il-side" class="upload-preview" style="display:none">
+      <div class="fms-photo-label">LADO DIR</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-il-lado-dir" onclick="document.getElementById(&#39;fms-input-il-lado-dir&#39;).click()">
+        <input type="file" id="fms-input-il-lado-dir" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-il-lado-dir&#39;,&#39;fms-prev-il-lado-dir&#39;,&#39;fms-icon-il-lado-dir&#39;)">
+        <img id="fms-prev-il-lado-dir" class="upload-preview" style="display:none">
         <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
-        <div class="upload-icon" id="fms-icon-il-side">📷</div>
-        <div class="upload-label">Foto</div>
+        <div class="upload-icon" id="fms-icon-il-lado-dir">📷</div>
+        <div class="upload-label">Perna D à frente</div>
         <div class="upload-hint">PNG · JPG</div>
       </div>
     </div>
@@ -1844,26 +1844,48 @@
           <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
         </select>
       </div>
-      <div class="fms-photo-row">
+      <div class="fms-photo-row" style="flex-wrap:wrap;">
     <div class="fms-photo-col">
-      <div class="fms-photo-label">FRENTE</div>
-      <div class="upload-zone fms-upload-mini" id="fms-zone-hs-front" onclick="document.getElementById(&#39;fms-input-hs-front&#39;).click()">
-        <input type="file" id="fms-input-hs-front" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-hs-front&#39;,&#39;fms-prev-hs-front&#39;,&#39;fms-icon-hs-front&#39;)">
-        <img id="fms-prev-hs-front" class="upload-preview" style="display:none">
+      <div class="fms-photo-label">FRENTE ESQ</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-hs-frente-esq" onclick="document.getElementById(&#39;fms-input-hs-frente-esq&#39;).click()">
+        <input type="file" id="fms-input-hs-frente-esq" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-hs-frente-esq&#39;,&#39;fms-prev-hs-frente-esq&#39;,&#39;fms-icon-hs-frente-esq&#39;)">
+        <img id="fms-prev-hs-frente-esq" class="upload-preview" style="display:none">
         <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
-        <div class="upload-icon" id="fms-icon-hs-front">📷</div>
-        <div class="upload-label">Foto</div>
+        <div class="upload-icon" id="fms-icon-hs-frente-esq">📷</div>
+        <div class="upload-label">Perna E elevada</div>
         <div class="upload-hint">PNG · JPG</div>
       </div>
     </div>
     <div class="fms-photo-col">
-      <div class="fms-photo-label">LADO</div>
-      <div class="upload-zone fms-upload-mini" id="fms-zone-hs-side" onclick="document.getElementById(&#39;fms-input-hs-side&#39;).click()">
-        <input type="file" id="fms-input-hs-side" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-hs-side&#39;,&#39;fms-prev-hs-side&#39;,&#39;fms-icon-hs-side&#39;)">
-        <img id="fms-prev-hs-side" class="upload-preview" style="display:none">
+      <div class="fms-photo-label">FRENTE DIR</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-hs-frente-dir" onclick="document.getElementById(&#39;fms-input-hs-frente-dir&#39;).click()">
+        <input type="file" id="fms-input-hs-frente-dir" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-hs-frente-dir&#39;,&#39;fms-prev-hs-frente-dir&#39;,&#39;fms-icon-hs-frente-dir&#39;)">
+        <img id="fms-prev-hs-frente-dir" class="upload-preview" style="display:none">
         <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
-        <div class="upload-icon" id="fms-icon-hs-side">📷</div>
-        <div class="upload-label">Foto</div>
+        <div class="upload-icon" id="fms-icon-hs-frente-dir">📷</div>
+        <div class="upload-label">Perna D elevada</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">LADO ESQ</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-hs-lado-esq" onclick="document.getElementById(&#39;fms-input-hs-lado-esq&#39;).click()">
+        <input type="file" id="fms-input-hs-lado-esq" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-hs-lado-esq&#39;,&#39;fms-prev-hs-lado-esq&#39;,&#39;fms-icon-hs-lado-esq&#39;)">
+        <img id="fms-prev-hs-lado-esq" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-hs-lado-esq">📷</div>
+        <div class="upload-label">Perna E elevada</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">LADO DIR</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-hs-lado-dir" onclick="document.getElementById(&#39;fms-input-hs-lado-dir&#39;).click()">
+        <input type="file" id="fms-input-hs-lado-dir" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-hs-lado-dir&#39;,&#39;fms-prev-hs-lado-dir&#39;,&#39;fms-icon-hs-lado-dir&#39;)">
+        <img id="fms-prev-hs-lado-dir" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-hs-lado-dir">📷</div>
+        <div class="upload-label">Perna D elevada</div>
         <div class="upload-hint">PNG · JPG</div>
       </div>
     </div>
@@ -1881,24 +1903,24 @@
       </div>
       <div class="fms-photo-row">
     <div class="fms-photo-col">
-      <div class="fms-photo-label">FRENTE</div>
-      <div class="upload-zone fms-upload-mini" id="fms-zone-sm-front" onclick="document.getElementById(&#39;fms-input-sm-front&#39;).click()">
-        <input type="file" id="fms-input-sm-front" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-sm-front&#39;,&#39;fms-prev-sm-front&#39;,&#39;fms-icon-sm-front&#39;)">
-        <img id="fms-prev-sm-front" class="upload-preview" style="display:none">
+      <div class="fms-photo-label">COSTAS LADO D</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-sm-costas-d" onclick="document.getElementById(&#39;fms-input-sm-costas-d&#39;).click()">
+        <input type="file" id="fms-input-sm-costas-d" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-sm-costas-d&#39;,&#39;fms-prev-sm-costas-d&#39;,&#39;fms-icon-sm-costas-d&#39;)">
+        <img id="fms-prev-sm-costas-d" class="upload-preview" style="display:none">
         <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
-        <div class="upload-icon" id="fms-icon-sm-front">📷</div>
-        <div class="upload-label">Foto</div>
+        <div class="upload-icon" id="fms-icon-sm-costas-d">📷</div>
+        <div class="upload-label">Mão D sobe</div>
         <div class="upload-hint">PNG · JPG</div>
       </div>
     </div>
     <div class="fms-photo-col">
-      <div class="fms-photo-label">LADO</div>
-      <div class="upload-zone fms-upload-mini" id="fms-zone-sm-side" onclick="document.getElementById(&#39;fms-input-sm-side&#39;).click()">
-        <input type="file" id="fms-input-sm-side" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-sm-side&#39;,&#39;fms-prev-sm-side&#39;,&#39;fms-icon-sm-side&#39;)">
-        <img id="fms-prev-sm-side" class="upload-preview" style="display:none">
+      <div class="fms-photo-label">COSTAS LADO E</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-sm-costas-e" onclick="document.getElementById(&#39;fms-input-sm-costas-e&#39;).click()">
+        <input type="file" id="fms-input-sm-costas-e" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-sm-costas-e&#39;,&#39;fms-prev-sm-costas-e&#39;,&#39;fms-icon-sm-costas-e&#39;)">
+        <img id="fms-prev-sm-costas-e" class="upload-preview" style="display:none">
         <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
-        <div class="upload-icon" id="fms-icon-sm-side">📷</div>
-        <div class="upload-label">Foto</div>
+        <div class="upload-icon" id="fms-icon-sm-costas-e">📷</div>
+        <div class="upload-label">Mão E sobe</div>
         <div class="upload-hint">PNG · JPG</div>
       </div>
     </div>
@@ -1916,23 +1938,48 @@
       </div>
       <div class="fms-photo-row">
     <div class="fms-photo-col">
-      <div class="fms-photo-label">FRENTE</div>
-      <div class="upload-zone fms-upload-mini" id="fms-zone-aslr-front" onclick="document.getElementById(&#39;fms-input-aslr-front&#39;).click()">
-        <input type="file" id="fms-input-aslr-front" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-aslr-front&#39;,&#39;fms-prev-aslr-front&#39;,&#39;fms-icon-aslr-front&#39;)">
-        <img id="fms-prev-aslr-front" class="upload-preview" style="display:none">
+      <div class="fms-photo-label">LADO ESQ</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-aslr-lado-esq" onclick="document.getElementById(&#39;fms-input-aslr-lado-esq&#39;).click()">
+        <input type="file" id="fms-input-aslr-lado-esq" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-aslr-lado-esq&#39;,&#39;fms-prev-aslr-lado-esq&#39;,&#39;fms-icon-aslr-lado-esq&#39;)">
+        <img id="fms-prev-aslr-lado-esq" class="upload-preview" style="display:none">
         <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
-        <div class="upload-icon" id="fms-icon-aslr-front">📷</div>
-        <div class="upload-label">Foto</div>
+        <div class="upload-icon" id="fms-icon-aslr-lado-esq">📷</div>
+        <div class="upload-label">Perna E elevada</div>
         <div class="upload-hint">PNG · JPG</div>
       </div>
     </div>
     <div class="fms-photo-col">
-      <div class="fms-photo-label">LADO</div>
-      <div class="upload-zone fms-upload-mini" id="fms-zone-aslr-side" onclick="document.getElementById(&#39;fms-input-aslr-side&#39;).click()">
-        <input type="file" id="fms-input-aslr-side" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-aslr-side&#39;,&#39;fms-prev-aslr-side&#39;,&#39;fms-icon-aslr-side&#39;)">
-        <img id="fms-prev-aslr-side" class="upload-preview" style="display:none">
+      <div class="fms-photo-label">LADO DIR</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-aslr-lado-dir" onclick="document.getElementById(&#39;fms-input-aslr-lado-dir&#39;).click()">
+        <input type="file" id="fms-input-aslr-lado-dir" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-aslr-lado-dir&#39;,&#39;fms-prev-aslr-lado-dir&#39;,&#39;fms-icon-aslr-lado-dir&#39;)">
+        <img id="fms-prev-aslr-lado-dir" class="upload-preview" style="display:none">
         <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
-        <div class="upload-icon" id="fms-icon-aslr-side">📷</div>
+        <div class="upload-icon" id="fms-icon-aslr-lado-dir">📷</div>
+        <div class="upload-label">Perna D elevada</div>
+        <div class="upload-hint">PNG · JPG</div>
+      </div>
+    </div>
+  </div>
+    </div><div class="fms-card">
+      <div style="margin-bottom:14px;">
+        <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">Trunk Stability Push-Up</p>
+        <p style="font-size:12px;color:var(--muted);font-family:var(--font-mono);">Estabilidade de Tronco</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);white-space:nowrap;">Nota (0–3)</label>
+        <select id="fms-score-tspu" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 12px;font-family:var(--font-body);font-size:14px;outline:none;flex:1;">
+          <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        </select>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Posição de prancha alta de lado — corpo reto, braços estendidos</p>
+      <div class="fms-photo-row">
+    <div class="fms-photo-col">
+      <div class="fms-photo-label">LATERAL PRANCHA</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-tspu-lateral" onclick="document.getElementById(&#39;fms-input-tspu-lateral&#39;).click()">
+        <input type="file" id="fms-input-tspu-lateral" accept="image/*" style="display:none" onchange="previewFMS(this,&#39;fms-zone-tspu-lateral&#39;,&#39;fms-prev-tspu-lateral&#39;,&#39;fms-icon-tspu-lateral&#39;)">
+        <img id="fms-prev-tspu-lateral" class="upload-preview" style="display:none">
+        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
+        <div class="upload-icon" id="fms-icon-tspu-lateral">📷</div>
         <div class="upload-label">Foto</div>
         <div class="upload-hint">PNG · JPG</div>
       </div>
@@ -2305,8 +2352,6 @@ const FMS_RESULT_DEFS = [
     desc: { 3: 'Tornozelo ultrapassa a linha média da coxa oposta', 2: 'Tornozelo entre joelho e linha média da coxa oposta', 1: 'Tornozelo abaixo do joelho da perna oposta', 0: 'Dor durante o movimento' } },
   { id: 'tspu', nameEn: 'Trunk Stability Push-Up', namePt: 'Estabilidade de Tronco',
     desc: { 3: 'Executa push-up completo sem queda de quadril (polegar na testa para homens, no queixo para mulheres)', 2: 'Executa push-up com polegar no queixo (homens) ou clavícula (mulheres)', 1: 'Incapaz de realizar push-up na posição mínima', 0: 'Dor durante o movimento ou no clearing test' } },
-  { id: 'rs', nameEn: 'Rotary Stability', namePt: 'Estabilidade Rotatória',
-    desc: { 3: 'Extensão/flexão unilateral correta com coluna paralela ao solo', 2: 'Realiza o padrão apenas em diagonal (braço e perna opostos)', 1: 'Incapaz de realizar o padrão sem perda de equilíbrio', 0: 'Dor durante o movimento ou no clearing test' } },
 ];
 
 // FMS test definitions for dynamic rendering
@@ -2325,6 +2370,9 @@ const FMS_TESTS = [
     scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'] },
   { id: 'aslr', name: 'ASLR',               namePt: 'Elevação Ativa da Perna Reta', type: 'score',
     desc: 'Avalia mobilidade ativa de isquiotibiais e panturrilha com estabilização de pelve e core ativo.',
+    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'] },
+  { id: 'tspu', name: 'Trunk Stability Push-Up', namePt: 'Estabilidade de Tronco', type: 'score',
+    desc: 'Avalia estabilidade reflexiva de tronco e core em cadeia cinética fechada.',
     scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'] },
   { id: 'tt',  name: 'Toe Touch Screen',     namePt: 'Toque na Ponta dos Pés', type: 'toggle',
     desc: 'Avalia mobilidade global da cadeia posterior com joelhos estendidos.',
@@ -4606,14 +4654,15 @@ function setToeTouch(val) {
 
 function runDiagnosis() {
   const scores = {
-    dos:  parseInt(document.getElementById('fms-score-dos')?.value) || 0,
-    il:   parseInt(document.getElementById('fms-score-il')?.value)  || 0,
-    hs:   parseInt(document.getElementById('fms-score-hs')?.value)  || 0,
-    sm:   parseInt(document.getElementById('fms-score-sm')?.value)  || 0,
-    aslr: parseInt(document.getElementById('fms-score-aslr')?.value)|| 0,
+    dos:  parseInt(document.getElementById('fms-score-dos')?.value)  || 0,
+    il:   parseInt(document.getElementById('fms-score-il')?.value)   || 0,
+    hs:   parseInt(document.getElementById('fms-score-hs')?.value)   || 0,
+    sm:   parseInt(document.getElementById('fms-score-sm')?.value)   || 0,
+    aslr: parseInt(document.getElementById('fms-score-aslr')?.value) || 0,
+    tspu: parseInt(document.getElementById('fms-score-tspu')?.value) || 0,
     tt:   state.toeTouch || null,
   };
-  const totalScore = scores.dos + scores.il + scores.hs + scores.sm + scores.aslr;
+  const totalScore = scores.dos + scores.il + scores.hs + scores.sm + scores.aslr + scores.tspu;
   const hasMedia = document.querySelector('.fms-grid .upload-zone.has-file');
   if (totalScore === 0 && !hasMedia && !scores.tt) return showToast('Preencha ao menos uma nota FMS, envie uma foto ou faça o Toe Touch.', true);
 
@@ -4628,8 +4677,9 @@ function runDiagnosis() {
   if (scores.hs <= 1) { issues.push('hip_instability'); feedback.push(`Hurdle Step nota ${scores.hs}: Instabilidade de quadril. Regrida para Bridge.`); }
   if (scores.sm <= 1) { issues.push('shoulder_restriction'); feedback.push(`Shoulder Mobility nota ${scores.sm}: Restrição de ombro. Use Floor Slides.`); }
   if (scores.aslr <= 1) { issues.push('hamstring_restriction'); feedback.push(`ASLR nota ${scores.aslr}: Restrição de isquiotibiais. Use Reaching SLDL BW.`); }
+  if (scores.tspu <= 1) { issues.push('trunk_instability'); feedback.push(`Trunk Push-Up nota ${scores.tspu}: Instabilidade de tronco. Priorizar ativação de core antes de pressing.`); }
   if (scores.tt === 'negative') { issues.push('toe_touch_negative'); feedback.push('Toe Touch negativo: Indica restrição posterior. Incluir Toe Touch Sequence no aquecimento.'); }
-  if (issues.length === 0) { issues.push('none'); feedback.push(`Todos os testes OK. Score total: ${totalScore}/15. Pode progredir normalmente.`); }
+  if (issues.length === 0) { issues.push('none'); feedback.push(`Todos os testes OK. Score total: ${totalScore}/18. Pode progredir normalmente.`); }
 
   if (!state.profile) state.profile = {};
   state.profile.fms = scores;
@@ -4637,7 +4687,7 @@ function runDiagnosis() {
   saveProfile(true);
 
   // Sync profile selects
-  ['dos','il','hs','sm','aslr'].forEach(k => { const el = document.getElementById('p-fms-' + k); if (el) el.value = scores[k]; });
+  ['dos','il','hs','sm','aslr','tspu'].forEach(k => { const el = document.getElementById('p-fms-' + k); if (el) el.value = scores[k]; });
   if (scores.tt) { const el = document.getElementById('p-fms-tt'); if (el) el.value = scores.tt; }
 
   const statRisks = document.getElementById('stat-risks');
@@ -4645,14 +4695,14 @@ function runDiagnosis() {
   refreshChatSidebar();
 
   document.getElementById('result-feedback').textContent = feedback.join('\n\n');
-  const issueLabels = { squat_dysfunction:'Disfunção de Agachamento', lunge_dysfunction:'Disfunção de Avanço', hip_instability:'Instabilidade de Quadril', shoulder_restriction:'Restrição de Ombro', hamstring_restriction:'Restrição de Isquiotibiais', toe_touch_negative:'Toe Touch Negativo', none:'Sem alterações' };
+  const issueLabels = { squat_dysfunction:'Disfunção de Agachamento', lunge_dysfunction:'Disfunção de Avanço', hip_instability:'Instabilidade de Quadril', shoulder_restriction:'Restrição de Ombro', hamstring_restriction:'Restrição de Isquiotibiais', trunk_instability:'Instabilidade de Tronco', toe_touch_negative:'Toe Touch Negativo', none:'Sem alterações' };
   document.getElementById('result-issues').innerHTML = issues.map(i => `<div class="issue-chip ${i==='none'?'ok':'risk'}">${i==='none'?'✅':'⚠️'} ${issueLabels[i]||i}</div>`).join('');
   const badge = document.getElementById('result-badge');
   const rc = issues.filter(f => f !== 'none').length;
   if (rc > 0) { badge.textContent = rc + ' FLAG' + (rc>1?'S':''); badge.style.background = 'rgba(239,68,68,0.1)'; badge.style.color = '#fca5a5'; }
   else { badge.textContent = 'APROVADO'; badge.style.background = 'rgba(0,255,135,0.1)'; badge.style.color = 'var(--green)'; }
   resultCard.classList.add('visible');
-  showToast(`Diagnóstico FMS concluído! Score: ${totalScore}/15`);
+  showToast(`Diagnóstico FMS concluído! Score: ${totalScore}/18`);
 }
 
 // ═══════════════════════════════════════════════
@@ -4861,15 +4911,15 @@ function renderFmsResults() {
     ? new Date(state.fmsLatest.date).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' })
     : '';
 
-  // Sum scored movements (excludes tspu/rs which are not in anamnesis)
-  const scoredIds = ['dos','hs','il','sm','aslr'];
+  // Sum all 6 scored movements (DOS, HS, IL, SM, ASLR, TSPU)
+  const scoredIds = ['dos','hs','il','sm','aslr','tspu'];
   const scores = scoredIds.map(id => fms[id] ?? null);
   const total  = scores.reduce((sum, s) => sum + (s ?? 0), 0);
-  const max    = scoredIds.length * 3; // 15
+  const max    = scoredIds.length * 3; // 18
 
   let classLabel, classColor;
-  if (total >= 12)      { classLabel = 'Padrões funcionais — baixo risco de lesão'; classColor = 'green'; }
-  else if (total >= 9)  { classLabel = 'Atenção — assimetrias ou limitações presentes'; classColor = 'yellow'; }
+  if (total >= 14)      { classLabel = 'Padrões funcionais — baixo risco de lesão'; classColor = 'green'; }
+  else if (total >= 10) { classLabel = 'Atenção — assimetrias ou limitações presentes'; classColor = 'yellow'; }
   else                  { classLabel = 'Alto risco — disfunções de movimento identificadas'; classColor = 'red'; }
 
   const cardsHtml = FMS_RESULT_DEFS.map(def => {
@@ -4899,7 +4949,7 @@ function renderFmsResults() {
     ${cardsHtml}
     <div class="fms-total-card">
       <div class="fms-total-score" style="color:${classColor === 'green' ? 'var(--green)' : classColor === 'yellow' ? '#f59e0b' : '#ef4444'}">${total}</div>
-      <div class="fms-total-label">PONTOS / ${max} (5 DE 7 MOVIMENTOS AVALIADOS)</div>
+      <div class="fms-total-label">PONTOS / ${max} (6 MOVIMENTOS AVALIADOS)</div>
       <div class="fms-total-class ${classColor}">${classLabel}</div>
       ${date ? `<div class="fms-result-date">Avaliação realizada em ${date}</div>` : ''}
     </div>
@@ -4943,22 +4993,23 @@ function showFmsPreview() {
 
   const fms = state.fmsLatest?.fms || state.profile?.fms || {};
   const riskFlags = (state.profile?.riskFlags || []).filter(f => f !== 'none');
-  const scoredIds = ['dos','hs','il','sm','aslr'];
+  const scoredIds = ['dos','hs','il','sm','aslr','tspu'];
   const total = scoredIds.reduce((sum, id) => sum + (fms[id] ?? 0), 0);
-  const max = scoredIds.length * 3;
+  const max = scoredIds.length * 3; // 18
 
   let classLabel, classColor;
-  if (total >= 12)     { classLabel = 'Boa base de movimento'; classColor = 'var(--green)'; }
-  else if (total >= 9) { classLabel = 'Atenção — limitações presentes'; classColor = '#f59e0b'; }
+  if (total >= 14)     { classLabel = 'Boa base de movimento'; classColor = 'var(--green)'; }
+  else if (total >= 10) { classLabel = 'Atenção — limitações presentes'; classColor = '#f59e0b'; }
   else                 { classLabel = 'Alto risco — disfunções identificadas'; classColor = '#ef4444'; }
 
   const flagLabels = {
     squat_dysfunction:'Disfunção de Agachamento', lunge_dysfunction:'Disfunção de Avanço',
     hip_instability:'Instabilidade de Quadril', shoulder_restriction:'Restrição de Ombro',
-    hamstring_restriction:'Restrição de Isquiotibiais', toe_touch_negative:'Toe Touch Negativo'
+    hamstring_restriction:'Restrição de Isquiotibiais', toe_touch_negative:'Toe Touch Negativo',
+    trunk_instability:'Instabilidade de Tronco'
   };
 
-  const movementNames = { dos:'Deep Squat', hs:'Hurdle Step', il:'Inline Lunge', sm:'Shoulder Mobility', aslr:'ASLR' };
+  const movementNames = { dos:'Deep Squat', hs:'Hurdle Step', il:'Inline Lunge', sm:'Shoulder Mobility', aslr:'ASLR', tspu:'Trunk Push-Up' };
 
   const scoresHtml = scoredIds.map(id => {
     const score = fms[id] ?? null;
