@@ -3,6 +3,7 @@
     { "source": "/api/chat", "destination": "/api/chat.js" },
     { "source": "/api/reset-password", "destination": "/api/reset-password.js" },
     { "source": "/api/profile", "destination": "/api/profile.js" },
+    { "source": "/api/sessions", "destination": "/api/sessions.js" },
     { "source": "/api/chat-history", "destination": "/api/chat-history.js" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]

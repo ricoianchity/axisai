@@ -1660,12 +1660,14 @@
 
       </div>
 
-      <div class="hero-banner" id="hero-next-step">
-        <div>
-          <h2 id="hero-title">COMECE SEU PRIMEIRO TREINO</h2>
-          <p id="hero-desc">Converse com o Axis Coach IA para receber seu plano personalizado.</p>
+      <div id="first-workout-cta">
+        <div class="hero-banner" id="hero-next-step">
+          <div>
+            <h2 id="hero-title">COMECE SEU PRIMEIRO TREINO</h2>
+            <p id="hero-desc">Converse com o Axis Coach IA para receber seu plano personalizado.</p>
+          </div>
+          <button class="btn-action" id="hero-btn" onclick="navigate(&#39;chat&#39;)">PEDIR TREINO</button>
         </div>
-        <button class="btn-action" id="hero-btn" onclick="navigate(&#39;chat&#39;)">PEDIR TREINO</button>
       </div>
       <div style="margin-bottom:16px;">
         <h3 style="font-family:var(--font-display);font-size:20px;letter-spacing:1px;margin-bottom:12px;">TREINOS RECENTES</h3>
@@ -2665,7 +2667,7 @@ async function completeEnterApp() {
   document.getElementById('profile-full-name').textContent = name;
   document.getElementById('profile-email-display').textContent = state.user?.email || '';
   loadAvatar();
-  refreshDashboard();
+  await refreshDashboard();
   refreshChatSidebar();
   await checkLGPDConsent();
   loadPrivacyToggles();
@@ -2953,6 +2955,7 @@ function navigate(page) {
     if (n.getAttribute('onclick')?.includes("'" + page + "'")) n.classList.add('active');
   });
   closeSidebar();
+  if (page === 'dashboard') refreshDashboard();
   if (page === 'workouts') renderWorkouts();
   if (page === 'diagnosis') renderFmsResults();
   if (page === 'profile') loadProfileHealth();
@@ -3184,34 +3187,295 @@ function renderWorkouts() {
 function completeWorkout(i) { state.workouts[i].completed = true; saveWorkouts(); renderWorkouts(); refreshDashboard(); showToast('Treino marcado como concluído! 💪'); }
 function deleteWorkout(i) { state.workouts.splice(i,1); saveWorkouts(); renderWorkouts(); refreshDashboard(); }
 
-function refreshDashboard() {
+async function getSupaToken() {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) {
+    console.warn('[getSupaToken]', error.message);
+    return null;
+  }
+  return data?.session?.access_token || null;
+}
+
+async function fetchTrainingSessions() {
+  const token = await getSupaToken();
+  if (!token) return [];
+
+  try {
+    const res = await fetch('/api/sessions?type=sessions', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.warn('[fetchSessions]', err.message);
+    return [];
+  }
+}
+
+async function fetchReadinessHistory() {
+  const token = await getSupaToken();
+  if (!token) return [];
+
+  try {
+    const res = await fetch('/api/sessions?type=readiness', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.warn('[fetchReadiness]', err.message);
+    return [];
+  }
+}
+
+function updateFirstWorkoutCTA() {
+  const treinos = loadTreinosIA();
+  const cta = document.getElementById('first-workout-cta');
+  if (!cta) return;
+  cta.style.display = treinos.length > 0 ? 'none' : '';
+}
+
+function renderRecentWorkouts() {
+  const container = document.getElementById('recent-workouts');
+  if (!container) return;
+
+  const treinos = loadTreinosIA();
+
+  if (treinos.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🏋️</div>
+        <div class="empty-title">SEM TREINOS AINDA</div>
+        <div class="empty-desc">Use o Coach IA para gerar seu plano personalizado.</div>
+        <button class="btn-action" onclick="navigate('chat')">FALAR COM O COACH</button>
+      </div>`;
+    return;
+  }
+
+  const sorted = [...treinos].sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+  const recent = sorted.slice(0, 3);
+
+  container.innerHTML = recent.map(t => {
+    const hasPillar = t.conteudo?.includes('PILLAR') || t.conteudo?.includes('Pillar');
+    const hasPower = t.conteudo?.includes('POD 1') || t.conteudo?.includes('Power');
+    const hasESD = t.conteudo?.includes('ESD');
+    const blocks = [
+      hasPillar ? 'Pillar Prep' : null,
+      hasPower ? 'Strength' : null,
+      hasESD ? 'ESD' : null
+    ].filter(Boolean);
+
+    return `
+      <div onclick="navigate('workouts')" style="
+        background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;
+        padding:16px;cursor:pointer;transition:border-color 0.2s;margin-bottom:10px"
+        onmouseenter="this.style.borderColor='#444'"
+        onmouseleave="this.style.borderColor='#2a2a2a'">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div>
+            <div style="color:#fff;font-weight:700;font-size:14px;margin-bottom:2px">${t.titulo || 'Treino'}</div>
+            <div style="color:#666;font-size:12px">${t.data || ''}</div>
+          </div>
+          <span style="background:#1f2a00;color:#e8ff4b;padding:3px 10px;border-radius:20px;
+                       font-size:11px;font-weight:700;border:1px solid #e8ff4b33">
+            ${t.categoria?.toUpperCase() || 'TREINO'}
+          </span>
+        </div>
+        ${blocks.length > 0 ? `
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${blocks.map(b => `
+              <span style="background:#222;color:#888;padding:2px 8px;border-radius:6px;font-size:11px">
+                ${b}
+              </span>`).join('')}
+          </div>` : ''}
+        <div style="margin-top:10px;color:#e8ff4b;font-size:12px;font-weight:600">
+          VER TREINO →
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderStreakGrid(sessionDates) {
+  const grid = document.getElementById('streak-grid');
+  if (!grid) return;
+
+  const sessionSet = new Set(sessionDates);
+  const days = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+  let html = '';
+
+  for (let i = 27; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+    const hasSession = sessionSet.has(dateStr);
+    const isToday = i === 0;
+    const dayName = days[date.getDay()];
+
+    html += `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+        <div style="
+          width:24px;height:24px;border-radius:6px;
+          background:${hasSession ? '#e8ff4b' : '#1a1a1a'};
+          border:1px solid ${isToday ? '#e8ff4b88' : hasSession ? '#e8ff4b' : '#2a2a2a'};
+          ${isToday && !hasSession ? 'border-style:dashed;' : ''}
+        " title="${dateStr}"></div>
+        ${i % 7 === 0 ? `<span style="color:#555;font-size:9px">${dayName}</span>` : ''}
+      </div>
+    `;
+  }
+
+  grid.innerHTML = html;
+}
+
+async function updateStreakAndConsistency() {
+  const sessions = await fetchTrainingSessions();
+  const statSessions = document.getElementById('stat-sessions');
+  if (statSessions) statSessions.textContent = String(sessions.length);
+
+  const streakCount = document.getElementById('streak-count');
+  const adherenceEl = document.getElementById('adherence-pct');
+  const streakBadge = document.getElementById('streak-badge');
+
+  if (!sessions.length) {
+    if (streakCount) streakCount.textContent = '0';
+    if (adherenceEl) adherenceEl.textContent = '0%';
+    if (streakBadge) {
+      streakBadge.className = 'insight-card-badge badge-muted';
+      streakBadge.textContent = 'Últimos 28 dias';
+    }
+    renderStreakGrid([]);
+    return;
+  }
+
+  const sessionDates = [...new Set(
+    sessions
+      .map(s => (s.completed_at || s.created_at || s.date || '').split('T')[0])
+      .filter(Boolean)
+  )].sort().reverse();
+
+  let streak = 0;
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+
+  for (let i = 0; i < sessionDates.length; i++) {
+    const sessionDate = new Date(sessionDates[i]);
+    sessionDate.setHours(0, 0, 0, 0);
+    const expectedDate = new Date(todayDate);
+    expectedDate.setDate(todayDate.getDate() - i);
+
+    if (sessionDate.getTime() === expectedDate.getTime()) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  if (streakCount) streakCount.textContent = String(streak);
+
+  const twentyEightDaysAgo = new Date();
+  twentyEightDaysAgo.setDate(twentyEightDaysAgo.getDate() - 28);
+  const recentSessions = sessionDates.filter(d => new Date(d) >= twentyEightDaysAgo);
+  const adherence = Math.round((recentSessions.length / 28) * 100);
+
+  if (adherenceEl) adherenceEl.textContent = `${adherence}%`;
+
+  if (streakBadge) {
+    if (adherence >= 70) {
+      streakBadge.className = 'insight-card-badge badge-green';
+      streakBadge.textContent = `${adherence}% aderência`;
+    } else if (adherence >= 40) {
+      streakBadge.className = 'insight-card-badge badge-amber';
+      streakBadge.textContent = `${adherence}% aderência`;
+    } else {
+      streakBadge.className = 'insight-card-badge badge-muted';
+      streakBadge.textContent = 'Últimos 28 dias';
+    }
+  }
+
+  renderStreakGrid(sessionDates);
+}
+
+async function updateReadinessCard() {
+  const history = await fetchReadinessHistory();
+  const historyContainer = document.getElementById('readiness-history');
+  if (!historyContainer) return;
+
+  if (history.length === 0) {
+    historyContainer.innerHTML = `
+      <div style="color:#555;font-size:12px;text-align:center;padding:10px">
+        Nenhum check-in nos últimos 7 dias
+      </div>`;
+    return;
+  }
+
+  const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  const byDate = {};
+  history.forEach(h => {
+    if (h.date) byDate[h.date] = h;
+  });
+
+  let html = '<div style="display:flex;gap:6px;align-items:flex-end;justify-content:space-between">';
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+    const entry = byDate[dateStr];
+    const score = entry?.readiness_score || entry?.readiness || 0;
+    const dayName = days[date.getDay()];
+    const isToday = i === 0;
+    const barColor = score >= 70 ? '#4CAF50' : score >= 40 ? '#FFC107' : score > 0 ? '#f44' : '#2a2a2a';
+    const barHeight = score > 0 ? Math.max(8, Math.round(score * 0.4)) : 4;
+
+    html += `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
+        ${score > 0 ? `<span style="color:#888;font-size:10px">${score}</span>` : ''}
+        <div style="
+          width:100%;height:${barHeight}px;border-radius:4px;
+          background:${barColor};opacity:${isToday ? 1 : 0.7};
+        "></div>
+        <span style="color:${isToday ? '#e8ff4b' : '#555'};font-size:10px;font-weight:${isToday ? '700' : '400'}">
+          ${isToday ? 'Hoje' : dayName}
+        </span>
+      </div>`;
+  }
+  html += '</div>';
+  historyContainer.innerHTML = html;
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayEntry = byDate[todayStr];
+  if (todayEntry) {
+    const score = todayEntry.readiness_score || todayEntry.readiness || 0;
+    const readinessNum = document.getElementById('readiness-num');
+    const readinessBadge = document.getElementById('readiness-badge');
+    if (readinessNum) readinessNum.textContent = String(score);
+    if (readinessBadge) {
+      const badge = score >= 70 ? 'Alta' : score >= 40 ? 'Média' : 'Baixa';
+      const color = score >= 70 ? '#4CAF50' : score >= 40 ? '#FFC107' : '#f44';
+      readinessBadge.textContent = badge;
+      readinessBadge.style.color = color;
+    }
+  }
+}
+
+async function refreshDashboard() {
   const treinosIA = loadTreinosIA();
   const active = state.workouts.filter(w => !w.completed);
-  const done = state.workouts.filter(w => w.completed);
-  document.getElementById('stat-workouts').textContent = active.length + treinosIA.length;
-  document.getElementById('stat-sessions').textContent = done.length;
   const riskCount = (state.profile?.riskFlags || []).filter(f => f !== 'none').length;
+  document.getElementById('stat-workouts').textContent = active.length + treinosIA.length;
   document.getElementById('stat-risks').textContent = riskCount;
-  const recent = document.getElementById('recent-workouts');
-  if (!state.workouts.length) {
-    recent.innerHTML = `<div class="empty-state"><div class="empty-icon">🏋️</div><div class="empty-title">SEM TREINOS AINDA</div><div class="empty-desc">Use o Coach IA para gerar seu plano personalizado.</div><button class="btn-action" onclick="navigate('chat')">FALAR COM O COACH</button></div>`;
-  } else {
-    recent.innerHTML = state.workouts.slice(0,3).map(w => `<div class="workout-card ${w.completed?'completed':''}"><div class="workout-icon ${w.completed?'completed':'pending'}">${w.completed?'✅':'🏋️'}</div><div class="workout-info"><div class="workout-title">${w.title}</div><div class="workout-meta">${w.phase||'Fase 1'} · ${new Date(w.date).toLocaleDateString('pt-BR')}</div></div><span class="workout-badge ${w.completed?'badge-done':'badge-pending'}">${w.completed?'FEITO':'PENDENTE'}</span></div>`).join('');
-  }
-  const next = active[0];
-  if (next) {
-    document.getElementById('hero-title').textContent = next.title.toUpperCase();
-    document.getElementById('hero-desc').textContent = 'Baseado no seu último diagnóstico, ajustamos os exercícios para você.';
-    document.getElementById('hero-btn').textContent = 'INICIAR TREINO';
-    document.getElementById('hero-btn').onclick = () => navigate('workouts');
-  } else {
-    document.getElementById('hero-title').textContent = 'COMECE SEU PRIMEIRO TREINO';
-    document.getElementById('hero-desc').textContent = 'Converse com o Axis Coach IA para receber seu plano personalizado.';
-    document.getElementById('hero-btn').textContent = 'PEDIR TREINO';
-    document.getElementById('hero-btn').onclick = () => navigate('chat');
-  }
+
+  renderRecentWorkouts();
+  updateFirstWorkoutCTA();
   refreshDashboardCards();
   refreshPendingAlert();
+
+  await Promise.all([
+    updateStreakAndConsistency(),
+    updateReadinessCard()
+  ]);
 }
 
 // ═══════════════════════════════════════════════
@@ -4826,40 +5090,7 @@ function renderReadinessCard() {
 }
 
 async function renderReadinessHistory() {
-  if (!state.user?.id) return;
-  const histEl = document.getElementById('readiness-history');
-  if (!histEl) return;
-
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-  const fromDate = sevenDaysAgo.toISOString().slice(0, 10);
-
-  const { data, error } = await supabase
-    .from('readiness_logs')
-    .select('date, readiness_score')
-    .eq('user_id', state.user.id)
-    .gte('date', fromDate)
-    .order('date', { ascending: true });
-
-  if (error || !data || data.length === 0) {
-    histEl.innerHTML = '';
-    return;
-  }
-
-  const badges = data.map(d => {
-    const band = getReadinessBand(d.readiness_score);
-    const dayLabel = new Date(d.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short' });
-    return `<div title="${d.date}: ${d.readiness_score}/100" style="display:flex;flex-direction:column;align-items:center;gap:3px;">
-      <div style="width:28px;height:28px;border-radius:50%;background:${band.color};opacity:0.85;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#000;">${d.readiness_score}</div>
-      <span style="font-size:9px;color:var(--muted);font-family:var(--font-mono);">${dayLabel}</span>
-    </div>`;
-  }).join('');
-
-  histEl.innerHTML = `
-    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
-      <div style="font-size:10px;color:var(--muted);font-family:var(--font-mono);letter-spacing:1px;margin-bottom:8px;">ÚLTIMOS 7 DIAS</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">${badges}</div>
-    </div>`;
+  await updateReadinessCard();
 }
 
 function animateCounter(id, target, duration) {
@@ -5018,7 +5249,7 @@ async function submitCheckin() {
 
   state.readiness = data;
   document.getElementById('checkin-modal').remove();
-  renderReadinessCard();
+  await refreshDashboard();
   showToast('Check-in salvo! Score: ' + readiness_score + '/100');
 }
 
@@ -5214,7 +5445,6 @@ function renderPhaseCard() {
 // ── Render all dashboard cards ──
 function refreshDashboardCards() {
   renderReadinessCard();
-  renderStreakCard();
   renderPhaseCard();
 }
 
