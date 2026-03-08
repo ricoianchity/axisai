@@ -987,6 +987,27 @@
     font-family: var(--font-mono); font-size: 13px; color: var(--muted);
     letter-spacing: 1px; text-transform: uppercase;
   }
+
+  /* ── COMORBIDADES / MEDICAÇÕES ── */
+  .comorbidity-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; background: #1a1a1a;
+    border: 1px solid #2a2a2a; border-radius: 8px;
+    color: #ccc; font-size: 13px; cursor: pointer; transition: border-color 0.2s;
+  }
+  .comorbidity-item:has(input:checked) { border-color: #e8ff4b; color: #fff; background: #1a1f00; }
+  .comorbidity-item input[type="checkbox"] { accent-color: #e8ff4b; }
+
+  /* ── FMS PHOTOS (wizard) ── */
+  .fms-photo-btn {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px;
+  }
+  .fms-photo-trigger {
+    background: #1a1a1a; border: 1px solid #333; color: #aaa;
+    padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s;
+  }
+  .fms-photo-trigger.has-photo { border-color: #4CAF50; color: #4CAF50; background: #0a1f0a; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -1012,6 +1033,9 @@
       <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="seu@email.com"></div>
       <div class="form-group"><label>Senha</label><input type="password" id="login-pass" placeholder="••••••••"></div>
       <button class="btn-primary" onclick="doLogin()">ENTRAR</button>
+      <div style="text-align:center;margin-top:10px;">
+        <button type="button" onclick="showForgotPassword()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;">Esqueci minha senha</button>
+      </div>
     </div>
     <div id="tab-register" style="display:none">
       <div class="form-group"><label>Nome</label><input type="text" id="reg-name" placeholder="Seu nome"></div>
@@ -1224,6 +1248,55 @@
           ⚠️ <strong>Atenção:</strong> Recomendamos que você consulte um médico antes de iniciar qualquer programa de exercícios. Sua saúde é a prioridade.
         </div>
       </div>
+
+      <!-- Comorbidades -->
+      <div class="form-group" style="margin-top:20px">
+        <label>Comorbidades diagnosticadas</label>
+        <p style="color:var(--muted);font-size:13px;margin:4px 0 12px">Marque as que se aplicam</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="comorbidities-grid">
+          <label class="comorbidity-item"><input type="checkbox" value="hipertensao"> Hipertensão</label>
+          <label class="comorbidity-item"><input type="checkbox" value="diabetes_t2"> Diabetes tipo 2</label>
+          <label class="comorbidity-item"><input type="checkbox" value="diabetes_t1"> Diabetes tipo 1</label>
+          <label class="comorbidity-item"><input type="checkbox" value="dislipidemia"> Dislipidemia</label>
+          <label class="comorbidity-item"><input type="checkbox" value="obesidade"> Obesidade</label>
+          <label class="comorbidity-item"><input type="checkbox" value="hipotireoidismo"> Hipotireoidismo</label>
+          <label class="comorbidity-item"><input type="checkbox" value="hipertireoidismo"> Hipertireoidismo</label>
+          <label class="comorbidity-item"><input type="checkbox" value="cardiopatia"> Cardiopatia</label>
+          <label class="comorbidity-item"><input type="checkbox" value="osteoporose"> Osteoporose</label>
+          <label class="comorbidity-item"><input type="checkbox" value="artrite"> Artrite/Artrose</label>
+          <label class="comorbidity-item"><input type="checkbox" value="ansiedade"> Transtorno de Ansiedade</label>
+          <label class="comorbidity-item"><input type="checkbox" value="depressao"> Depressão</label>
+          <label class="comorbidity-item"><input type="checkbox" value="bipolar"> Transtorno Bipolar</label>
+          <label class="comorbidity-item"><input type="checkbox" value="tdah"> TDAH</label>
+          <label class="comorbidity-item"><input type="checkbox" value="fibromialgia"> Fibromialgia</label>
+          <label class="comorbidity-item"><input type="checkbox" value="asma"> Asma/DPOC</label>
+        </div>
+        <input type="text" id="w-comorbidities-other" placeholder="Outras (separe por vírgula)"
+          style="width:100%;margin-top:10px;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
+      </div>
+
+      <!-- Medicações -->
+      <div class="form-group" style="margin-top:20px">
+        <label>Medicações contínuas</label>
+        <p style="color:var(--muted);font-size:13px;margin:4px 0 12px">Marque as categorias que se aplicam</p>
+        <div style="display:flex;flex-direction:column;gap:8px" id="medications-grid">
+          <label class="comorbidity-item"><input type="checkbox" value="antidepressivo"> Antidepressivo (ex: sertralina, fluoxetina, venlafaxina)</label>
+          <label class="comorbidity-item"><input type="checkbox" value="ansiolitico"> Ansiolítico / Benzodiazepínico (ex: clonazepam, alprazolam)</label>
+          <label class="comorbidity-item"><input type="checkbox" value="antipsicoptico"> Antipsicótico / Estabilizador de humor (ex: quetiapina, lítio, risperidona)</label>
+          <label class="comorbidity-item"><input type="checkbox" value="tdah_med"> Medicação para TDAH (ex: ritalina, vyvanse, strattera)</label>
+          <label class="comorbidity-item"><input type="checkbox" value="betabloqueador"> Betabloqueador (ex: propranolol, atenolol, metoprolol)</label>
+          <label class="comorbidity-item"><input type="checkbox" value="anti_hipertensivo"> Anti-hipertensivo (ex: losartana, enalapril, anlodipino)</label>
+          <label class="comorbidity-item"><input type="checkbox" value="anticoagulante"> Anticoagulante (ex: warfarina, rivaroxabana)</label>
+          <label class="comorbidity-item"><input type="checkbox" value="insulina"> Insulina</label>
+          <label class="comorbidity-item"><input type="checkbox" value="metformina"> Metformina / Antidiabético oral</label>
+          <label class="comorbidity-item"><input type="checkbox" value="ozempic"> Ozempic / Mounjaro / GLP-1 (semaglutida, tirzepatida)</label>
+          <label class="comorbidity-item"><input type="checkbox" value="corticoide"> Corticoide (ex: prednisona, dexametasona)</label>
+          <label class="comorbidity-item"><input type="checkbox" value="tireoidiano"> Medicação para tireoide (ex: levotiroxina)</label>
+          <label class="comorbidity-item"><input type="checkbox" value="anticonvulsivante"> Anticonvulsivante (ex: topiramato, carbamazepina, ácido valproico)</label>
+        </div>
+        <input type="text" id="w-medications-other" placeholder="Outras medicações (separe por vírgula)"
+          style="width:100%;margin-top:10px;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
+      </div>
     </div>
 
     <!-- ── ETAPA 5: Avaliação FMS ── -->
@@ -1255,6 +1328,13 @@
           <input type="checkbox" id="fms-pain-dos" onchange="fmsTogglePain('dos',this.checked)" style="accent-color:var(--red);width:14px;height:14px;cursor:pointer;"> Dor durante o movimento
         </label>
         <div id="fms-pain-msg-dos" style="display:none;margin-top:5px;font-size:12px;color:var(--red);">Score com dor = 0. Consulte um profissional.</div>
+        <div class="fms-photos" style="margin-top:10px">
+          <span style="font-size:12px;color:#888">📷 Fotos necessárias:</span>
+          <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+            <div class="fms-photo-btn"><span>FRENTE</span><input type="file" accept="image/*" capture="environment" id="fms-photo-dos-front" style="display:none" onchange="fmsPhotoSelected('dos','front',this)"><button type="button" onclick="document.getElementById('fms-photo-dos-front').click()" class="fms-photo-trigger" id="fms-photo-dos-front-btn">📷</button></div>
+            <div class="fms-photo-btn"><span>LADO</span><input type="file" accept="image/*" capture="environment" id="fms-photo-dos-side" style="display:none" onchange="fmsPhotoSelected('dos','side',this)"><button type="button" onclick="document.getElementById('fms-photo-dos-side').click()" class="fms-photo-trigger" id="fms-photo-dos-side-btn">📷</button></div>
+          </div>
+        </div>
       </div>
 
       <!-- Movement 2: Hurdle Step -->
@@ -1276,6 +1356,15 @@
           <input type="checkbox" id="fms-pain-hs" onchange="fmsTogglePain('hs',this.checked)" style="accent-color:var(--red);width:14px;height:14px;cursor:pointer;"> Dor durante o movimento
         </label>
         <div id="fms-pain-msg-hs" style="display:none;margin-top:5px;font-size:12px;color:var(--red);">Score com dor = 0. Consulte um profissional.</div>
+        <div class="fms-photos" style="margin-top:10px">
+          <span style="font-size:12px;color:#888">📷 Fotos necessárias:</span>
+          <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+            <div class="fms-photo-btn"><span>FRENTE E</span><input type="file" accept="image/*" capture="environment" id="fms-photo-hs-front-l" style="display:none" onchange="fmsPhotoSelected('hs','front_l',this)"><button type="button" onclick="document.getElementById('fms-photo-hs-front-l').click()" class="fms-photo-trigger" id="fms-photo-hs-front-l-btn">📷</button></div>
+            <div class="fms-photo-btn"><span>FRENTE D</span><input type="file" accept="image/*" capture="environment" id="fms-photo-hs-front-r" style="display:none" onchange="fmsPhotoSelected('hs','front_r',this)"><button type="button" onclick="document.getElementById('fms-photo-hs-front-r').click()" class="fms-photo-trigger" id="fms-photo-hs-front-r-btn">📷</button></div>
+            <div class="fms-photo-btn"><span>LADO E</span><input type="file" accept="image/*" capture="environment" id="fms-photo-hs-side-l" style="display:none" onchange="fmsPhotoSelected('hs','side_l',this)"><button type="button" onclick="document.getElementById('fms-photo-hs-side-l').click()" class="fms-photo-trigger" id="fms-photo-hs-side-l-btn">📷</button></div>
+            <div class="fms-photo-btn"><span>LADO D</span><input type="file" accept="image/*" capture="environment" id="fms-photo-hs-side-r" style="display:none" onchange="fmsPhotoSelected('hs','side_r',this)"><button type="button" onclick="document.getElementById('fms-photo-hs-side-r').click()" class="fms-photo-trigger" id="fms-photo-hs-side-r-btn">📷</button></div>
+          </div>
+        </div>
       </div>
 
       <!-- Movement 3: Inline Lunge -->
@@ -1297,6 +1386,13 @@
           <input type="checkbox" id="fms-pain-il" onchange="fmsTogglePain('il',this.checked)" style="accent-color:var(--red);width:14px;height:14px;cursor:pointer;"> Dor durante o movimento
         </label>
         <div id="fms-pain-msg-il" style="display:none;margin-top:5px;font-size:12px;color:var(--red);">Score com dor = 0. Consulte um profissional.</div>
+        <div class="fms-photos" style="margin-top:10px">
+          <span style="font-size:12px;color:#888">📷 Fotos necessárias:</span>
+          <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+            <div class="fms-photo-btn"><span>LADO E</span><input type="file" accept="image/*" capture="environment" id="fms-photo-il-side-l" style="display:none" onchange="fmsPhotoSelected('il','side_l',this)"><button type="button" onclick="document.getElementById('fms-photo-il-side-l').click()" class="fms-photo-trigger" id="fms-photo-il-side-l-btn">📷</button></div>
+            <div class="fms-photo-btn"><span>LADO D</span><input type="file" accept="image/*" capture="environment" id="fms-photo-il-side-r" style="display:none" onchange="fmsPhotoSelected('il','side_r',this)"><button type="button" onclick="document.getElementById('fms-photo-il-side-r').click()" class="fms-photo-trigger" id="fms-photo-il-side-r-btn">📷</button></div>
+          </div>
+        </div>
       </div>
 
       <!-- Movement 4: Shoulder Mobility -->
@@ -1318,6 +1414,13 @@
           <input type="checkbox" id="fms-pain-sm" onchange="fmsTogglePain('sm',this.checked)" style="accent-color:var(--red);width:14px;height:14px;cursor:pointer;"> Dor durante o movimento
         </label>
         <div id="fms-pain-msg-sm" style="display:none;margin-top:5px;font-size:12px;color:var(--red);">Score com dor = 0. Consulte um profissional.</div>
+        <div class="fms-photos" style="margin-top:10px">
+          <span style="font-size:12px;color:#888">📷 Fotos necessárias:</span>
+          <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+            <div class="fms-photo-btn"><span>LADO E</span><input type="file" accept="image/*" capture="environment" id="fms-photo-sm-side-l" style="display:none" onchange="fmsPhotoSelected('sm','side_l',this)"><button type="button" onclick="document.getElementById('fms-photo-sm-side-l').click()" class="fms-photo-trigger" id="fms-photo-sm-side-l-btn">📷</button></div>
+            <div class="fms-photo-btn"><span>LADO D</span><input type="file" accept="image/*" capture="environment" id="fms-photo-sm-side-r" style="display:none" onchange="fmsPhotoSelected('sm','side_r',this)"><button type="button" onclick="document.getElementById('fms-photo-sm-side-r').click()" class="fms-photo-trigger" id="fms-photo-sm-side-r-btn">📷</button></div>
+          </div>
+        </div>
       </div>
 
       <!-- Movement 5: ASLR -->
@@ -1339,6 +1442,40 @@
           <input type="checkbox" id="fms-pain-aslr" onchange="fmsTogglePain('aslr',this.checked)" style="accent-color:var(--red);width:14px;height:14px;cursor:pointer;"> Dor durante o movimento
         </label>
         <div id="fms-pain-msg-aslr" style="display:none;margin-top:5px;font-size:12px;color:var(--red);">Score com dor = 0. Consulte um profissional.</div>
+        <div class="fms-photos" style="margin-top:10px">
+          <span style="font-size:12px;color:#888">📷 Fotos necessárias:</span>
+          <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+            <div class="fms-photo-btn"><span>LADO E</span><input type="file" accept="image/*" capture="environment" id="fms-photo-aslr-side-l" style="display:none" onchange="fmsPhotoSelected('aslr','side_l',this)"><button type="button" onclick="document.getElementById('fms-photo-aslr-side-l').click()" class="fms-photo-trigger" id="fms-photo-aslr-side-l-btn">📷</button></div>
+            <div class="fms-photo-btn"><span>LADO D</span><input type="file" accept="image/*" capture="environment" id="fms-photo-aslr-side-r" style="display:none" onchange="fmsPhotoSelected('aslr','side_r',this)"><button type="button" onclick="document.getElementById('fms-photo-aslr-side-r').click()" class="fms-photo-trigger" id="fms-photo-aslr-side-r-btn">📷</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Movement 6: Trunk Stability Push-Up -->
+      <div class="fms-movement-card" id="fms-card-tspu">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <p style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;margin-bottom:2px;">Trunk Stability Push-Up</p>
+            <p style="font-size:11px;color:var(--muted);font-family:var(--font-mono);">Estabilidade de tronco e core em prancha alta</p>
+          </div>
+          <span id="fms-badge-tspu" style="font-family:var(--font-mono);font-size:11px;color:var(--muted);flex-shrink:0;margin-left:8px;">—</span>
+        </div>
+        <div class="fms-score-group">
+          <button class="fms-score-pill" onclick="fmsSetScore('tspu',0,this)">0</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('tspu',1,this)">1</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('tspu',2,this)">2</button>
+          <button class="fms-score-pill" onclick="fmsSetScore('tspu',3,this)">3</button>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;font-size:12px;color:var(--muted);">
+          <input type="checkbox" id="fms-pain-tspu" onchange="fmsTogglePain('tspu',this.checked)" style="accent-color:var(--red);width:14px;height:14px;cursor:pointer;"> Dor durante o movimento
+        </label>
+        <div id="fms-pain-msg-tspu" style="display:none;margin-top:5px;font-size:12px;color:var(--red);">Score com dor = 0. Consulte um profissional.</div>
+        <div class="fms-photos" style="margin-top:10px">
+          <span style="font-size:12px;color:#888">📷 Fotos necessárias:</span>
+          <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+            <div class="fms-photo-btn"><span>LATERAL</span><input type="file" accept="image/*" capture="environment" id="fms-photo-tspu-side" style="display:none" onchange="fmsPhotoSelected('tspu','side',this)"><button type="button" onclick="document.getElementById('fms-photo-tspu-side').click()" class="fms-photo-trigger" id="fms-photo-tspu-side-btn">📷</button></div>
+          </div>
+        </div>
       </div>
 
       <!-- Score total (updates in real-time) -->
@@ -1347,7 +1484,7 @@
           <span style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">Score Total</span>
           <div style="display:flex;align-items:baseline;gap:4px;margin-top:2px;">
             <span id="fms-total-num" style="font-family:var(--font-display);font-size:32px;letter-spacing:1px;line-height:1;">0</span>
-            <span style="font-family:var(--font-mono);font-size:13px;color:var(--muted);">/ 15</span>
+            <span style="font-family:var(--font-mono);font-size:13px;color:var(--muted);">/ 18</span>
           </div>
         </div>
         <div style="text-align:right;flex:1;">
@@ -1858,6 +1995,14 @@
         </div>
         <div style="display:flex;flex-direction:column;gap:24px;">
           <div class="form-card">
+            <h3>IDENTIFICAÇÃO</h3>
+            <div class="form-grid">
+              <div class="form-group"><label>Nome de exibição</label><input type="text" id="profile-display-name" placeholder="Como quer ser chamado no app" style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box"><small style="color:var(--muted);font-size:12px">Aparece na saudação da dashboard</small></div>
+              <div class="form-group"><label>Nome completo</label><input type="text" id="profile-full-name-edit" placeholder="Nome completo" style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box"></div>
+            </div>
+            <button class="btn-save" onclick="saveProfileHealth()">SALVAR IDENTIFICAÇÃO</button>
+          </div>
+          <div class="form-card">
             <h3>DADOS DE TREINO</h3>
             <div class="form-grid">
               <div class="form-group"><label>Idade</label><input type="number" id="p-age" placeholder="25"></div>
@@ -1893,6 +2038,58 @@
               <div class="form-group"><label>Toe Touch Screen<br><span style="font-weight:400;color:var(--muted);">(Toque na Ponta dos Pés)</span></label><select id="p-fms-tt"><option value="">Selecione...</option><option value="positive">Positivo</option><option value="negative">Negativo</option></select></div>
             </div>
             <button class="btn-save" onclick="saveFMS()">SALVAR FMS</button>
+          </div>
+          <div class="form-card" id="profile-health-section">
+            <h3>SAÚDE</h3>
+            <div class="form-group">
+              <label>Comorbidades diagnosticadas</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px" id="profile-comorbidities-grid">
+                <label class="comorbidity-item"><input type="checkbox" value="hipertensao"> Hipertensão</label>
+                <label class="comorbidity-item"><input type="checkbox" value="diabetes_t2"> Diabetes tipo 2</label>
+                <label class="comorbidity-item"><input type="checkbox" value="diabetes_t1"> Diabetes tipo 1</label>
+                <label class="comorbidity-item"><input type="checkbox" value="dislipidemia"> Dislipidemia</label>
+                <label class="comorbidity-item"><input type="checkbox" value="obesidade"> Obesidade</label>
+                <label class="comorbidity-item"><input type="checkbox" value="hipotireoidismo"> Hipotireoidismo</label>
+                <label class="comorbidity-item"><input type="checkbox" value="hipertireoidismo"> Hipertireoidismo</label>
+                <label class="comorbidity-item"><input type="checkbox" value="cardiopatia"> Cardiopatia</label>
+                <label class="comorbidity-item"><input type="checkbox" value="osteoporose"> Osteoporose</label>
+                <label class="comorbidity-item"><input type="checkbox" value="artrite"> Artrite/Artrose</label>
+                <label class="comorbidity-item"><input type="checkbox" value="ansiedade"> Ansiedade</label>
+                <label class="comorbidity-item"><input type="checkbox" value="depressao"> Depressão</label>
+                <label class="comorbidity-item"><input type="checkbox" value="bipolar"> Transtorno Bipolar</label>
+                <label class="comorbidity-item"><input type="checkbox" value="tdah"> TDAH</label>
+                <label class="comorbidity-item"><input type="checkbox" value="fibromialgia"> Fibromialgia</label>
+                <label class="comorbidity-item"><input type="checkbox" value="asma"> Asma/DPOC</label>
+              </div>
+              <input type="text" id="profile-comorbidities-other" placeholder="Outras"
+                style="width:100%;margin-top:8px;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
+            </div>
+            <div class="form-group" style="margin-top:16px">
+              <label>Medicações contínuas</label>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px" id="profile-medications-grid">
+                <label class="comorbidity-item"><input type="checkbox" value="antidepressivo"> Antidepressivo</label>
+                <label class="comorbidity-item"><input type="checkbox" value="ansiolitico"> Ansiolítico / Benzodiazepínico</label>
+                <label class="comorbidity-item"><input type="checkbox" value="antipsicoptico"> Antipsicótico / Estabilizador de humor</label>
+                <label class="comorbidity-item"><input type="checkbox" value="tdah_med"> Medicação para TDAH</label>
+                <label class="comorbidity-item"><input type="checkbox" value="betabloqueador"> Betabloqueador</label>
+                <label class="comorbidity-item"><input type="checkbox" value="anti_hipertensivo"> Anti-hipertensivo</label>
+                <label class="comorbidity-item"><input type="checkbox" value="anticoagulante"> Anticoagulante</label>
+                <label class="comorbidity-item"><input type="checkbox" value="insulina"> Insulina</label>
+                <label class="comorbidity-item"><input type="checkbox" value="metformina"> Metformina / Antidiabético oral</label>
+                <label class="comorbidity-item"><input type="checkbox" value="ozempic"> Ozempic / Mounjaro / GLP-1</label>
+                <label class="comorbidity-item"><input type="checkbox" value="corticoide"> Corticoide</label>
+                <label class="comorbidity-item"><input type="checkbox" value="tireoidiano"> Medicação para tireoide</label>
+                <label class="comorbidity-item"><input type="checkbox" value="anticonvulsivante"> Anticonvulsivante</label>
+              </div>
+              <input type="text" id="profile-medications-other" placeholder="Outras medicações"
+                style="width:100%;margin-top:8px;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
+            </div>
+            <div class="form-group" style="margin-top:16px">
+              <label>Histórico de lesões</label>
+              <textarea id="profile-injuries-edit" placeholder="Descreva lesões relevantes..." rows="3"
+                style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box;resize:vertical"></textarea>
+            </div>
+            <button class="btn-save" onclick="saveProfileHealth()" style="margin-top:16px">SALVAR DADOS DE SAÚDE</button>
           </div>
           <!-- ── Privacy Settings (LGPD) ── -->
           <div class="form-card privacy-card" id="privacy-settings">
@@ -2383,6 +2580,26 @@ async function doRegister() {
   showToast('Conta criada! Verifique seu e-mail para continuar.');
 }
 
+async function showForgotPassword() {
+  const emailInput = document.getElementById('login-email');
+  const email = (emailInput?.value?.trim()) || prompt('Digite seu email para recuperação:');
+  if (!email) return;
+  try {
+    const res = await fetch('/api/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    if (res.ok) {
+      showToast('Email de recuperação enviado! Verifique sua caixa de entrada.');
+    } else {
+      showToast('Erro ao enviar email de recuperação.', true);
+    }
+  } catch (err) {
+    showToast('Erro de conexão: ' + err.message, true);
+  }
+}
+
 async function doLogout() {
   await supabase.auth.signOut();
   localStorage.removeItem('axisai_user');
@@ -2425,6 +2642,15 @@ function enterApp() {
   completeEnterApp();
 }
 
+function getDisplayName() {
+  const profile = JSON.parse(localStorage.getItem('axisai_profile') || '{}');
+  const user = state.user || JSON.parse(localStorage.getItem('axisai_user') || '{}');
+  return profile.display_name ||
+         profile.full_name?.split(' ')[0] ||
+         user.name?.split('.')[0]?.toUpperCase() ||
+         'ATLETA';
+}
+
 async function completeEnterApp() {
   // ── FIX BUG 1: Ensure guard is set even when called directly from _finishWizard ──
   _appEntered = true;
@@ -2432,10 +2658,9 @@ async function completeEnterApp() {
   document.getElementById('screen-app').classList.add('visible');
   const name = state.user?.name || 'Atleta';
   const initial = name.charAt(0).toUpperCase();
-  const firstName = name.split(' ')[0].toUpperCase();
   document.getElementById('user-avatar-letter').textContent = initial;
-  document.getElementById('user-display-name').textContent = name;
-  document.getElementById('greeting-name').textContent = firstName;
+  document.getElementById('user-display-name').textContent = getDisplayName();
+  document.getElementById('greeting-name').textContent = getDisplayName();
   document.getElementById('profile-avatar-big').textContent = initial;
   document.getElementById('profile-full-name').textContent = name;
   document.getElementById('profile-email-display').textContent = state.user?.email || '';
@@ -2530,9 +2755,22 @@ function toggleParqWarning(val) {
 }
 
 // ── FMS wizard state ──────────────────────────
-const _fmsScores = { dos: null, hs: null, il: null, sm: null, aslr: null };
+const _fmsScores = { dos: null, hs: null, il: null, sm: null, aslr: null, tspu: null };
 let _fmsToeTouch = null;
 let _wizardFmsData = null; // set by _saveFmsAndFinish before calling _finishWizard
+const _fmsPhotos = {}; // { dos: { front: base64, side: base64 }, hs: {...}, ... }
+
+function fmsPhotoSelected(movement, angle, input) {
+  if (!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    if (!_fmsPhotos[movement]) _fmsPhotos[movement] = {};
+    _fmsPhotos[movement][angle] = e.target.result;
+    const btn = document.getElementById(`fms-photo-${movement}-${angle.replace('_','-')}-btn`);
+    if (btn) { btn.textContent = '✅'; btn.classList.add('has-photo'); }
+  };
+  reader.readAsDataURL(input.files[0]);
+}
 
 function fmsSetScore(id, score, el) {
   const painCheck = document.getElementById('fms-pain-' + id);
@@ -2629,10 +2867,12 @@ function _saveFmsAndFinish() {
       hs:   _fmsScores.hs,
       sm:   _fmsScores.sm,
       aslr: _fmsScores.aslr,
+      tspu: _fmsScores.tspu,
       tt:   _fmsToeTouch === true ? 'positive' : _fmsToeTouch === false ? 'negative' : null,
     },
     toeTouch:   _fmsToeTouch,
     riskFlags:  _computeFmsRiskFlags(),
+    photos:     { ..._fmsPhotos },
   };
   // Sync app-level toeTouch used by the diagnosis page
   if (_fmsToeTouch !== null) state.toeTouch = _wizardFmsData.fms.tt;
@@ -2649,6 +2889,12 @@ function _skipFms() {
 
 async function _finishWizard() {
   const equipment = [...document.querySelectorAll('.w-equipment:checked')].map(e => e.value);
+  const comorbiditiesChecked = Array.from(document.querySelectorAll('#comorbidities-grid input:checked')).map(el => el.value);
+  const comorbiditiesOther = document.getElementById('w-comorbidities-other')?.value?.trim();
+  if (comorbiditiesOther) comorbiditiesChecked.push(...comorbiditiesOther.split(',').map(s => s.trim()).filter(Boolean));
+  const medicationsChecked = Array.from(document.querySelectorAll('#medications-grid input:checked')).map(el => el.value);
+  const medicationsOther = document.getElementById('w-medications-other')?.value?.trim();
+  if (medicationsOther) medicationsChecked.push(...medicationsOther.split(',').map(s => s.trim()).filter(Boolean));
   const newData = {
     age:         document.getElementById('w-age').value,
     weight:      document.getElementById('w-weight').value,
@@ -2668,6 +2914,8 @@ async function _finishWizard() {
     horasSentado: document.getElementById('w-horas-sentado')?.value || '',
     estresseOcup: document.getElementById('w-estresse-ocup')?.value || '',
     turnoTrabalho: document.getElementById('w-turno')?.value || '',
+    comorbidities: comorbiditiesChecked,
+    medications:   medicationsChecked,
   };
   // Merge FMS data if collected in step 5
   if (_wizardFmsData) {
@@ -2707,6 +2955,7 @@ function navigate(page) {
   closeSidebar();
   if (page === 'workouts') renderWorkouts();
   if (page === 'diagnosis') renderFmsResults();
+  if (page === 'profile') loadProfileHealth();
 }
 
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('mobile-open'); document.getElementById('overlay').classList.toggle('mobile-open'); }
@@ -3826,7 +4075,23 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
       readinessCtx = '\n\nSem dados de prontidão hoje — prescreva com base no histórico recente e no planejamento de fase.';
     }
 
-    const systemPrompt = CORE_PROMPT + profileCtx + fmsCtx + flagCtx + readinessCtx + (needsReference ? REF_TABLES : '');
+    const _healthComorbidities = p?.comorbidities || [];
+    const _healthMedications = p?.medications || [];
+    let healthCtx = '';
+    if (_healthComorbidities.length > 0 || _healthMedications.length > 0) {
+      healthCtx = '\n\nDADOS DE SAÚDE DO ATLETA:';
+      if (_healthComorbidities.length > 0) healthCtx += `\nComorbidades: ${_healthComorbidities.join(', ')}`;
+      if (_healthMedications.length > 0) {
+        healthCtx += `\nMedicações contínuas: ${_healthMedications.join(', ')}`;
+        if (_healthMedications.includes('betabloqueador')) healthCtx += '\n⚠️ BETABLOQUEADOR: não usar FC como parâmetro de intensidade. Usar PSE obrigatoriamente.';
+        if (_healthMedications.includes('ozempic')) healthCtx += '\n⚠️ GLP-1 (Ozempic/Mounjaro): priorizar volume de treino de força, monitorar composição corporal, atenção ao aporte proteico.';
+        if (_healthMedications.includes('antidepressivo') || _healthMedications.includes('ansiolitico')) healthCtx += '\n⚠️ Medicação psiquiátrica: dados de sono/energia/humor do check-in podem ser influenciados pela medicação. Interpretar prontidão com contexto clínico.';
+        if (_healthMedications.includes('corticoide')) healthCtx += '\n⚠️ CORTICOIDE: atenção ao volume e recuperação. Pode mascarar dor e inflamação.';
+        if (_healthMedications.includes('anticoagulante')) healthCtx += '\n⚠️ ANTICOAGULANTE: evitar exercícios de impacto e contato físico.';
+        if (_healthMedications.includes('insulina') || _healthMedications.includes('metformina')) healthCtx += '\n⚠️ DIABETES/INSULINA: nunca prescrever treino em jejum. Monitorar sintomas.';
+      }
+    }
+    const systemPrompt = CORE_PROMPT + profileCtx + fmsCtx + flagCtx + healthCtx + readinessCtx + (needsReference ? REF_TABLES : '');
 
     console.log('[chat] Enviando para /api/chat:', { messages: state.chatHistory.length, model: 'claude-sonnet-4-20250514', readinessScore: rdToday?.readiness_score ?? 'n/a' });
     const response = await fetch('/api/chat', {
@@ -4044,6 +4309,81 @@ function runDiagnosis() {
 }
 
 // ═══════════════════════════════════════════════
+//  PROFILE HEALTH (comorbidades, medicações, nome)
+// ═══════════════════════════════════════════════
+function loadProfileHealth() {
+  const profile = JSON.parse(localStorage.getItem('axisai_profile') || '{}');
+
+  const displayNameEl = document.getElementById('profile-display-name');
+  const fullNameEl = document.getElementById('profile-full-name-edit');
+  if (displayNameEl) displayNameEl.value = profile.display_name || '';
+  if (fullNameEl) fullNameEl.value = profile.full_name || profile.name || '';
+
+  const comorbidities = profile.comorbidities || [];
+  document.querySelectorAll('#profile-comorbidities-grid input[type="checkbox"]').forEach(cb => {
+    cb.checked = comorbidities.includes(cb.value);
+  });
+  const knownComorbidities = Array.from(document.querySelectorAll('#profile-comorbidities-grid input')).map(i => i.value);
+  const otherComorbidities = comorbidities.filter(c => !knownComorbidities.includes(c));
+  const otherComorbiditiesEl = document.getElementById('profile-comorbidities-other');
+  if (otherComorbiditiesEl) otherComorbiditiesEl.value = otherComorbidities.join(', ');
+
+  const medications = profile.medications || [];
+  document.querySelectorAll('#profile-medications-grid input[type="checkbox"]').forEach(cb => {
+    cb.checked = medications.includes(cb.value);
+  });
+  const knownMeds = Array.from(document.querySelectorAll('#profile-medications-grid input')).map(i => i.value);
+  const otherMeds = medications.filter(m => !knownMeds.includes(m));
+  const otherMedsEl = document.getElementById('profile-medications-other');
+  if (otherMedsEl) otherMedsEl.value = otherMeds.join(', ');
+
+  const injuriesEl = document.getElementById('profile-injuries-edit');
+  if (injuriesEl) injuriesEl.value = profile.injuries || '';
+}
+
+async function saveProfileHealth() {
+  const profile = JSON.parse(localStorage.getItem('axisai_profile') || '{}');
+
+  const displayName = document.getElementById('profile-display-name')?.value?.trim();
+  const fullName = document.getElementById('profile-full-name-edit')?.value?.trim();
+
+  const comorbiditiesChecked = Array.from(
+    document.querySelectorAll('#profile-comorbidities-grid input:checked')
+  ).map(el => el.value);
+  const comorbiditiesOther = document.getElementById('profile-comorbidities-other')?.value?.trim();
+  if (comorbiditiesOther) comorbiditiesChecked.push(...comorbiditiesOther.split(',').map(s => s.trim()).filter(Boolean));
+
+  const medicationsChecked = Array.from(
+    document.querySelectorAll('#profile-medications-grid input:checked')
+  ).map(el => el.value);
+  const medicationsOther = document.getElementById('profile-medications-other')?.value?.trim();
+  if (medicationsOther) medicationsChecked.push(...medicationsOther.split(',').map(s => s.trim()).filter(Boolean));
+
+  const injuries = document.getElementById('profile-injuries-edit')?.value?.trim();
+
+  const updatedProfile = {
+    ...profile,
+    display_name:  displayName || profile.display_name,
+    full_name:     fullName    || profile.full_name,
+    comorbidities: comorbiditiesChecked,
+    medications:   medicationsChecked,
+    injuries:      injuries !== undefined ? injuries : profile.injuries,
+  };
+  state.profile = updatedProfile;
+  const profilePayload = { ...updatedProfile, id: state.user?.id };
+  delete profilePayload.role;
+  await saveData('profiles', profilePayload, 'axisai_profile');
+
+  // Update greeting in sidebar/dashboard
+  const nameEl = document.getElementById('user-display-name');
+  if (nameEl) nameEl.textContent = getDisplayName();
+  const greetingEl = document.getElementById('greeting-name');
+  if (greetingEl) greetingEl.textContent = getDisplayName();
+
+  showToast('Dados de saúde salvos com sucesso!');
+}
+
+// ═══════════════════════════════════════════════
 //  PROFILE
 // ═══════════════════════════════════════════════
 function loadProfile() {
@@ -4217,6 +4557,25 @@ function renderFmsResults() {
       ${date ? `<div class="fms-result-date">Avaliação realizada em ${date}</div>` : ''}
     </div>
   </div>`;
+
+  // Medication alerts
+  const _healthProfile = JSON.parse(localStorage.getItem('axisai_profile') || '{}');
+  const _medications = _healthProfile.medications || [];
+  if (_medications.length > 0) {
+    const medAlerts = [];
+    if (_medications.includes('betabloqueador')) medAlerts.push('⚠️ Betabloqueador detectado — FC não é parâmetro confiável de intensidade. Usar PSE (escala de Borg) como referência principal.');
+    if (_medications.includes('anticoagulante')) medAlerts.push('⚠️ Anticoagulante detectado — evitar exercícios de impacto e contato. Risco de sangramento aumentado.');
+    if (_medications.includes('corticoide')) medAlerts.push('⚠️ Corticoide em uso — atenção ao volume de treino e recuperação. Pode mascarar dor e inflamação.');
+    if (_medications.includes('insulina') || _medications.includes('metformina')) medAlerts.push('⚠️ Medicação para diabetes — nunca treinar em jejum. Monitorar sintomas de hipoglicemia.');
+    if (_medications.includes('ozempic')) medAlerts.push('⚠️ GLP-1 (Ozempic/Mounjaro) — possível redução de massa magra. Priorizar volume de treino de força. Monitorar composição corporal.');
+    if (_medications.includes('antidepressivo') || _medications.includes('ansiolitico')) medAlerts.push('⚠️ Medicação psiquiátrica — dados de sono/energia/humor do check-in podem ser influenciados. Interpretar prontidão com contexto clínico.');
+    if (medAlerts.length > 0) {
+      container.innerHTML += `<div style="background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:16px;margin-top:12px">
+        <h4 style="color:#FFC107;margin:0 0 10px;font-size:14px">⚕️ ALERTAS POR MEDICAÇÃO</h4>
+        ${medAlerts.map(a => `<p style="color:#aaa;font-size:13px;margin:0 0 8px;line-height:1.5">${a}</p>`).join('')}
+      </div>`;
+    }
+  }
 }
 
 function refreshPendingAlert() {
