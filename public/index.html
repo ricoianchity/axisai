@@ -2680,7 +2680,7 @@ function renderFMSGrid() {
           <button class="toe-btn" id="toe-btn-pos" onclick="setToeTouch('positive')">✅ POSITIVO</button>
           <button class="toe-btn" id="toe-btn-neg" onclick="setToeTouch('negative')">❌ NEGATIVO</button>
         </div>
-        ${photoRowHTML(t.id)}
+        ${photoRowHTML(t.id, t.photos)}
       </div>`;
     }
     return `<div class="fms-card">
