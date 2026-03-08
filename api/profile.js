@@ -75,22 +75,22 @@ export default async function handler(req) {
   if (!userRes.ok) return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401, headers });
   const user = await userRes.json();
 
-  const sbHeaders = {
+  const dbHeaders = {
     'Content-Type': 'application/json',
-    'apikey': process.env.SUPABASE_SERVICE_KEY,
-    'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+    'apikey': process.env.SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${token}`,
     'Prefer': 'return=representation',
   };
 
   if (req.method === 'GET') {
     // Prefer profiles.user_id = auth.uid(); fallback to profiles.id = auth.uid()
-    const byUserId = await getProfileByKey(user, sbHeaders, 'user_id');
+    const byUserId = await getProfileByKey(user, dbHeaders, 'user_id');
     if (byUserId.ok) return new Response(JSON.stringify(byUserId.row), { headers });
     if (!isColumnMissing(byUserId.error, 'user_id')) {
       return new Response(JSON.stringify({ error: byUserId.error?.message || 'Profile fetch error' }), { status: 400, headers });
     }
 
-    const byId = await getProfileByKey(user, sbHeaders, 'id');
+    const byId = await getProfileByKey(user, dbHeaders, 'id');
     if (byId.ok) return new Response(JSON.stringify(byId.row), { headers });
     return new Response(JSON.stringify({ error: byId.error?.message || 'Profile fetch error' }), { status: 400, headers });
   }
@@ -100,7 +100,7 @@ export default async function handler(req) {
     const payload = { ...body, updated_at: new Date().toISOString() };
 
     // 1) Try user_id schema first
-    const patchUserId = await patchProfileByKey(user, sbHeaders, 'user_id', payload);
+    const patchUserId = await patchProfileByKey(user, dbHeaders, 'user_id', payload);
     if (patchUserId.ok && patchUserId.rows.length > 0) {
       return new Response(JSON.stringify(patchUserId.rows[0]), { headers });
     }
@@ -110,17 +110,17 @@ export default async function handler(req) {
     }
 
     if (patchUserId.ok && patchUserId.rows.length === 0) {
-      const insUserId = await insertProfileByKey(user, sbHeaders, 'user_id', payload);
+      const insUserId = await insertProfileByKey(user, dbHeaders, 'user_id', payload);
       if (insUserId.ok) return new Response(JSON.stringify(insUserId.row), { headers });
     }
 
     // 2) Fallback id schema
-    const patchId = await patchProfileByKey(user, sbHeaders, 'id', payload);
+    const patchId = await patchProfileByKey(user, dbHeaders, 'id', payload);
     if (patchId.ok && patchId.rows.length > 0) {
       return new Response(JSON.stringify(patchId.rows[0]), { headers });
     }
     if (patchId.ok && patchId.rows.length === 0) {
-      const insId = await insertProfileByKey(user, sbHeaders, 'id', payload);
+      const insId = await insertProfileByKey(user, dbHeaders, 'id', payload);
       if (insId.ok) return new Response(JSON.stringify(insId.row), { headers });
       return new Response(JSON.stringify({ error: insId.error?.message || 'Profile insert error' }), { status: 400, headers });
     }
