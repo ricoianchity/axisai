@@ -2247,6 +2247,7 @@
                 <div class="form-group"><label>Hurdle Step<br><span style="font-weight:400;color:var(--muted);">(Passada sobre Barreira)</span></label><select id="p-fms-hs"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
                 <div class="form-group"><label>Shoulder Mobility<br><span style="font-weight:400;color:var(--muted);">(Mobilidade de Ombro)</span></label><select id="p-fms-sm"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
                 <div class="form-group"><label>ASLR<br><span style="font-weight:400;color:var(--muted);">(Elevação Ativa da Perna Reta)</span></label><select id="p-fms-aslr"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+                <div class="form-group"><label>Trunk Stability Push-Up<br><span style="font-weight:400;color:var(--muted);">(Estabilidade de Tronco)</span></label><select id="p-fms-tspu"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
                 <div class="form-group"><label>Toe Touch Screen<br><span style="font-weight:400;color:var(--muted);">(Toque na Ponta dos Pés)</span></label><select id="p-fms-tt"><option value="">Selecione...</option><option value="positive">Positivo</option><option value="negative">Negativo</option></select></div>
               </div>
               <button class="btn-save" onclick="saveFMS()">SALVAR FMS</button>
@@ -5338,7 +5339,7 @@ function loadProfile() {
     });
     if (p.injuries) document.getElementById('p-injuries').value = p.injuries;
     if (p.fms) {
-      ['dos','il','hs','sm','aslr'].forEach(k => { if (p.fms[k] !== undefined) { const el = document.getElementById('p-fms-' + k); if (el) el.value = p.fms[k]; } });
+      ['dos','il','hs','sm','aslr','tspu'].forEach(k => { if (p.fms[k] !== undefined) { const el = document.getElementById('p-fms-' + k); if (el) el.value = p.fms[k]; } });
       if (p.fms.tt) { const el = document.getElementById('p-fms-tt'); if (el) el.value = p.fms.tt; }
     }
     // Rotina profissional
@@ -5388,7 +5389,7 @@ async function saveProfile(silent = false) {
 
 function saveFMS() {
   const vals = {};
-  ['dos','il','hs','sm','aslr'].forEach(k => { const v = document.getElementById('p-fms-' + k).value; if (v !== '') vals[k] = parseInt(v); });
+  ['dos','il','hs','sm','aslr','tspu'].forEach(k => { const v = document.getElementById('p-fms-' + k).value; if (v !== '') vals[k] = parseInt(v); });
   const tt = document.getElementById('p-fms-tt').value;
   if (tt) vals.tt = tt;
   if (Object.keys(vals).length === 0) return showToast('Preencha ao menos um score.', true);
