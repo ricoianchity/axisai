@@ -3189,6 +3189,45 @@ function parqHasPositiveAnswers(answers) {
   return Object.values(answers).some(v => String(v).toLowerCase() === 'yes');
 }
 
+function getParqCacheKey() {
+  return state.user?.id ? `axisai_parq_cache_${state.user.id}` : null;
+}
+
+function getParqDecision(profileLike) {
+  if (!profileLike || typeof profileLike !== 'object') return null;
+  const out = {
+    parq_cleared: profileLike.parq_cleared === true,
+    parq_completed_at: profileLike.parq_completed_at || null,
+    parq_answers: profileLike.parq_answers || null
+  };
+  const hasDecision = out.parq_cleared || parqHasPositiveAnswers(out.parq_answers) || !!out.parq_completed_at;
+  return hasDecision ? out : null;
+}
+
+function applyLocalParqDecision() {
+  const key = getParqCacheKey();
+  if (!key) return;
+  try {
+    const cached = JSON.parse(localStorage.getItem(key) || 'null');
+    const decision = getParqDecision(cached);
+    if (!decision) return;
+    state.profile = { ...(state.profile || {}), ...decision };
+    localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
+  } catch (_) {}
+}
+
+function persistParqDecisionLocal(payload) {
+  const decision = getParqDecision(payload) || {
+    parq_cleared: payload?.parq_cleared === true,
+    parq_completed_at: payload?.parq_completed_at || new Date().toISOString(),
+    parq_answers: payload?.parq_answers || null
+  };
+  state.profile = { ...(state.profile || {}), ...decision };
+  localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
+  const key = getParqCacheKey();
+  if (key) localStorage.setItem(key, JSON.stringify(decision));
+}
+
 function updateCoachNavIndicator() {
   const icon = document.getElementById('nav-chat-icon');
   const btn = document.getElementById('nav-chat-btn');
@@ -3217,38 +3256,54 @@ function updateCoachNavIndicator() {
 
 async function syncParqStatusFromSupabase() {
   if (!state.user?.id) return true;
+  applyLocalParqDecision();
 
   try {
-    let { data, error } = await supabase
-      .from('profiles')
-      .select('parq_cleared, parq_completed_at, parq_answers')
-      .eq('user_id', state.user.id)
-      .maybeSingle();
-
-    // Fallback: schemas that store auth UUID directly in profiles.id
-    if (error && String(error.message || '').includes('column profiles.user_id does not exist')) {
-      ({ data, error } = await supabase
-        .from('profiles')
-        .select('parq_cleared, parq_completed_at, parq_answers')
-        .eq('id', state.user.id)
-        .maybeSingle());
+    const token = await getSupaToken();
+    if (!token) {
+      updateCoachNavIndicator();
+      return true;
     }
 
-    if (error) {
-      showToast('Erro ao verificar PAR-Q no Supabase: ' + error.message, true);
-      return false;
+    const res = await fetch('/api/profile', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      updateCoachNavIndicator();
+      return true;
     }
 
-    if (data) {
-      state.profile = { ...(state.profile || {}), ...data };
+    const data = await res.json().catch(() => null);
+    if (data && typeof data === 'object') {
+      const remoteProfile = {
+        parq_cleared: data.parq_cleared === true,
+        parq_completed_at: data.parq_completed_at || null,
+        parq_answers: data.parq_answers || null
+      };
+      const localDecision = getParqDecision(state.profile);
+      const remoteDecision = getParqDecision(remoteProfile);
+      let mergedDecision = remoteDecision || localDecision;
+      if (localDecision && remoteDecision) {
+        const localTs = Date.parse(localDecision.parq_completed_at || '');
+        const remoteTs = Date.parse(remoteDecision.parq_completed_at || '');
+        if (!Number.isNaN(localTs) && !Number.isNaN(remoteTs)) {
+          mergedDecision = localTs >= remoteTs ? localDecision : remoteDecision;
+        }
+      }
+      state.profile = { ...(state.profile || {}), ...(mergedDecision || {}) };
       localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
+      if (mergedDecision) {
+        const key = getParqCacheKey();
+        if (key) localStorage.setItem(key, JSON.stringify(mergedDecision));
+      }
     }
 
     updateCoachNavIndicator();
     return true;
   } catch (err) {
-    showToast('Erro ao verificar PAR-Q: ' + err.message, true);
-    return false;
+    console.warn('[PAR-Q sync]', err.message);
+    updateCoachNavIndicator();
+    return true;
   }
 }
 
@@ -3258,12 +3313,13 @@ async function saveParqToProfile(payload) {
     return false;
   }
 
+  // Persist locally first so PAR-Q is never re-prompted in this device/session.
+  persistParqDecisionLocal(payload);
+  updateCoachNavIndicator();
+
   try {
     const token = await getSupaToken();
-    if (!token) {
-      showToast('Sessão expirada. Faça login novamente.', true);
-      return false;
-    }
+    if (!token) return true;
 
     const res = await fetch('/api/profile', {
       method: 'POST',
@@ -3276,17 +3332,13 @@ async function saveParqToProfile(payload) {
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      showToast('Erro ao salvar PAR-Q: ' + (errData.error || res.statusText), true);
-      return false;
+      console.warn('[PAR-Q save] remote sync failed:', errData.error || res.statusText);
+      return true;
     }
-
-    state.profile = { ...(state.profile || {}), ...payload };
-    localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
-    updateCoachNavIndicator();
     return true;
   } catch (err) {
-    showToast('Erro ao salvar PAR-Q: ' + err.message, true);
-    return false;
+    console.warn('[PAR-Q save]', err.message);
+    return true;
   }
 }
 
@@ -3417,9 +3469,9 @@ function openParqBlockedModal() {
 
 async function ensureParqBeforeCoach() {
   if (!state.user?.id) return true;
+  applyLocalParqDecision();
 
-  const synced = await syncParqStatusFromSupabase();
-  if (!synced) return false;
+  await syncParqStatusFromSupabase();
 
   if (state.profile?.parq_cleared === true) return true;
   if (parqHasPositiveAnswers(state.profile?.parq_answers)) {
