@@ -1585,11 +1585,15 @@
       </div>
 
       <div class="stats-grid">
-        <div class="stat-card green">
-          <div class="stat-icon">🛡️</div>
-          <div class="stat-value" id="stat-risks">0</div>
-          <div class="stat-label">Alertas biomecânicos</div>
-          <button class="stat-link" onclick="showFmsPreview()">Ver avaliação FMS →</button>
+        <div class="stat-card green" onclick="navigate('diagnosis')" style="cursor:pointer;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span style="color:#888;font-size:11px;font-weight:700;letter-spacing:1px">BIOMECÂNICA</span>
+            <span style="color:#e8ff4b;font-size:11px;font-weight:600">VER COMPLETO →</span>
+          </div>
+          <div id="fms-preview-card">
+            <!-- preenchido por renderFmsPreviewCard() -->
+          </div>
+          <span id="stat-risks" style="display:none">0</span>
         </div>
         <div class="stat-card blue">
           <div class="stat-icon">🏋️</div>
@@ -3237,6 +3241,82 @@ function updateFirstWorkoutCTA() {
   cta.style.display = treinos.length > 0 ? 'none' : '';
 }
 
+function renderFmsPreviewCard() {
+  const container = document.getElementById('fms-preview-card');
+  if (!container) return;
+
+  const profile = JSON.parse(localStorage.getItem('axisai_profile') || '{}');
+  const fmsLatest = JSON.parse(localStorage.getItem('axisai_fms_latest') || '{}');
+  const fms = profile.fms || fmsLatest.fms || fmsLatest.scores || null;
+
+  if (!fms || Object.keys(fms).length === 0) {
+    container.innerHTML = `
+      <div style="color:#555;font-size:12px;text-align:center;padding:8px 0">
+        Nenhuma avaliação registrada
+      </div>
+      <button class="btn-action" onclick="navigate('diagnosis')"
+        style="margin-top:8px;width:100%;font-size:11px">
+        FAZER AVALIAÇÃO
+      </button>`;
+    return;
+  }
+
+  const labels = { dos: 'DOS', il: 'IL', hs: 'HS', sm: 'SM', aslr: 'ASLR' };
+  const scores = Object.entries(labels).map(([key, label]) => ({
+    key, label, score: parseInt(fms[key], 10) || 0
+  }));
+  const total = scores.reduce((sum, s) => sum + s.score, 0);
+  const maxTotal = scores.length * 3;
+
+  let riskLabel, riskColor, riskBg;
+  if (total >= 14) {
+    riskLabel = 'BAIXO RISCO'; riskColor = '#4CAF50'; riskBg = '#0a1f0a';
+  } else if (total >= 10) {
+    riskLabel = 'RISCO MODERADO'; riskColor = '#FFC107'; riskBg = '#1f1a00';
+  } else {
+    riskLabel = 'ALTO RISCO'; riskColor = '#f44336'; riskBg = '#1f0a0a';
+  }
+
+  function scoreColor(s) {
+    if (s === 3) return '#4CAF50';
+    if (s === 2) return '#FFC107';
+    if (s === 1) return '#f44336';
+    return '#333';
+  }
+
+  const barsHTML = scores.map(({ label, score }) => `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
+      <span style="color:#fff;font-size:13px;font-weight:700">${score}</span>
+      <div style="width:100%;border-radius:4px;overflow:hidden;background:#1a1a1a;height:36px;
+                  display:flex;flex-direction:column;justify-content:flex-end">
+        <div style="
+          width:100%;
+          height:${Math.round((score / 3) * 36)}px;
+          background:${scoreColor(score)};
+          border-radius:4px;
+          transition:height 0.3s ease;
+        "></div>
+      </div>
+      <span style="color:#666;font-size:10px;font-weight:600">${label}</span>
+    </div>
+  `).join('');
+
+  container.innerHTML = `
+    <div style="display:flex;gap:6px;align-items:flex-end;margin-bottom:12px">
+      ${barsHTML}
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="
+        background:${riskBg};color:${riskColor};
+        padding:3px 10px;border-radius:20px;
+        font-size:10px;font-weight:700;
+        border:1px solid ${riskColor}44;
+      ">${riskLabel}</span>
+      <span style="color:#555;font-size:11px">${total}/${maxTotal}</span>
+    </div>
+  `;
+}
+
 function renderRecentWorkouts() {
   const container = document.getElementById('recent-workouts');
   if (!container) return;
@@ -3464,11 +3544,13 @@ async function refreshDashboard() {
   const treinosIA = loadTreinosIA();
   const active = state.workouts.filter(w => !w.completed);
   const riskCount = (state.profile?.riskFlags || []).filter(f => f !== 'none').length;
+  const statRisks = document.getElementById('stat-risks');
   document.getElementById('stat-workouts').textContent = active.length + treinosIA.length;
-  document.getElementById('stat-risks').textContent = riskCount;
+  if (statRisks) statRisks.textContent = String(riskCount);
 
   renderRecentWorkouts();
   updateFirstWorkoutCTA();
+  renderFmsPreviewCard();
   refreshDashboardCards();
   refreshPendingAlert();
 
@@ -4558,7 +4640,8 @@ function runDiagnosis() {
   ['dos','il','hs','sm','aslr'].forEach(k => { const el = document.getElementById('p-fms-' + k); if (el) el.value = scores[k]; });
   if (scores.tt) { const el = document.getElementById('p-fms-tt'); if (el) el.value = scores.tt; }
 
-  document.getElementById('stat-risks').textContent = issues.filter(f => f !== 'none').length;
+  const statRisks = document.getElementById('stat-risks');
+  if (statRisks) statRisks.textContent = String(issues.filter(f => f !== 'none').length);
   refreshChatSidebar();
 
   document.getElementById('result-feedback').textContent = feedback.join('\n\n');
