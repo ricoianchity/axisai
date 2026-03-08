@@ -423,6 +423,49 @@
   .profile-plan { display: inline-block; margin-top: 12px; padding: 4px 14px; background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.2); border-radius: 20px; font-size: 11px; font-weight: 700; color: var(--green); letter-spacing: 1px; font-family: var(--font-mono); }
   .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px; }
   .form-card h3 { font-family: var(--font-display); font-size: 20px; letter-spacing: 1px; margin-bottom: 20px; }
+  .profile-section { padding: 0; overflow: hidden; }
+  .profile-section-header {
+    width: 100%;
+    background: rgba(255,255,255,0.03);
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px;
+    text-align: left;
+    font-family: var(--font-display);
+    font-size: 16px;
+    letter-spacing: 1px;
+  }
+  .profile-section-header:hover { background: rgba(255,255,255,0.05); }
+  .profile-section-arrow {
+    font-size: 12px;
+    color: var(--muted);
+    transition: transform 0.25s ease;
+    transform: rotate(0deg);
+  }
+  .profile-section.is-open .profile-section-arrow { transform: rotate(180deg); }
+  .profile-section-body {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease, opacity 0.25s ease, padding 0.25s ease;
+    padding: 0 22px;
+  }
+  .profile-section.is-open .profile-section-body {
+    max-height: 2200px;
+    opacity: 1;
+    padding: 22px;
+  }
+  .profile-options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .form-grid .span2 { grid-column: span 2; }
   .form-group select { width: 100%; padding: 12px 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: var(--font-body); font-size: 14px; outline: none; cursor: pointer; }
@@ -665,6 +708,7 @@
     .chat-layout { grid-template-columns: 1fr; }
     .chat-sidebar { display: none; }
     .profile-grid { grid-template-columns: 1fr; }
+    .profile-options-grid { grid-template-columns: 1fr; }
     .form-grid { grid-template-columns: 1fr; }
     .form-grid .span2 { grid-column: span 1; }
   }
@@ -2358,25 +2402,32 @@ const FMS_RESULT_DEFS = [
 const FMS_TESTS = [
   { id: 'dos', name: 'Deep Overhead Squat', namePt: 'Agachamento Profundo', type: 'score',
     desc: 'Avalia mobilidade bilateral simétrica de quadril, joelho e tornozelo, além de estabilidade bilateral do ombro e coluna torácica.',
-    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'] },
+    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'],
+    photos: [{label:'Frente', key:'front'}, {label:'Lado', key:'side'}] },
   { id: 'il',  name: 'Inline Lunge',        namePt: 'Avanço em Linha',       type: 'score',
     desc: 'Avalia estabilidade, flexibilidade e função do quadril e tornozelo em padrão de passada.',
-    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'] },
+    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'],
+    photos: [{label:'Lado Esquerdo', key:'lado-esq'}, {label:'Lado Direito', key:'lado-dir'}] },
   { id: 'hs',  name: 'Hurdle Step',          namePt: 'Passada sobre Barreira', type: 'score',
     desc: 'Avalia mobilidade e estabilidade de quadril, joelho e tornozelo em padrão de passada unilateral.',
-    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'] },
+    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'],
+    photos: [{label:'Frente Esq', key:'frente-esq'}, {label:'Frente Dir', key:'frente-dir'}, {label:'Lado Esq', key:'lado-esq'}, {label:'Lado Dir', key:'lado-dir'}] },
   { id: 'sm',  name: 'Shoulder Mobility',    namePt: 'Mobilidade de Ombro',    type: 'score',
     desc: 'Avalia amplitude bilateral de rotação e adução/abdução de ombro.',
-    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'] },
+    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'],
+    photos: [{label:'Costas Lado D', key:'costas-d'}, {label:'Costas Lado E', key:'costas-e'}] },
   { id: 'aslr', name: 'ASLR',               namePt: 'Elevação Ativa da Perna Reta', type: 'score',
     desc: 'Avalia mobilidade ativa de isquiotibiais e panturrilha com estabilização de pelve e core ativo.',
-    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'] },
+    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'],
+    photos: [{label:'Lado Esquerdo', key:'lado-esq'}, {label:'Lado Direito', key:'lado-dir'}] },
   { id: 'tspu', name: 'Trunk Stability Push-Up', namePt: 'Estabilidade de Tronco', type: 'score',
     desc: 'Avalia estabilidade reflexiva de tronco e core em cadeia cinética fechada.',
-    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'] },
+    scores: ['3 — Executa sem compensações', '2 — Executa com compensação', '1 — Incapaz de executar', '0 — Dor durante o movimento'],
+    photos: [{label:'Lateral Prancha Alta', key:'lateral'}] },
   { id: 'tt',  name: 'Toe Touch Screen',     namePt: 'Toque na Ponta dos Pés', type: 'toggle',
     desc: 'Avalia mobilidade global da cadeia posterior com joelhos estendidos.',
-    scores: ['Positivo — Consegue tocar a ponta dos pés', 'Negativo — Não consegue tocar'] },
+    scores: ['Positivo — Consegue tocar a ponta dos pés', 'Negativo — Não consegue tocar'],
+    photos: [{label:'Frente', key:'front'}, {label:'Lado', key:'side'}] },
 ];
 
 // ═══════════════════════════════════════════════
@@ -2522,35 +2573,24 @@ function renderFMSGrid() {
           <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
         </select>
       </div>
-      ${photoRowHTML(t.id)}
+      ${photoRowHTML(t.id, t.photos)}
     </div>`;
   }).join('');
 }
 
-function photoRowHTML(id) {
+function photoRowHTML(id, photos) {
   return `<div class="fms-photo-row">
-    <div class="fms-photo-col">
-      <div class="fms-photo-label">FRENTE</div>
-      <div class="upload-zone fms-upload-mini" id="fms-zone-${id}-front" onclick="document.getElementById('fms-input-${id}-front').click()">
-        <input type="file" id="fms-input-${id}-front" accept="image/*" style="display:none" onchange="previewFMS(this,'fms-zone-${id}-front','fms-prev-${id}-front','fms-icon-${id}-front')">
-        <img id="fms-prev-${id}-front" class="upload-preview" style="display:none">
+    ${photos.map(p => `<div class="fms-photo-col">
+      <div class="fms-photo-label">${p.label.toUpperCase()}</div>
+      <div class="upload-zone fms-upload-mini" id="fms-zone-${id}-${p.key}" onclick="document.getElementById('fms-input-${id}-${p.key}').click()">
+        <input type="file" id="fms-input-${id}-${p.key}" accept="image/*" style="display:none" onchange="previewFMS(this,'fms-zone-${id}-${p.key}','fms-prev-${id}-${p.key}','fms-icon-${id}-${p.key}')">
+        <img id="fms-prev-${id}-${p.key}" class="upload-preview" style="display:none">
         <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
-        <div class="upload-icon" id="fms-icon-${id}-front">📷</div>
+        <div class="upload-icon" id="fms-icon-${id}-${p.key}">📷</div>
         <div class="upload-label">Foto</div>
         <div class="upload-hint">PNG · JPG</div>
       </div>
-    </div>
-    <div class="fms-photo-col">
-      <div class="fms-photo-label">LADO</div>
-      <div class="upload-zone fms-upload-mini" id="fms-zone-${id}-side" onclick="document.getElementById('fms-input-${id}-side').click()">
-        <input type="file" id="fms-input-${id}-side" accept="image/*" style="display:none" onchange="previewFMS(this,'fms-zone-${id}-side','fms-prev-${id}-side','fms-icon-${id}-side')">
-        <img id="fms-prev-${id}-side" class="upload-preview" style="display:none">
-        <div class="upload-overlay"><span style="font-size:24px;">🔄</span><span style="font-size:12px;margin-top:6px;">Trocar foto</span></div>
-        <div class="upload-icon" id="fms-icon-${id}-side">📷</div>
-        <div class="upload-label">Foto</div>
-        <div class="upload-hint">PNG · JPG</div>
-      </div>
-    </div>
+    </div>`).join('')}
   </div>`;
 }
 
