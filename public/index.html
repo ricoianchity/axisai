@@ -2091,147 +2091,226 @@
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:24px;">
-          <div class="form-card">
-            <h3>IDENTIFICAÇÃO</h3>
-            <div class="form-grid">
-              <div class="form-group"><label>Nome de exibição</label><input type="text" id="profile-display-name" placeholder="Como quer ser chamado no app" style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box"><small style="color:var(--muted);font-size:12px">Aparece na saudação da dashboard</small></div>
-              <div class="form-group"><label>Nome completo</label><input type="text" id="profile-full-name-edit" placeholder="Nome completo" style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box"></div>
+          <div class="form-card profile-section is-open" id="profile-section-identificacao">
+            <button class="profile-section-header" onclick="toggleProfileSection('profile-section-identificacao')">
+              <span>IDENTIFICAÇÃO</span>
+              <span class="profile-section-arrow">▼</span>
+            </button>
+            <div class="profile-section-body">
+              <div class="form-grid">
+                <div class="form-group"><label>Nome de exibição</label><input type="text" id="profile-display-name" placeholder="Como quer ser chamado no app" style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box"><small style="color:var(--muted);font-size:12px">Aparece na saudação da dashboard</small></div>
+                <div class="form-group"><label>Nome completo</label><input type="text" id="profile-full-name-edit" placeholder="Nome completo" style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box"></div>
+              </div>
+              <button class="btn-save" onclick="saveProfileHealth()">SALVAR IDENTIFICAÇÃO</button>
             </div>
-            <button class="btn-save" onclick="saveProfileHealth()">SALVAR IDENTIFICAÇÃO</button>
           </div>
-          <div class="form-card">
-            <h3>DADOS DE TREINO</h3>
-            <div class="form-grid">
-              <div class="form-group"><label>Idade</label><input type="number" id="p-age" placeholder="25"></div>
-              <div class="form-group"><label>Peso (kg)</label><input type="number" id="p-weight" placeholder="80"></div>
-              <div class="form-group"><label>Altura (cm)</label><input type="number" id="p-height" placeholder="175"></div>
-              <div class="form-group"><label>Nível</label><select id="p-level"><option value="">Selecione...</option><option value="beginner">Iniciante</option><option value="intermediate">Intermediário</option><option value="advanced">Avançado</option></select></div>
-              <div class="form-group"><label>Objetivo</label><select id="p-goal"><option value="">Selecione...</option><option value="Estética e Definição">Estética e Definição</option><option value="Força e Performance">Força e Performance</option><option value="Saúde e Bem-estar">Saúde e Bem-estar</option><option value="Performance Esportiva">Performance Esportiva</option></select></div>
-              <div class="form-group"><label>Local de Treino</label><select id="p-gym"><option value="">Selecione...</option><option value="Academia Comercial">Academia Comercial</option><option value="Box CrossFit">Box CrossFit</option><option value="Em Casa">Em Casa</option></select></div>
-              <div class="form-group span2"><label>Lesões / Histórico Clínico</label><input type="text" id="p-injuries" placeholder="Ex: Tendinite no joelho, lombar..."></div>
+
+          <div class="form-card profile-section" id="profile-section-dados-treino">
+            <button class="profile-section-header" onclick="toggleProfileSection('profile-section-dados-treino')">
+              <span>DADOS DE TREINO</span>
+              <span class="profile-section-arrow">▼</span>
+            </button>
+            <div class="profile-section-body">
+              <div class="form-grid">
+                <div class="form-group"><label>Idade</label><input type="number" id="p-age" placeholder="25"></div>
+                <div class="form-group"><label>Peso (kg)</label><input type="number" id="p-weight" placeholder="80"></div>
+                <div class="form-group"><label>Altura (cm)</label><input type="number" id="p-height" placeholder="175"></div>
+                <div class="form-group"><label>Nível</label><select id="p-level"><option value="">Selecione...</option><option value="beginner">Iniciante</option><option value="intermediate">Intermediário</option><option value="advanced">Avançado</option></select></div>
+                <div class="form-group"><label>Objetivo</label><select id="p-goal"><option value="">Selecione...</option><option value="Estética e Definição">Estética e Definição</option><option value="Força e Performance">Força e Performance</option><option value="Saúde e Bem-estar">Saúde e Bem-estar</option><option value="Performance Esportiva">Performance Esportiva</option></select></div>
+                <div class="form-group"><label>Local de Treino</label><select id="p-gym"><option value="">Selecione...</option><option value="Academia Comercial">Academia Comercial</option><option value="Box CrossFit">Box CrossFit</option><option value="Em Casa">Em Casa</option></select></div>
+                <div class="form-group span2"><label>Lesões / Histórico Clínico</label><input type="text" id="p-injuries" placeholder="Ex: Tendinite no joelho, lombar..."></div>
+              </div>
+              <button class="btn-save" onclick="saveProfile()">SALVAR PERFIL</button>
             </div>
-            <button class="btn-save" onclick="saveProfile()">SALVAR PERFIL</button>
           </div>
-          <div class="form-card">
-            <h3>ROTINA PROFISSIONAL</h3>
-            <div class="form-grid">
-              <div class="form-group span2"><label>Profissão</label><input type="text" id="p-profissao" placeholder="Ex: Analista, Professor, Médico..."></div>
-              <div class="form-group"><label>Horas de trabalho por dia</label><input type="number" id="p-horas-trabalho" placeholder="8" min="1" max="24"></div>
-              <div class="form-group"><label>Perfil postural do trabalho</label><select id="p-perfil-postural" onchange="toggleHorasSentado(this,'p-horas-sentado-group')"><option value="">Selecione...</option><option value="Predominantemente sentado">Predominantemente sentado</option><option value="Misto">Misto</option><option value="Predominantemente em pé">Predominantemente em pé</option></select></div>
-              <div class="form-group" id="p-horas-sentado-group" style="display:none"><label>Horas sentado por dia</label><input type="number" id="p-horas-sentado" placeholder="4" min="1" max="24"></div>
-              <div class="form-group"><label>Estresse ocupacional</label><select id="p-estresse-ocup"><option value="">Selecione...</option><option value="Baixo">Baixo</option><option value="Moderado">Moderado</option><option value="Alto">Alto</option></select></div>
-              <div class="form-group"><label>Turno de trabalho</label><select id="p-turno"><option value="">Selecione...</option><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option><option value="Variável">Variável</option></select></div>
+
+          <div class="form-card profile-section" id="profile-section-frequencia">
+            <button class="profile-section-header" onclick="toggleProfileSection('profile-section-frequencia')">
+              <span>FREQUÊNCIA E DISPONIBILIDADE</span>
+              <span class="profile-section-arrow">▼</span>
+            </button>
+            <div class="profile-section-body">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Frequência semanal</label>
+                  <select id="p-frequency">
+                    <option value="">Selecione...</option>
+                    <option value="2x">2x por semana</option>
+                    <option value="3x">3x por semana</option>
+                    <option value="4x">4x por semana</option>
+                    <option value="5x+">5x ou mais por semana</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Tempo disponível por sessão</label>
+                  <select id="p-session-time">
+                    <option value="">Selecione...</option>
+                    <option value="30min">30 minutos</option>
+                    <option value="45min">45 minutos</option>
+                    <option value="60min">60 minutos</option>
+                    <option value="90min">90 minutos</option>
+                  </select>
+                </div>
+                <div class="form-group span2">
+                  <label>Equipamentos disponíveis</label>
+                  <div class="profile-options-grid" id="p-equipment-grid">
+                    <label class="comorbidity-item"><input type="checkbox" class="p-equipment" value="Barra e anilhas"> Barra e anilhas</label>
+                    <label class="comorbidity-item"><input type="checkbox" class="p-equipment" value="Halteres"> Halteres</label>
+                    <label class="comorbidity-item"><input type="checkbox" class="p-equipment" value="Kettlebell"> Kettlebell</label>
+                    <label class="comorbidity-item"><input type="checkbox" class="p-equipment" value="TRX/Suspensão"> TRX/Suspensão</label>
+                    <label class="comorbidity-item"><input type="checkbox" class="p-equipment" value="Máquinas"> Máquinas</label>
+                    <label class="comorbidity-item"><input type="checkbox" class="p-equipment" value="Sled/Trenó"> Sled/Trenó</label>
+                    <label class="comorbidity-item"><input type="checkbox" class="p-equipment" value="Bicicleta/Rower"> Bicicleta/Rower</label>
+                    <label class="comorbidity-item"><input type="checkbox" class="p-equipment" value="Apenas peso corporal"> Peso corporal</label>
+                  </div>
+                </div>
+              </div>
+              <button class="btn-save" onclick="saveProfile()">SALVAR DISPONIBILIDADE</button>
             </div>
-            <button class="btn-save" onclick="saveProfile()">SALVAR PERFIL</button>
           </div>
-          <div class="form-card">
-            <h3>AVALIAÇÃO FMS</h3>
-            <div class="form-grid">
-              <div class="form-group"><label>Deep Overhead Squat<br><span style="font-weight:400;color:var(--muted);">(Agachamento Profundo)</span></label><select id="p-fms-dos"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
-              <div class="form-group"><label>Inline Lunge<br><span style="font-weight:400;color:var(--muted);">(Avanço em Linha)</span></label><select id="p-fms-il"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
-              <div class="form-group"><label>Hurdle Step<br><span style="font-weight:400;color:var(--muted);">(Passada sobre Barreira)</span></label><select id="p-fms-hs"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
-              <div class="form-group"><label>Shoulder Mobility<br><span style="font-weight:400;color:var(--muted);">(Mobilidade de Ombro)</span></label><select id="p-fms-sm"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
-              <div class="form-group"><label>ASLR<br><span style="font-weight:400;color:var(--muted);">(Elevação Ativa da Perna Reta)</span></label><select id="p-fms-aslr"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
-              <div class="form-group"><label>Toe Touch Screen<br><span style="font-weight:400;color:var(--muted);">(Toque na Ponta dos Pés)</span></label><select id="p-fms-tt"><option value="">Selecione...</option><option value="positive">Positivo</option><option value="negative">Negativo</option></select></div>
+
+          <div class="form-card profile-section" id="profile-section-rotina">
+            <button class="profile-section-header" onclick="toggleProfileSection('profile-section-rotina')">
+              <span>ROTINA PROFISSIONAL</span>
+              <span class="profile-section-arrow">▼</span>
+            </button>
+            <div class="profile-section-body">
+              <div class="form-grid">
+                <div class="form-group span2"><label>Profissão</label><input type="text" id="p-profissao" placeholder="Ex: Analista, Professor, Médico..."></div>
+                <div class="form-group"><label>Horas de trabalho por dia</label><input type="number" id="p-horas-trabalho" placeholder="8" min="1" max="24"></div>
+                <div class="form-group"><label>Perfil postural do trabalho</label><select id="p-perfil-postural" onchange="toggleHorasSentado(this,'p-horas-sentado-group')"><option value="">Selecione...</option><option value="Predominantemente sentado">Predominantemente sentado</option><option value="Misto">Misto</option><option value="Predominantemente em pé">Predominantemente em pé</option></select></div>
+                <div class="form-group" id="p-horas-sentado-group" style="display:none"><label>Horas sentado por dia</label><input type="number" id="p-horas-sentado" placeholder="4" min="1" max="24"></div>
+                <div class="form-group"><label>Estresse ocupacional</label><select id="p-estresse-ocup"><option value="">Selecione...</option><option value="Baixo">Baixo</option><option value="Moderado">Moderado</option><option value="Alto">Alto</option></select></div>
+                <div class="form-group"><label>Turno de trabalho</label><select id="p-turno"><option value="">Selecione...</option><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option><option value="Variável">Variável</option></select></div>
+              </div>
+              <button class="btn-save" onclick="saveProfile()">SALVAR PERFIL</button>
             </div>
-            <button class="btn-save" onclick="saveFMS()">SALVAR FMS</button>
           </div>
-          <div class="form-card" id="profile-health-section">
-            <h3>SAÚDE</h3>
-            <div class="form-group">
-              <label>Comorbidades diagnosticadas</label>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px" id="profile-comorbidities-grid">
-                <label class="comorbidity-item"><input type="checkbox" value="hipertensao"> Hipertensão</label>
-                <label class="comorbidity-item"><input type="checkbox" value="diabetes_t2"> Diabetes tipo 2</label>
-                <label class="comorbidity-item"><input type="checkbox" value="diabetes_t1"> Diabetes tipo 1</label>
-                <label class="comorbidity-item"><input type="checkbox" value="dislipidemia"> Dislipidemia</label>
-                <label class="comorbidity-item"><input type="checkbox" value="obesidade"> Obesidade</label>
-                <label class="comorbidity-item"><input type="checkbox" value="hipotireoidismo"> Hipotireoidismo</label>
-                <label class="comorbidity-item"><input type="checkbox" value="hipertireoidismo"> Hipertireoidismo</label>
-                <label class="comorbidity-item"><input type="checkbox" value="cardiopatia"> Cardiopatia</label>
-                <label class="comorbidity-item"><input type="checkbox" value="osteoporose"> Osteoporose</label>
-                <label class="comorbidity-item"><input type="checkbox" value="artrite"> Artrite/Artrose</label>
-                <label class="comorbidity-item"><input type="checkbox" value="ansiedade"> Ansiedade</label>
-                <label class="comorbidity-item"><input type="checkbox" value="depressao"> Depressão</label>
-                <label class="comorbidity-item"><input type="checkbox" value="bipolar"> Transtorno Bipolar</label>
-                <label class="comorbidity-item"><input type="checkbox" value="tdah"> TDAH</label>
-                <label class="comorbidity-item"><input type="checkbox" value="fibromialgia"> Fibromialgia</label>
-                <label class="comorbidity-item"><input type="checkbox" value="asma"> Asma/DPOC</label>
+
+          <div class="form-card profile-section" id="profile-section-fms">
+            <button class="profile-section-header" onclick="toggleProfileSection('profile-section-fms')">
+              <span>AVALIAÇÃO FMS</span>
+              <span class="profile-section-arrow">▼</span>
+            </button>
+            <div class="profile-section-body">
+              <div class="form-grid">
+                <div class="form-group"><label>Deep Overhead Squat<br><span style="font-weight:400;color:var(--muted);">(Agachamento Profundo)</span></label><select id="p-fms-dos"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+                <div class="form-group"><label>Inline Lunge<br><span style="font-weight:400;color:var(--muted);">(Avanço em Linha)</span></label><select id="p-fms-il"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+                <div class="form-group"><label>Hurdle Step<br><span style="font-weight:400;color:var(--muted);">(Passada sobre Barreira)</span></label><select id="p-fms-hs"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+                <div class="form-group"><label>Shoulder Mobility<br><span style="font-weight:400;color:var(--muted);">(Mobilidade de Ombro)</span></label><select id="p-fms-sm"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+                <div class="form-group"><label>ASLR<br><span style="font-weight:400;color:var(--muted);">(Elevação Ativa da Perna Reta)</span></label><select id="p-fms-aslr"><option value="">Selecione...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+                <div class="form-group"><label>Toe Touch Screen<br><span style="font-weight:400;color:var(--muted);">(Toque na Ponta dos Pés)</span></label><select id="p-fms-tt"><option value="">Selecione...</option><option value="positive">Positivo</option><option value="negative">Negativo</option></select></div>
               </div>
-              <input type="text" id="profile-comorbidities-other" placeholder="Outras"
-                style="width:100%;margin-top:8px;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
+              <button class="btn-save" onclick="saveFMS()">SALVAR FMS</button>
             </div>
-            <div class="form-group" style="margin-top:16px">
-              <label>Medicações contínuas</label>
-              <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px" id="profile-medications-grid">
-                <label class="comorbidity-item"><input type="checkbox" value="antidepressivo"> Antidepressivo</label>
-                <label class="comorbidity-item"><input type="checkbox" value="ansiolitico"> Ansiolítico / Benzodiazepínico</label>
-                <label class="comorbidity-item"><input type="checkbox" value="antipsicoptico"> Antipsicótico / Estabilizador de humor</label>
-                <label class="comorbidity-item"><input type="checkbox" value="tdah_med"> Medicação para TDAH</label>
-                <label class="comorbidity-item"><input type="checkbox" value="betabloqueador"> Betabloqueador</label>
-                <label class="comorbidity-item"><input type="checkbox" value="anti_hipertensivo"> Anti-hipertensivo</label>
-                <label class="comorbidity-item"><input type="checkbox" value="anticoagulante"> Anticoagulante</label>
-                <label class="comorbidity-item"><input type="checkbox" value="insulina"> Insulina</label>
-                <label class="comorbidity-item"><input type="checkbox" value="metformina"> Metformina / Antidiabético oral</label>
-                <label class="comorbidity-item"><input type="checkbox" value="ozempic"> Ozempic / Mounjaro / GLP-1</label>
-                <label class="comorbidity-item"><input type="checkbox" value="corticoide"> Corticoide</label>
-                <label class="comorbidity-item"><input type="checkbox" value="tireoidiano"> Medicação para tireoide</label>
-                <label class="comorbidity-item"><input type="checkbox" value="anticonvulsivante"> Anticonvulsivante</label>
-              </div>
-              <input type="text" id="profile-medications-other" placeholder="Outras medicações"
-                style="width:100%;margin-top:8px;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
-            </div>
-            <div class="form-group" style="margin-top:16px">
-              <label>Histórico de lesões</label>
-              <textarea id="profile-injuries-edit" placeholder="Descreva lesões relevantes..." rows="3"
-                style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box;resize:vertical"></textarea>
-            </div>
-            <button class="btn-save" onclick="saveProfileHealth()" style="margin-top:16px">SALVAR DADOS DE SAÚDE</button>
           </div>
-          <!-- ── Privacy Settings (LGPD) ── -->
-          <div class="form-card privacy-card" id="privacy-settings">
-            <h3>PRIVACIDADE E DADOS</h3>
-            <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Gerencie seus consentimentos conforme a LGPD (Lei 13.709/2018). Consentimentos não essenciais podem ser revogados a qualquer momento.</p>
-            <div class="privacy-toggles" id="privacy-toggles">
-              <div class="lgpd-toggle-row locked">
-                <div class="lgpd-toggle-info">
-                  <div class="lgpd-toggle-name">Essencial</div>
-                  <div class="lgpd-toggle-desc">Autenticação, segurança e funcionamento básico.</div>
+
+          <div class="form-card profile-section" id="profile-health-section">
+            <button class="profile-section-header" onclick="toggleProfileSection('profile-health-section')">
+              <span>SAÚDE</span>
+              <span class="profile-section-arrow">▼</span>
+            </button>
+            <div class="profile-section-body">
+              <div class="form-group">
+                <label>Comorbidades diagnosticadas</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px" id="profile-comorbidities-grid">
+                  <label class="comorbidity-item"><input type="checkbox" value="hipertensao"> Hipertensão</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="diabetes_t2"> Diabetes tipo 2</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="diabetes_t1"> Diabetes tipo 1</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="dislipidemia"> Dislipidemia</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="obesidade"> Obesidade</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="hipotireoidismo"> Hipotireoidismo</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="hipertireoidismo"> Hipertireoidismo</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="cardiopatia"> Cardiopatia</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="osteoporose"> Osteoporose</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="artrite"> Artrite/Artrose</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="ansiedade"> Ansiedade</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="depressao"> Depressão</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="bipolar"> Transtorno Bipolar</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="tdah"> TDAH</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="fibromialgia"> Fibromialgia</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="asma"> Asma/DPOC</label>
                 </div>
-                <label class="lgpd-switch"><input type="checkbox" checked disabled><span class="slider"></span></label>
+                <input type="text" id="profile-comorbidities-other" placeholder="Outras"
+                  style="width:100%;margin-top:8px;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
               </div>
-              <div class="lgpd-toggle-row">
-                <div class="lgpd-toggle-info">
-                  <div class="lgpd-toggle-name">Dados FMS</div>
-                  <div class="lgpd-toggle-desc">Avaliações de movimento funcional.</div>
+              <div class="form-group" style="margin-top:16px">
+                <label>Medicações contínuas</label>
+                <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px" id="profile-medications-grid">
+                  <label class="comorbidity-item"><input type="checkbox" value="antidepressivo"> Antidepressivo</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="ansiolitico"> Ansiolítico / Benzodiazepínico</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="antipsicoptico"> Antipsicótico / Estabilizador de humor</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="tdah_med"> Medicação para TDAH</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="betabloqueador"> Betabloqueador</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="anti_hipertensivo"> Anti-hipertensivo</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="anticoagulante"> Anticoagulante</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="insulina"> Insulina</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="metformina"> Metformina / Antidiabético oral</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="ozempic"> Ozempic / Mounjaro / GLP-1</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="corticoide"> Corticoide</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="tireoidiano"> Medicação para tireoide</label>
+                  <label class="comorbidity-item"><input type="checkbox" value="anticonvulsivante"> Anticonvulsivante</label>
                 </div>
-                <label class="lgpd-switch"><input type="checkbox" id="priv-fms" onchange="updatePrivacyConsent()"><span class="slider"></span></label>
+                <input type="text" id="profile-medications-other" placeholder="Outras medicações"
+                  style="width:100%;margin-top:8px;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
               </div>
-              <div class="lgpd-toggle-row">
-                <div class="lgpd-toggle-info">
-                  <div class="lgpd-toggle-name">Histórico de Treinos</div>
-                  <div class="lgpd-toggle-desc">Sessões, progressão e periodização.</div>
-                </div>
-                <label class="lgpd-switch"><input type="checkbox" id="priv-training" onchange="updatePrivacyConsent()"><span class="slider"></span></label>
+              <div class="form-group" style="margin-top:16px">
+                <label>Histórico de lesões</label>
+                <textarea id="profile-injuries-edit" placeholder="Descreva lesões relevantes..." rows="3"
+                  style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box;resize:vertical"></textarea>
               </div>
-              <div class="lgpd-toggle-row">
-                <div class="lgpd-toggle-info">
-                  <div class="lgpd-toggle-name">Análise de Uso</div>
-                  <div class="lgpd-toggle-desc">Dados anônimos de melhoria.</div>
-                </div>
-                <label class="lgpd-switch"><input type="checkbox" id="priv-analytics" onchange="updatePrivacyConsent()"><span class="slider"></span></label>
-              </div>
-              <div class="lgpd-toggle-row">
-                <div class="lgpd-toggle-info">
-                  <div class="lgpd-toggle-name">Marketing</div>
-                  <div class="lgpd-toggle-desc">Novidades e recursos do AxisAI.</div>
-                </div>
-                <label class="lgpd-switch"><input type="checkbox" id="priv-marketing" onchange="updatePrivacyConsent()"><span class="slider"></span></label>
-              </div>
+              <button class="btn-save" onclick="saveProfileHealth()" style="margin-top:16px">SALVAR DADOS DE SAÚDE</button>
             </div>
-            <div class="privacy-actions">
-              <button class="btn-export" onclick="exportUserData()">📦 EXPORTAR MEUS DADOS</button>
-              <button class="btn-delete-account" onclick="requestAccountDeletion()">🗑️ EXCLUIR MINHA CONTA</button>
+          </div>
+
+          <div class="form-card privacy-card profile-section" id="privacy-settings">
+            <button class="profile-section-header" onclick="toggleProfileSection('privacy-settings')">
+              <span>PRIVACIDADE E DADOS</span>
+              <span class="profile-section-arrow">▼</span>
+            </button>
+            <div class="profile-section-body">
+              <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Gerencie seus consentimentos conforme a LGPD (Lei 13.709/2018). Consentimentos não essenciais podem ser revogados a qualquer momento.</p>
+              <div class="privacy-toggles" id="privacy-toggles">
+                <div class="lgpd-toggle-row locked">
+                  <div class="lgpd-toggle-info">
+                    <div class="lgpd-toggle-name">Essencial</div>
+                    <div class="lgpd-toggle-desc">Autenticação, segurança e funcionamento básico.</div>
+                  </div>
+                  <label class="lgpd-switch"><input type="checkbox" checked disabled><span class="slider"></span></label>
+                </div>
+                <div class="lgpd-toggle-row">
+                  <div class="lgpd-toggle-info">
+                    <div class="lgpd-toggle-name">Dados FMS</div>
+                    <div class="lgpd-toggle-desc">Avaliações de movimento funcional.</div>
+                  </div>
+                  <label class="lgpd-switch"><input type="checkbox" id="priv-fms" onchange="updatePrivacyConsent()"><span class="slider"></span></label>
+                </div>
+                <div class="lgpd-toggle-row">
+                  <div class="lgpd-toggle-info">
+                    <div class="lgpd-toggle-name">Histórico de Treinos</div>
+                    <div class="lgpd-toggle-desc">Sessões, progressão e periodização.</div>
+                  </div>
+                  <label class="lgpd-switch"><input type="checkbox" id="priv-training" onchange="updatePrivacyConsent()"><span class="slider"></span></label>
+                </div>
+                <div class="lgpd-toggle-row">
+                  <div class="lgpd-toggle-info">
+                    <div class="lgpd-toggle-name">Análise de Uso</div>
+                    <div class="lgpd-toggle-desc">Dados anônimos de melhoria.</div>
+                  </div>
+                  <label class="lgpd-switch"><input type="checkbox" id="priv-analytics" onchange="updatePrivacyConsent()"><span class="slider"></span></label>
+                </div>
+                <div class="lgpd-toggle-row">
+                  <div class="lgpd-toggle-info">
+                    <div class="lgpd-toggle-name">Marketing</div>
+                    <div class="lgpd-toggle-desc">Novidades e recursos do AxisAI.</div>
+                  </div>
+                  <label class="lgpd-switch"><input type="checkbox" id="priv-marketing" onchange="updatePrivacyConsent()"><span class="slider"></span></label>
+                </div>
+              </div>
+              <div class="privacy-actions">
+                <button class="btn-export" onclick="exportUserData()">📦 EXPORTAR MEUS DADOS</button>
+                <button class="btn-delete-account" onclick="requestAccountDeletion()">🗑️ EXCLUIR MINHA CONTA</button>
+              </div>
             </div>
           </div>
         </div>
@@ -2597,6 +2676,12 @@ function photoRowHTML(id, photos) {
 function toggleHorasSentado(selectEl, groupId) {
   const grp = document.getElementById(groupId);
   if (grp) grp.style.display = selectEl.value === 'Misto' ? 'block' : 'none';
+}
+
+function toggleProfileSection(sectionId) {
+  const card = document.getElementById(sectionId);
+  if (!card) return;
+  card.classList.toggle('is-open');
 }
 
 function toggleFmsInfo(id) {
@@ -4854,6 +4939,17 @@ function loadProfile() {
     if (p.level) document.getElementById('p-level').value = p.level;
     if (p.goal) document.getElementById('p-goal').value = p.goal;
     if (p.gym) document.getElementById('p-gym').value = p.gym;
+    if (p.frequency) {
+      const el = document.getElementById('p-frequency');
+      if (el) el.value = p.frequency;
+    }
+    if (p.sessionTime) {
+      const el = document.getElementById('p-session-time');
+      if (el) el.value = p.sessionTime;
+    }
+    document.querySelectorAll('.p-equipment').forEach(el => {
+      el.checked = Array.isArray(p.equipment) && p.equipment.includes(el.value);
+    });
     if (p.injuries) document.getElementById('p-injuries').value = p.injuries;
     if (p.fms) {
       ['dos','il','hs','sm','aslr'].forEach(k => { if (p.fms[k] !== undefined) { const el = document.getElementById('p-fms-' + k); if (el) el.value = p.fms[k]; } });
@@ -4870,6 +4966,11 @@ function loadProfile() {
 }
 
 async function saveProfile(silent = false) {
+  const equipmentEls = document.querySelectorAll('.p-equipment');
+  const equipment = equipmentEls.length
+    ? Array.from(document.querySelectorAll('.p-equipment:checked')).map(e => e.value)
+    : (Array.isArray(state.profile?.equipment) ? state.profile.equipment : []);
+
   const p = {
     age: document.getElementById('p-age')?.value || state.profile?.age,
     weight: document.getElementById('p-weight')?.value || state.profile?.weight,
@@ -4877,6 +4978,9 @@ async function saveProfile(silent = false) {
     level: document.getElementById('p-level')?.value || state.profile?.level,
     goal: document.getElementById('p-goal')?.value || state.profile?.goal,
     gym: document.getElementById('p-gym')?.value || state.profile?.gym,
+    frequency: document.getElementById('p-frequency')?.value || state.profile?.frequency,
+    sessionTime: document.getElementById('p-session-time')?.value || state.profile?.sessionTime,
+    equipment,
     injuries: document.getElementById('p-injuries')?.value || state.profile?.injuries,
     riskFlags: state.profile?.riskFlags || [],
     fms: state.profile?.fms || {},
