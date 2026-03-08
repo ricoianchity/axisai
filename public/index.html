@@ -2882,6 +2882,8 @@ function getDisplayName() {
 async function completeEnterApp() {
   // ── FIX BUG 1: Ensure guard is set even when called directly from _finishWizard ──
   _appEntered = true;
+  const loadingOverlay = document.getElementById('loading-overlay');
+  if (loadingOverlay) loadingOverlay.style.display = 'none';
   document.getElementById('screen-onboarding').style.display = 'none';
   document.getElementById('screen-app').classList.add('visible');
   const name = state.user?.name || 'Atleta';
