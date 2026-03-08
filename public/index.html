@@ -3219,11 +3219,20 @@ async function syncParqStatusFromSupabase() {
   if (!state.user?.id) return true;
 
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('profiles')
       .select('parq_cleared, parq_completed_at, parq_answers')
-      .eq('id', state.user.id)
+      .eq('user_id', state.user.id)
       .maybeSingle();
+
+    // Fallback: schemas that store auth UUID directly in profiles.id
+    if (error && String(error.message || '').includes('column profiles.user_id does not exist')) {
+      ({ data, error } = await supabase
+        .from('profiles')
+        .select('parq_cleared, parq_completed_at, parq_answers')
+        .eq('id', state.user.id)
+        .maybeSingle());
+    }
 
     if (error) {
       showToast('Erro ao verificar PAR-Q no Supabase: ' + error.message, true);
@@ -3250,12 +3259,46 @@ async function saveParqToProfile(payload) {
   }
 
   try {
-    const profilePayload = { id: state.user.id, ...payload, updated_at: new Date().toISOString() };
-    const { error } = await supabase.from('profiles').upsert(profilePayload);
+    const profilePayload = { ...payload, updated_at: new Date().toISOString() };
+
+    // Prefer schemas with profiles.user_id = auth.uid()
+    let mode = 'user_id';
+    let { data: updated, error } = await supabase
+      .from('profiles')
+      .update(profilePayload)
+      .eq('user_id', state.user.id)
+      .select('id')
+      .limit(1);
+
+    // Fallback for schemas without user_id (profiles.id = auth.uid())
+    if (error && String(error.message || '').includes('column profiles.user_id does not exist')) {
+      mode = 'id';
+      ({ data: updated, error } = await supabase
+        .from('profiles')
+        .update(profilePayload)
+        .eq('id', state.user.id)
+        .select('id')
+        .limit(1));
+    }
+
     if (error) {
       showToast('Erro ao salvar PAR-Q: ' + error.message, true);
       return false;
     }
+
+    // If no row exists yet, create one with the correct key
+    if (!updated || updated.length === 0) {
+      const insertPayload = mode === 'user_id'
+        ? { user_id: state.user.id, ...profilePayload }
+        : { id: state.user.id, ...profilePayload };
+
+      const { error: insertError } = await supabase.from('profiles').insert(insertPayload);
+      if (insertError) {
+        showToast('Erro ao salvar PAR-Q: ' + insertError.message, true);
+        return false;
+      }
+    }
+
     state.profile = { ...(state.profile || {}), ...payload };
     localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
     updateCoachNavIndicator();
