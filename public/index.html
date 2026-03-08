@@ -985,6 +985,54 @@
     border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700;
   }
 
+  /* ── PAR-Q MODAL ── */
+  .parq-overlay {
+    position: fixed; inset: 0; z-index: 10003;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    animation: fadeUp 0.25s ease;
+  }
+  .parq-modal {
+    background: #0d1117; border: 1px solid var(--border); border-radius: 16px;
+    width: 100%; max-width: 760px; max-height: 88vh; overflow-y: auto;
+    padding: 24px;
+  }
+  .parq-title {
+    font-family: var(--font-display); font-size: 20px; letter-spacing: 1px; margin-bottom: 6px;
+  }
+  .parq-subtitle {
+    font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 18px;
+  }
+  .parq-list { display: flex; flex-direction: column; gap: 10px; }
+  .parq-question {
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px;
+  }
+  .parq-question-text { font-size: 13px; line-height: 1.5; margin-bottom: 10px; }
+  .parq-choices { display: flex; gap: 8px; }
+  .parq-choice {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px;
+    background: var(--bg2); color: var(--text); cursor: pointer; font-size: 12px; font-weight: 700;
+  }
+  .parq-choice:has(input:checked) {
+    border-color: var(--green); color: var(--green); background: rgba(0,255,135,0.1);
+  }
+  .parq-choice input { accent-color: var(--green); }
+  .parq-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .parq-btn-secondary {
+    flex: 1; border: 1px solid var(--border); background: none; color: var(--muted);
+    border-radius: 8px; padding: 10px; cursor: pointer; font-weight: 700;
+  }
+  .parq-btn-primary {
+    flex: 1; border: none; background: linear-gradient(135deg, var(--green), #00c8ff); color: #000;
+    border-radius: 8px; padding: 10px; cursor: pointer; font-weight: 700;
+  }
+  .parq-warning {
+    border: 1px solid rgba(239,68,68,0.4); background: rgba(239,68,68,0.12);
+    border-radius: 10px; padding: 14px; color: #fca5a5; font-size: 13px; line-height: 1.6;
+  }
+
   /* ── PRIVACY POLICY MODAL ── */
   .privacy-policy-overlay {
     position: fixed; inset: 0; z-index: 10002;
@@ -1592,7 +1640,7 @@
       <div class="nav-section-label">Principal</div>
       <button class="nav-item active" onclick="navigate(&#39;dashboard&#39;)"><span class="icon">⚡</span><span class="label">Dashboard</span></button>
       <button class="nav-item" onclick="navigate(&#39;workouts&#39;)"><span class="icon">🏋️</span><span class="label">Treinos</span></button>
-      <button class="nav-item" onclick="navigate(&#39;chat&#39;)"><span class="icon">🤖</span><span class="label">Coach IA</span></button>
+      <button class="nav-item" id="nav-chat-btn" onclick="navigate(&#39;chat&#39;)"><span class="icon" id="nav-chat-icon">🤖</span><span class="label">Coach IA</span></button>
       <div class="nav-section-label">Avaliação</div>
       <button class="nav-item" onclick="navigate(&#39;diagnosis&#39;)"><span class="icon">📸</span><span class="label">Diagnóstico</span></button>
       <div class="nav-section-label">Conta</div>
@@ -2531,10 +2579,12 @@ async function loadUserData(userId) {
   const role = state.profile?.role || 'client';
   state.role = role;
   document.body.setAttribute('data-role', role);
+  updateCoachNavIndicator();
 }
 
 async function initApp() {
   renderFMSGrid();
+  updateCoachNavIndicator();
   // Loading overlay is visible by default (HTML starts with it shown)
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
@@ -2563,6 +2613,7 @@ async function initApp() {
     } else {
       // No valid session — show auth screen
       document.getElementById('screen-auth').style.display = 'flex';
+      updateCoachNavIndicator();
     }
     document.getElementById('loading-overlay').style.display = 'none';
     _authResolving = false;
@@ -2786,6 +2837,7 @@ async function doLogout() {
   state.chatHistory = [];
   state.fmsLatest   = null;
   _appEntered = false; // ── FIX BUG 1: Reset guard so next login can route correctly ──
+  updateCoachNavIndicator();
   document.getElementById('screen-auth').style.display = 'flex';
   document.getElementById('screen-app').classList.remove('visible');
 }
@@ -3120,7 +3172,266 @@ async function _finishWizard() {
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-function navigate(page) {
+const PARQ_QUESTIONS = [
+  'Algum médico já disse que você tem algum problema cardíaco e recomendou que você só pratique atividade física com supervisão médica?',
+  'Você sente dor no peito ao praticar atividade física?',
+  'No último mês, você sentiu dor no peito sem estar praticando atividade física?',
+  'Você perde o equilíbrio por causa de tontura ou alguma vez perdeu a consciência?',
+  'Você tem algum problema ósseo ou articular que poderia ser agravado pela prática de atividade física?',
+  'Algum médico está atualmente prescrevendo medicamentos para sua pressão arterial ou para o coração?',
+  'Você tem conhecimento de alguma outra razão pela qual não deveria praticar atividade física?'
+];
+
+function parqHasPositiveAnswers(answers) {
+  if (!answers || typeof answers !== 'object') return false;
+  return Object.values(answers).some(v => String(v).toLowerCase() === 'yes');
+}
+
+function updateCoachNavIndicator() {
+  const icon = document.getElementById('nav-chat-icon');
+  const btn = document.getElementById('nav-chat-btn');
+  if (!icon || !btn) return;
+
+  if (!state.user?.id) {
+    icon.textContent = '🤖';
+    btn.title = 'Coach IA';
+    return;
+  }
+
+  const cleared = state.profile?.parq_cleared === true;
+  const positive = parqHasPositiveAnswers(state.profile?.parq_answers);
+
+  if (cleared) {
+    icon.textContent = '🤖';
+    btn.title = 'Coach IA liberado';
+  } else if (positive) {
+    icon.textContent = '⚠️';
+    btn.title = 'PAR-Q com resposta positiva';
+  } else {
+    icon.textContent = '🔒';
+    btn.title = 'PAR-Q pendente';
+  }
+}
+
+async function syncParqStatusFromSupabase() {
+  if (!state.user?.id) return true;
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('parq_cleared, parq_completed_at, parq_answers')
+      .eq('id', state.user.id)
+      .maybeSingle();
+
+    if (error) {
+      showToast('Erro ao verificar PAR-Q no Supabase: ' + error.message, true);
+      return false;
+    }
+
+    if (data) {
+      state.profile = { ...(state.profile || {}), ...data };
+      localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
+    }
+
+    updateCoachNavIndicator();
+    return true;
+  } catch (err) {
+    showToast('Erro ao verificar PAR-Q: ' + err.message, true);
+    return false;
+  }
+}
+
+async function saveParqToProfile(payload) {
+  if (!state.user?.id) {
+    showToast('Sessão expirada. Faça login novamente.', true);
+    return false;
+  }
+
+  try {
+    const profilePayload = { id: state.user.id, ...payload, updated_at: new Date().toISOString() };
+    const { error } = await supabase.from('profiles').upsert(profilePayload);
+    if (error) {
+      showToast('Erro ao salvar PAR-Q: ' + error.message, true);
+      return false;
+    }
+    state.profile = { ...(state.profile || {}), ...payload };
+    localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
+    updateCoachNavIndicator();
+    return true;
+  } catch (err) {
+    showToast('Erro ao salvar PAR-Q: ' + err.message, true);
+    return false;
+  }
+}
+
+function openParqModal() {
+  return new Promise(resolve => {
+    const existing = document.getElementById('parq-modal');
+    if (existing) {
+      resolve(null);
+      return;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'parq-modal';
+    overlay.className = 'parq-overlay';
+
+    const questionsHtml = PARQ_QUESTIONS.map((q, idx) => `
+      <div class="parq-question">
+        <div class="parq-question-text">${idx + 1}. ${q}</div>
+        <div class="parq-choices">
+          <label class="parq-choice">
+            <input type="radio" name="parq-q${idx + 1}" value="yes">
+            <span>Sim</span>
+          </label>
+          <label class="parq-choice">
+            <input type="radio" name="parq-q${idx + 1}" value="no">
+            <span>Não</span>
+          </label>
+        </div>
+      </div>
+    `).join('');
+
+    overlay.innerHTML = `
+      <div class="parq-modal" onclick="event.stopPropagation()">
+        <div class="parq-title">Triagem de Prontidão — PAR-Q</div>
+        <div class="parq-subtitle">Antes de iniciar sua prescrição, precisamos de algumas informações de segurança.</div>
+        <div class="parq-list">${questionsHtml}</div>
+        <div class="parq-actions">
+          <button class="parq-btn-secondary" id="parq-cancel-btn">Cancelar</button>
+          <button class="parq-btn-primary" id="parq-submit-btn">Enviar</button>
+        </div>
+      </div>
+    `;
+
+    let resolved = false;
+    const finish = (value) => {
+      if (resolved) return;
+      resolved = true;
+      overlay.remove();
+      resolve(value);
+    };
+
+    overlay.addEventListener('click', () => finish(null));
+
+    document.body.appendChild(overlay);
+
+    const cancelBtn = document.getElementById('parq-cancel-btn');
+    const submitBtn = document.getElementById('parq-submit-btn');
+
+    if (cancelBtn) cancelBtn.onclick = () => finish(null);
+    if (submitBtn) {
+      submitBtn.onclick = () => {
+        const answers = {};
+        for (let i = 1; i <= PARQ_QUESTIONS.length; i++) {
+          const checked = overlay.querySelector(`input[name="parq-q${i}"]:checked`);
+          if (!checked) {
+            showToast('Responda todas as perguntas do PAR-Q.', true);
+            return;
+          }
+          answers[`q${i}`] = checked.value;
+        }
+
+        if (parqHasPositiveAnswers(answers)) {
+          const modal = overlay.querySelector('.parq-modal');
+          modal.innerHTML = `
+            <div class="parq-title">Triagem de Prontidão — PAR-Q</div>
+            <div class="parq-warning">
+              Por precaução, recomendamos que você obtenha liberação médica antes de iniciar um programa de treino. Você pode continuar explorando o app, mas a prescrição de treino estará desabilitada até a liberação.
+            </div>
+            <div class="parq-actions">
+              <button class="parq-btn-primary" id="parq-understood-btn">Entendido</button>
+            </div>
+          `;
+          const understoodBtn = document.getElementById('parq-understood-btn');
+          if (understoodBtn) understoodBtn.onclick = () => finish({ cleared: false, answers });
+          return;
+        }
+
+        finish({ cleared: true, answers });
+      };
+    }
+  });
+}
+
+function openParqBlockedModal() {
+  return new Promise(resolve => {
+    const existing = document.getElementById('parq-modal');
+    if (existing) {
+      resolve(false);
+      return;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'parq-modal';
+    overlay.className = 'parq-overlay';
+    overlay.innerHTML = `
+      <div class="parq-modal" onclick="event.stopPropagation()">
+        <div class="parq-title">Triagem de Prontidão — PAR-Q</div>
+        <div class="parq-warning">
+          Por precaução, recomendamos que você obtenha liberação médica antes de iniciar um programa de treino. Você pode continuar explorando o app, mas a prescrição de treino estará desabilitada até a liberação.
+        </div>
+        <div class="parq-actions">
+          <button class="parq-btn-primary" id="parq-understood-btn">Entendido</button>
+        </div>
+      </div>
+    `;
+
+    const finish = () => {
+      overlay.remove();
+      resolve(false);
+    };
+
+    overlay.addEventListener('click', finish);
+    document.body.appendChild(overlay);
+    const btn = document.getElementById('parq-understood-btn');
+    if (btn) btn.onclick = finish;
+  });
+}
+
+async function ensureParqBeforeCoach() {
+  if (!state.user?.id) return true;
+
+  const synced = await syncParqStatusFromSupabase();
+  if (!synced) return false;
+
+  if (state.profile?.parq_cleared === true) return true;
+  if (parqHasPositiveAnswers(state.profile?.parq_answers)) {
+    await openParqBlockedModal();
+    return false;
+  }
+
+  const result = await openParqModal();
+  if (!result) return false;
+
+  const now = new Date().toISOString();
+  if (result.cleared) {
+    const saved = await saveParqToProfile({
+      parq_cleared: true,
+      parq_completed_at: now,
+      parq_answers: result.answers
+    });
+    return saved;
+  }
+
+  const saved = await saveParqToProfile({
+    parq_cleared: false,
+    parq_completed_at: now,
+    parq_answers: result.answers
+  });
+  if (!saved) return false;
+  return false;
+}
+
+async function navigate(page) {
+  if (page === 'chat') {
+    const canOpenChat = await ensureParqBeforeCoach();
+    if (!canOpenChat) {
+      closeSidebar();
+      return;
+    }
+  }
+
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const target = document.getElementById('page-' + page);
@@ -3132,7 +3443,7 @@ function navigate(page) {
   if (page === 'dashboard') refreshDashboard();
   if (page === 'workouts') renderWorkouts();
   if (page === 'diagnosis') renderFmsResults();
-  if (page === 'profile') loadProfileHealth();
+  if (page === 'profile') { loadProfile(); loadProfileHealth(); }
 }
 
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('mobile-open'); document.getElementById('overlay').classList.toggle('mobile-open'); }
@@ -4960,6 +5271,7 @@ function loadProfile() {
     if (p.estresseOcup) { const el = document.getElementById('p-estresse-ocup');  if (el) el.value = p.estresseOcup; }
     if (p.turnoTrabalho){ const el = document.getElementById('p-turno');           if (el) el.value = p.turnoTrabalho; }
   }
+  updateCoachNavIndicator();
 }
 
 async function saveProfile(silent = false) {
