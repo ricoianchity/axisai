@@ -4813,7 +4813,9 @@ function _resetSessionState() {
     tempoDescanso: 0,
     tempoTotal: 0,
     aguardandoDescanso: false,
-    descansoConcluido: false
+    descansoConcluido: false,
+    checkedItems: {},
+    cargasRegistradas: {}
   };
 }
 
@@ -4943,6 +4945,36 @@ function parseTreino(conteudo) {
 
   const fallback = [{ bloco: 'TREINO', tipo: 'warmup', navegavel: false, descricao: original, exercicios: [] }];
 
+  const DEFAULT_FOAM_AREAS = [
+    { nome: 'Glúteos', tempo: '60s cada lado' },
+    { nome: 'IT Band / Posterior de Coxa', tempo: '60s cada lado' },
+    { nome: 'Quadríceps', tempo: '45s cada lado' },
+    { nome: 'Panturrilha', tempo: '45s cada lado' },
+    { nome: 'Coluna Torácica', tempo: '60s' }
+  ];
+
+  const DEFAULT_PILLAR_EXERCICIOS = [
+    { nome: '90/90 Hip Rotation', prescricao: '5 reps/lado' },
+    { nome: 'Spiderman + Rotation', prescricao: '5 reps/lado' },
+    { nome: 'T-Spine Rotation', prescricao: '6 reps/lado' },
+    { nome: 'Ankle Mob', prescricao: '8 reps/lado' },
+    { nome: 'Respiração PRI', prescricao: '5 ciclos' },
+    { nome: 'Floor Slides', prescricao: '2x10' },
+    { nome: 'Leg Lowering', prescricao: '2x8/lado' },
+    { nome: 'Cook Hip Lift', prescricao: '2x8/lado' },
+    { nome: 'Mini-Band Walk', prescricao: '2x10 passos' },
+    { nome: 'Plank Hold', prescricao: '2x20s' }
+  ];
+
+  const DEFAULT_WARMUP_EXERCICIOS = [
+    { nome: 'Squat Matrix', prescricao: '5 reps cada direção' },
+    { nome: 'Knee Hug to Lunge', prescricao: '5/lado' },
+    { nome: 'Skip A', prescricao: '2x10m' },
+    { nome: 'Lateral Shuffle', prescricao: '2x10m' },
+    { nome: 'Carioca', prescricao: '2x10m' },
+    { nome: 'Bear Crawl', prescricao: '2x10m' }
+  ];
+
   const extractDuration = (line) => {
     const m = line.match(/\(([^)]*min[^)]*)\)/i);
     return m ? m[1].trim() : '';
@@ -4953,18 +4985,46 @@ function parseTreino(conteudo) {
     return idx >= 0 ? line.slice(idx + 1).trim() : '';
   };
 
-  const createBlock = (bloco, tipo, navegavel, duracao = '', descricao = '') => ({
-    bloco,
-    tipo,
-    duracao,
-    navegavel,
-    descricao: descricao || '',
-    exercicios: []
-  });
+  const isBulletLine = (line) => /^[-•\u2022]/.test(line);
+
+  const parseBulletItem = (line) => {
+    const clean = line.replace(/^[-•\u2022]\s*/, '').trim();
+    const colonIdx = clean.indexOf(':');
+    if (colonIdx > 0) {
+      return { nome: clean.slice(0, colonIdx).trim(), valor: clean.slice(colonIdx + 1).trim() };
+    }
+    return { nome: clean, valor: '' };
+  };
+
+  const generateSets = (setsTotal) =>
+    Array.from({ length: Math.max(1, setsTotal) }, (_, i) => ({
+      setNum: i + 1,
+      carga: null,
+      concluido: false
+    }));
+
+  const createBlock = (bloco, tipo, navegavel, duracao = '', descricao = '') => {
+    const base = { bloco, tipo, duracao, navegavel, descricao: descricao || '', exercicios: [] };
+    if (tipo === 'foam_roll') base.areas = [];
+    if (tipo === 'conditioning') base.itens = [];
+    return base;
+  };
 
   const flushCurrent = () => {
     if (!current) return;
     if (!Array.isArray(current.exercicios)) current.exercicios = [];
+
+    // Apply defaults for prep blocks with no parsed items
+    if (current.tipo === 'foam_roll' && current.areas && current.areas.length === 0) {
+      current.areas = DEFAULT_FOAM_AREAS.slice();
+    }
+    if (current.tipo === 'pillar_prep' && current.exercicios.length === 0) {
+      current.exercicios = DEFAULT_PILLAR_EXERCICIOS.slice();
+    }
+    if (current.tipo === 'warm_up' && current.exercicios.length === 0) {
+      current.exercicios = DEFAULT_WARMUP_EXERCICIOS.slice();
+    }
+
     blocks.push(current);
     current = null;
   };
@@ -4975,16 +5035,16 @@ function parseTreino(conteudo) {
     const descricao = extractAfterColon(line);
 
     if (/^FOAM\s*ROLL\b/i.test(line)) {
-      return { bloco: 'FOAM ROLL', tipo: 'warmup', navegavel: false, duracao, descricao };
+      return { bloco: 'FOAM ROLL', tipo: 'foam_roll', navegavel: false, duracao, descricao };
     }
 
     if (/^PILLAR\s*PREP\b/i.test(line)) {
       const legacyExpand = /FOAM\s*ROLL\s*\+\s*MOBILIDADE\s*\+\s*ATIVA(?:Ç|C)[AÃ]O\s*\+\s*DIN[ÂA]MICO/i.test(upper);
-      return { bloco: 'PILLAR PREP', tipo: 'warmup', navegavel: false, duracao, descricao, legacyExpand };
+      return { bloco: 'PILLAR PREP', tipo: 'pillar_prep', navegavel: false, duracao, descricao, legacyExpand };
     }
 
     if (/^WARM[\s-]*UP\b/i.test(line)) {
-      return { bloco: 'WARM-UP', tipo: 'warmup', navegavel: false, duracao, descricao };
+      return { bloco: 'WARM-UP', tipo: 'warm_up', navegavel: false, duracao, descricao };
     }
 
     if (/^HEAVY\s*POWER\b/i.test(line)) {
@@ -5015,15 +5075,21 @@ function parseTreino(conteudo) {
   };
 
   for (const lineRaw of lines) {
-    const line = lineRaw.replace(/^[•\-\u2022]\s*/, '').trim();
+    const line = lineRaw.replace(/^[•\u2022]\s*/, '').trim();
     const header = detectHeader(line);
 
     if (header) {
       if (header.legacyExpand) {
         flushCurrent();
-        blocks.push(createBlock('FOAM ROLL', 'warmup', false, '3min', 'Foam Roll'));
-        blocks.push(createBlock('PILLAR PREP', 'warmup', false, header.duracao || '', 'Mobilidade + Ativação'));
-        blocks.push(createBlock('WARM-UP', 'warmup', false, '5min', 'Dinâmico'));
+        const fr = createBlock('FOAM ROLL', 'foam_roll', false, '3min', '');
+        fr.areas = DEFAULT_FOAM_AREAS.slice();
+        blocks.push(fr);
+        const pp = createBlock('PILLAR PREP', 'pillar_prep', false, header.duracao || '', '');
+        pp.exercicios = DEFAULT_PILLAR_EXERCICIOS.slice();
+        blocks.push(pp);
+        const wu = createBlock('WARM-UP', 'warm_up', false, '5min', '');
+        wu.exercicios = DEFAULT_WARMUP_EXERCICIOS.slice();
+        blocks.push(wu);
         continue;
       }
 
@@ -5031,7 +5097,10 @@ function parseTreino(conteudo) {
         if (current && current.bloco === 'STRENGTH POD 2') {
           if (header.descricao) {
             const exInline = _parseExerciseEntries(header.descricao, current.bloco, current.exercicios.length);
-            if (exInline.length) current.exercicios.push(...exInline);
+            if (exInline.length) {
+              exInline.forEach(ex => { ex.sets = generateSets(ex.setsTotal); });
+              current.exercicios.push(...exInline);
+            }
           }
           continue;
         }
@@ -5041,7 +5110,10 @@ function parseTreino(conteudo) {
           current = blocks.pop();
           if (header.descricao) {
             const exInline = _parseExerciseEntries(header.descricao, current.bloco, current.exercicios.length);
-            if (exInline.length) current.exercicios.push(...exInline);
+            if (exInline.length) {
+              exInline.forEach(ex => { ex.sets = generateSets(ex.setsTotal); });
+              current.exercicios.push(...exInline);
+            }
           }
           continue;
         }
@@ -5053,6 +5125,7 @@ function parseTreino(conteudo) {
       if (header.descricao && current.navegavel) {
         const exInline = _parseExerciseEntries(header.descricao, current.bloco, current.exercicios.length);
         if (exInline.length) {
+          exInline.forEach(ex => { if (current.tipo === 'strength') ex.sets = generateSets(ex.setsTotal); });
           current.exercicios.push(...exInline);
           current.descricao = '';
         }
@@ -5065,10 +5138,20 @@ function parseTreino(conteudo) {
     if (current.navegavel) {
       const ex = _parseExerciseEntries(line, current.bloco, current.exercicios.length);
       if (ex.length) {
+        ex.forEach(e => { if (current.tipo === 'strength') e.sets = generateSets(e.setsTotal); });
         current.exercicios.push(...ex);
       } else {
         current.descricao = [current.descricao, line].filter(Boolean).join(' ');
       }
+    } else if (current.tipo === 'foam_roll' && isBulletLine(lineRaw)) {
+      const { nome, valor } = parseBulletItem(lineRaw);
+      if (nome) current.areas.push({ nome, tempo: valor });
+    } else if ((current.tipo === 'pillar_prep' || current.tipo === 'warm_up') && isBulletLine(lineRaw)) {
+      const { nome, valor } = parseBulletItem(lineRaw);
+      if (nome) current.exercicios.push({ nome, prescricao: valor });
+    } else if (current.tipo === 'conditioning' && isBulletLine(lineRaw)) {
+      const { nome, valor } = parseBulletItem(lineRaw);
+      if (nome) current.itens.push({ nome, prescricao: valor });
     } else {
       current.descricao = [current.descricao, line].filter(Boolean).join(' ');
     }
@@ -5109,7 +5192,9 @@ function _openSessionWidget(workoutId, title, conteudo, card) {
     tempoDescanso: 0,
     tempoTotal: 0,
     aguardandoDescanso: false,
-    descansoConcluido: false
+    descansoConcluido: false,
+    checkedItems: {},
+    cargasRegistradas: {}
   };
 
   if (card) {
@@ -5256,6 +5341,12 @@ function _sessionPrev() {
   _sessionRenderWidget();
 }
 
+function _toggleItem(blocoIdx, itemIdx) {
+  const key = `${blocoIdx}-${itemIdx}`;
+  _sessionState.checkedItems[key] = !_sessionState.checkedItems[key];
+  _sessionRenderWidget();
+}
+
 function _sessionMarkSetDone() {
   const block = _getCurrentBlock();
   const ex = _getCurrentExercise();
@@ -5263,6 +5354,18 @@ function _sessionMarkSetDone() {
 
   const setsTotal = Math.max(1, ex.setsTotal || 3);
   if (_sessionState.setAtual > setsTotal) return;
+
+  // Save carga if strength block
+  if (block.tipo === 'strength') {
+    const cargaInput = document.getElementById('carga-set-input');
+    const cargaVal = cargaInput && cargaInput.value !== '' ? parseFloat(cargaInput.value) || null : null;
+    if (!_sessionState.cargasRegistradas[block.bloco]) _sessionState.cargasRegistradas[block.bloco] = {};
+    const exKey = `${ex.id}_${ex.nome}`;
+    if (!_sessionState.cargasRegistradas[block.bloco][exKey]) {
+      _sessionState.cargasRegistradas[block.bloco][exKey] = Array(setsTotal).fill(null);
+    }
+    _sessionState.cargasRegistradas[block.bloco][exKey][_sessionState.setAtual - 1] = cargaVal;
+  }
 
   _sessionState.setAtual += 1;
 
@@ -5325,7 +5428,67 @@ function _sessionRenderWidget() {
 
   let contentHtml = '';
 
-  if (!block.navegavel || !block.exercicios.length) {
+  if (block.tipo === 'foam_roll') {
+    const areas = block.areas && block.areas.length ? block.areas : [];
+    const areasHtml = areas.map((a, i) => {
+      const ck = _sessionState.checkedItems[`${bIdx}-${i}`];
+      return `<div onclick="event.stopPropagation();_toggleItem(${bIdx},${i})" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;">
+        <div style="width:20px;height:20px;border-radius:50%;border:2px solid ${ck ? 'var(--green)' : 'rgba(255,255,255,0.2)'};background:${ck ? 'rgba(0,255,135,0.2)' : 'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:var(--green);">${ck ? '✓' : ''}</div>
+        <div style="flex:1;">
+          <span style="font-size:13px;color:${ck ? '#9fe870' : '#c9d0dc'};${ck ? 'text-decoration:line-through;opacity:0.7;' : ''}">${a.nome}</span>
+          ${a.tempo ? `<span style="margin-left:8px;font-size:11px;color:var(--muted);font-family:var(--font-mono);">${a.tempo}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    contentHtml = `
+      <div style="padding:16px 18px 10px;">
+        <div style="font-size:20px;font-family:var(--font-display);letter-spacing:1px;color:#fff;line-height:1.1;">FOAM ROLL</div>
+        ${block.duracao ? `<div style="margin-top:4px;color:var(--muted);font-size:12px;font-family:var(--font-mono);">${block.duracao}</div>` : ''}
+        <div style="margin-top:12px;">${areasHtml || '<div style="color:var(--muted);font-size:13px;">Trabalhe as principais áreas com o rolo.</div>'}</div>
+      </div>`;
+
+  } else if (block.tipo === 'pillar_prep' || block.tipo === 'warm_up') {
+    const items = block.exercicios && block.exercicios.length ? block.exercicios : [];
+    const itemsHtml = items.map((e, i) => {
+      const ck = _sessionState.checkedItems[`${bIdx}-${i}`];
+      return `<div onclick="event.stopPropagation();_toggleItem(${bIdx},${i})" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;">
+        <div style="width:20px;height:20px;border-radius:4px;border:2px solid ${ck ? 'var(--green)' : 'rgba(255,255,255,0.2)'};background:${ck ? 'rgba(0,255,135,0.2)' : 'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:var(--green);">${ck ? '✓' : ''}</div>
+        <div style="flex:1;">
+          <span style="font-size:13px;color:${ck ? '#9fe870' : '#c9d0dc'};${ck ? 'text-decoration:line-through;opacity:0.7;' : ''}">${e.nome}</span>
+          ${e.prescricao ? `<span style="margin-left:8px;font-size:11px;color:var(--muted);font-family:var(--font-mono);">${e.prescricao}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    const label = block.tipo === 'pillar_prep' ? 'PILLAR PREP' : 'WARM-UP';
+    contentHtml = `
+      <div style="padding:16px 18px 10px;">
+        <div style="font-size:20px;font-family:var(--font-display);letter-spacing:1px;color:#fff;line-height:1.1;">${label}</div>
+        ${block.duracao ? `<div style="margin-top:4px;color:var(--muted);font-size:12px;font-family:var(--font-mono);">${block.duracao}</div>` : ''}
+        <div style="margin-top:12px;">${itemsHtml || '<div style="color:var(--muted);font-size:13px;">Complete os exercícios de preparação.</div>'}</div>
+      </div>`;
+
+  } else if (block.tipo === 'conditioning') {
+    const itens = block.itens && block.itens.length ? block.itens : [];
+    let condHtml = '';
+    if (itens.length) {
+      condHtml = itens.map(it => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+        <span style="font-size:13px;color:#c9d0dc;">${it.nome}</span>
+        <span style="font-size:12px;color:var(--muted);font-family:var(--font-mono);">${it.prescricao}</span>
+      </div>`).join('');
+    } else if (block.descricao) {
+      condHtml = `<div style="font-size:13px;color:#c9d0dc;line-height:1.5;">${block.descricao}</div>`;
+    }
+    contentHtml = `
+      <div style="padding:16px 18px 10px;">
+        <div style="font-size:20px;font-family:var(--font-display);letter-spacing:1px;color:#fff;line-height:1.1;">ESD</div>
+        ${block.duracao ? `<div style="margin-top:4px;color:var(--muted);font-size:12px;font-family:var(--font-mono);">${block.duracao}</div>` : ''}
+        <div style="margin-top:12px;">${condHtml || '<div style="color:var(--muted);font-size:13px;">Condicionamento final da sessão.</div>'}</div>
+        <div style="margin-top:16px;text-align:center;">
+          <button onclick="event.stopPropagation();_concludeSession()" style="width:100%;padding:14px;background:var(--green);color:#000;border:none;border-radius:12px;font-family:var(--font-display);font-size:20px;letter-spacing:2px;cursor:pointer;">CONCLUIR SESSÃO</button>
+        </div>
+      </div>`;
+
+  } else if (!block.navegavel || !block.exercicios.length) {
     contentHtml = `
       <div style="padding:16px 18px 10px;">
         <div style="font-size:20px;font-family:var(--font-display);letter-spacing:1px;color:#fff;line-height:1.1;">${block.bloco}</div>
@@ -5336,19 +5499,35 @@ function _sessionRenderWidget() {
     const setsTotal = Math.max(1, ex.setsTotal || 3);
     const reps = ex.repsPrescricao || '-';
     const descanso = ex.descansoSegundos || 60;
+    const isStrength = block.tipo === 'strength';
 
     const nomeMatch = String(ex.nome || '').match(/^(.*?)\s*\((.*?)\)\s*$/);
     const nomeBase = nomeMatch ? nomeMatch[1].trim() : ex.nome;
     const nomePt = nomeMatch ? nomeMatch[2].trim() : '';
 
+    // Build carga display for strength
+    const exKey = `${ex.id}_${ex.nome}`;
+    const savedCargas = (isStrength && _sessionState.cargasRegistradas[block.bloco] && _sessionState.cargasRegistradas[block.bloco][exKey]) || [];
+
     let setsHtml = '';
     for (let i = 1; i <= setsTotal; i++) {
       const done = i < _sessionState.setAtual || _sessionState.setAtual > setsTotal;
-      const current = i === _sessionState.setAtual && _sessionState.setAtual <= setsTotal;
-      const symbol = done ? '●' : current ? '►' : '○';
-      const suffix = done ? ' ✓' : current ? ' (atual)' : '';
-      setsHtml += `<div style="font-size:13px;color:${current ? 'var(--green)' : done ? '#d5f8a2' : '#9aa3b2'};line-height:1.4;">${symbol} Set ${i}${suffix}</div>`;
+      const isCurr = i === _sessionState.setAtual && _sessionState.setAtual <= setsTotal;
+      const symbol = done ? '●' : isCurr ? '►' : '○';
+      const cargaRegistrada = savedCargas[i - 1];
+      const cargaLabel = done && isStrength && cargaRegistrada != null ? ` · ${cargaRegistrada}kg` : '';
+      const suffix = done ? ` ✓${cargaLabel}` : isCurr ? ' (atual)' : '';
+      setsHtml += `<div style="font-size:13px;color:${isCurr ? 'var(--green)' : done ? '#d5f8a2' : '#9aa3b2'};line-height:1.4;">${symbol} Set ${i}${suffix}</div>`;
     }
+
+    // Carga input for strength current set
+    const cargaInputHtml = isStrength && _sessionState.setAtual <= setsTotal ? `
+      <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+        <label style="font-size:12px;color:var(--muted);font-family:var(--font-mono);white-space:nowrap;">Carga (kg):</label>
+        <input id="carga-set-input" type="number" step="0.5" min="0" placeholder="0"
+          style="width:80px;padding:6px 10px;background:#111827;border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:14px;font-family:var(--font-mono);text-align:center;outline:none;"
+          onclick="event.stopPropagation()" oninput="event.stopPropagation()">
+      </div>` : '';
 
     let restPanel = '';
     if (_sessionState.modoDescanso) {
@@ -5371,7 +5550,7 @@ function _sessionRenderWidget() {
     } else if (_sessionState.setAtual <= setsTotal) {
       restPanel = `
         <div style="margin-top:12px;padding:10px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);text-align:center;">
-          <button onclick="event.stopPropagation();_sessionMarkSetDone()" style="padding:9px 14px;background:rgba(0,255,135,0.15);border:1px solid rgba(0,255,135,0.4);color:var(--green);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.8px;">MARCAR SET CONCLUÍDO</button>
+          <button onclick="event.stopPropagation();_sessionMarkSetDone()" style="padding:9px 14px;background:rgba(0,255,135,0.15);border:1px solid rgba(0,255,135,0.4);color:var(--green);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.8px;">✓ CONCLUIR SET</button>
         </div>`;
     } else {
       restPanel = `
@@ -5387,6 +5566,7 @@ function _sessionRenderWidget() {
         ${nomePt ? `<div style="margin-top:2px;color:#9aa3b2;font-size:13px;">(${nomePt})</div>` : ''}
         <div style="margin-top:6px;color:var(--muted);font-size:12px;font-family:var(--font-mono);">${setsTotal} séries · ${reps} reps · ${descanso}s descanso</div>
         <div style="margin-top:10px;display:flex;flex-direction:column;gap:4px;">${setsHtml}</div>
+        ${cargaInputHtml}
         ${restPanel}
       </div>`;
   }
@@ -5524,6 +5704,8 @@ async function _saveSession(finishedAt, duration) {
     const userId = user?.id;
     if (!userId) throw new Error('Usuário não autenticado');
 
+    const cargas = _sessionState?.cargasRegistradas || {};
+    const cargasPayload = Object.keys(cargas).length ? cargas : null;
     const { error: logErr } = await supabase.from('session_logs').insert({
       user_id:          userId,
       workout_id:       workoutId || null,
@@ -5533,6 +5715,7 @@ async function _saveSession(finishedAt, duration) {
       rpe,
       ua,
       notes,
+      cargas:           cargasPayload,
     });
     if (logErr) console.warn('[session_logs insert]', logErr.message);
 
@@ -5832,7 +6015,13 @@ A sessão segue SEMPRE esta ordem. Nunca omitir blocos, nunca reordenar.
 
 FOAM ROLL (2-3min)
 Glúteos, posterior de coxa, quadríceps, panturrilha, coluna torácica.
-Formato de output: "FOAM ROLL (3min): Glúteos - IT Band - Quadríceps - Panturrilha - Coluna Torácica"
+Formato de output:
+"FOAM ROLL (3min):
+- Glúteos: 60s cada lado
+- IT Band / Posterior de Coxa: 60s cada lado
+- Quadríceps: 45s cada lado
+- Panturrilha: 45s cada lado
+- Coluna Torácica: 60s"
 
 PILLAR PREP — MOBILITY + MOTOR CONTROL (8-10min)
 Mobilidade articular e controle motor. Sem cardio, sem dinâmico aqui.
@@ -5841,13 +6030,31 @@ Sequência: 90/90 Hip Rotation, Spiderman + Rotation, T-Spine Rotation, Ankle Mo
            Cook Hip Lift, Mini-Band Walk, Plank Hold.
 Regras: SLDL/hinge unilateral no treino → Leg Lowering obrigatório |
         OH/pressão vertical → Floor Slides obrigatório
-Formato de output: "PILLAR PREP (10min): 90/90 Hip Rotation - Spiderman + Rotation - ..."
+Formato de output:
+"PILLAR PREP (10min):
+- 90/90 Hip Rotation: 5 reps/lado
+- Spiderman + Rotation: 5 reps/lado
+- T-Spine Rotation: 6 reps/lado
+- Ankle Mob: 8 reps/lado
+- Respiração PRI: 5 ciclos
+- Floor Slides: 2x10
+- Leg Lowering: 2x8/lado
+- Cook Hip Lift: 2x8/lado
+- Mini-Band Walk: 2x10 passos
+- Plank Hold: 2x20s"
 
 WARM-UP (5min)
 Preparação cardiovascular e neuromuscular. Static stretches + movimento dinâmico.
 Sequência: Squat Matrix, Knee Hug to Lunge, Skip A, Lateral Shuffle, Carioca,
            Bear Crawl, Jump Rope ou equivalente.
-Formato de output: "WARM-UP (5min): Squat Matrix - Knee Hug to Lunge - Skip A - Shuffle"
+Formato de output:
+"WARM-UP (5min):
+- Squat Matrix: 5 reps cada direção
+- Knee Hug to Lunge: 5/lado
+- Skip A: 2x10m
+- Lateral Shuffle: 2x10m
+- Carioca: 2x10m
+- Bear Crawl: 2x10m"
 
 POWER — LIGHT POWER (todos os clientes com nível intermediate+)
 1 exercício de potência leve. Objetivo: recrutamento do SNC, não fadiga.
@@ -5891,7 +6098,13 @@ B3) Exercício - séries x reps - descanso"
 ESD / CONDITIONING (8-12min)
 Energia: aeróbico de baixa intensidade (Z2) ou circuito metabólico.
 Não prescrever se sessão já passou de 55min de trabalho.
-Formato de output: "ESD: Bike Zone 2 10min" ou "ESD: Circuito 3 rounds — Kettlebell Swing 10x / Sled Push / Row"
+Formato de output: "ESD: Bike Zone 2 10min"
+OU se circuito:
+"ESD:
+- Kettlebell Swing: 3x15
+- Sled Push: 3x20m
+- Row: 3x250m"
+REGRA ABSOLUTA: Nunca comprimir blocos em linha única. Cada exercício/área em sua própria linha com hífen.
 
 9) REGRA DE OMISSÃO:
 - Foam Roll sempre presente
