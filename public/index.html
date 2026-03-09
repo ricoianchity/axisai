@@ -4346,29 +4346,83 @@ function toggleSessionCard(bodyId) {
 }
 
 // Build a full block-by-block preview HTML using parseTreino
+function _toggleBlockDetail(id) {
+  // Extract prefix: everything before the last "-" followed by a digit
+  const prefixMatch = id.match(/^(bpd-[^-]+-)/);
+  const prefix = prefixMatch ? prefixMatch[1] : 'bpd-';
+  // Close all panels sharing this prefix
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(el => {
+    if (el.id !== id) el.style.display = 'none';
+  });
+  // Toggle the clicked one
+  const panel = document.getElementById(id);
+  if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
 function _buildBlocksPreviewHTML(conteudo) {
   try {
     const blocos = parseTreino(conteudo);
     if (!blocos || !blocos.length) throw new Error('empty');
+
+    // FIX 1: filter out prep blocks (foam_roll, pillar_prep, warm_up) when no session is active
+    const sessionActive = !!_sessionContext;
+    const prepTypes = new Set(['foam_roll', 'pillar_prep', 'warm_up']);
+    const visibleBlocos = sessionActive
+      ? blocos
+      : blocos.filter(b => !prepTypes.has(b.tipo));
+    if (!visibleBlocos.length) throw new Error('empty');
+
+    // FIX 4: unique prefix per card using hash of conteudo
+    const hashPrefix = 'bpd-' + (conteudo.length + (conteudo.charCodeAt(0) || 0)) + '-';
+
     const iconMap = {
       foam_roll: '🔵', pillar_prep: '🔵', warm_up: '🔵',
       power: '🟡', strength: '🟠', conditioning: '🟣'
     };
-    return blocos.map(b => {
+
+    return visibleBlocos.map((b, idx) => {
       const icon = iconMap[b.tipo] || '⚪';
       const name = b.bloco;
       const dur  = b.duracao ? `<span style="margin-left:6px;color:var(--muted);font-size:11px;">${b.duracao}</span>` : '';
-      let detail = '';
-      if ((b.tipo === 'strength' || b.tipo === 'power') && b.exercicios && b.exercicios.length) {
-        detail = `<span style="margin-left:6px;color:var(--muted);font-size:11px;">${b.exercicios.map(e => e.id || e.nome).join(' · ')}</span>`;
+
+      // FIX 3: build detail panel content
+      const panelId = hashPrefix + idx;
+      let detailContent = '';
+      if (b.tipo === 'foam_roll' && b.areas && b.areas.length) {
+        detailContent = b.areas.map(a => `<div>${a.nome}${a.tempo ? ' — ' + a.tempo : ''}</div>`).join('');
+      } else if ((b.tipo === 'pillar_prep' || b.tipo === 'warm_up') && b.exercicios && b.exercicios.length) {
+        detailContent = b.exercicios.map(e => `<div>${e.nome}${e.prescricao ? ' — ' + e.prescricao : ''}</div>`).join('');
+      } else if ((b.tipo === 'strength' || b.tipo === 'power') && b.exercicios && b.exercicios.length) {
+        detailContent = b.exercicios.map(e => `<div>${e.id ? e.id + ') ' : ''}${e.nome}${e.prescricao ? ' — ' + e.prescricao : ''}</div>`).join('');
       } else if (b.tipo === 'conditioning') {
-        const desc = b.descricao || (b.itens && b.itens.length ? b.itens[0].nome : '');
-        if (desc) detail = `<span style="margin-left:6px;color:var(--muted);font-size:11px;">${desc.slice(0, 50)}</span>`;
+        const desc = b.descricao ? `<div>${b.descricao.slice(0, 120)}</div>` : '';
+        const items = (b.itens && b.itens.length) ? b.itens.map(it => `<div>${it.nome}${it.prescricao ? ' — ' + it.prescricao : ''}</div>`).join('') : '';
+        detailContent = desc + items;
       }
-      return `<div style="display:flex;align-items:baseline;gap:4px;padding:1px 0;font-size:12px;line-height:1.5;">`
+
+      const detailPanel = detailContent
+        ? `<div id="${panelId}" style="display:none;background:rgba(255,255,255,0.04);border-radius:6px;padding:6px 10px;margin:2px 0 4px 20px;font-size:11px;color:var(--muted);">${detailContent}</div>`
+        : '';
+
+      const rowOnclick = detailContent ? ` onclick="event.stopPropagation();_toggleBlockDetail('${panelId}')" style="cursor:pointer;"` : '';
+
+      // inline detail span for strength/power (legacy behaviour kept)
+      let inlineDetail = '';
+      if (!detailContent && (b.tipo === 'strength' || b.tipo === 'power') && b.exercicios && b.exercicios.length) {
+        inlineDetail = `<span style="margin-left:6px;color:var(--muted);font-size:11px;">${b.exercicios.map(e => e.id || e.nome).join(' · ')}</span>`;
+      } else if (!detailContent && b.tipo === 'conditioning') {
+        const desc = b.descricao || (b.itens && b.itens.length ? b.itens[0].nome : '');
+        if (desc) inlineDetail = `<span style="margin-left:6px;color:var(--muted);font-size:11px;">${desc.slice(0, 50)}</span>`;
+      }
+
+      return `<div${rowOnclick}>`
+        + `<div style="display:flex;align-items:baseline;gap:4px;padding:1px 0;font-size:12px;line-height:1.5;">`
         + `<span>${icon}</span>`
         + `<span style="font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">${name}</span>`
-        + dur + detail
+        + dur + inlineDetail
+        + (detailContent ? `<span style="margin-left:4px;color:var(--muted);font-size:10px;">▶</span>` : '')
+        + `</div>`
+        + detailPanel
         + `</div>`;
     }).join('');
   } catch(e) {
@@ -6104,8 +6158,31 @@ Formato de output:
 HP1) Trap Bar Jump - 3x3 - 90s
 HP2) Pallof Press - 3x8/lado - 90s"
 
+REGRA ABSOLUTA DE DISTRIBUIÇÃO DE FORÇA:
+Cada triset = 1 POD separado. NUNCA colocar mais de 3 exercícios num mesmo POD.
+NUNCA usar B1/B2/B3/B4/B5/B6 num único POD.
+
+Distribuição obrigatória:
+- STRENGTH POD 1: A1 + A2 + A3 (sempre 3 exercícios, sem exceção)
+- STRENGTH POD 2: B1 + B2 + B3 (sempre 3 exercícios, sem exceção)
+- STRENGTH POD 3: C1 + C2 + C3 (apenas se houver tempo — sessão 60min+)
+
+Regra de composição por POD:
+POD 1 (A): MI knee dominant + MS push ou pull + Core/Corretivo
+POD 2 (B): MI hip dominant + MS oposto ao A2 + Core/Corretivo
+POD 3 (C): Acessório unilateral + Carry/Loaded movement + Core rotacional
+
+Se cliente for advanced e tiver HEAVY POWER antes da força:
+- HEAVY POWER: HP1 (potência pesada) + HP2 (core acessório) — biset
+- STRENGTH POD 1: A1 + A2 + A3
+- STRENGTH POD 2: B1 + B2 + B3
+
+NUNCA comprimir dois trisets num único POD.
+NUNCA gerar POD com mais de 3 exercícios.
+NUNCA gerar POD com menos de 3 exercícios (usar Dead Bug, Plank Hold ou Pallof Press como terceiro exercício padrão se necessário).
+
 STRENGTH POD 1 — TRISET (bloco principal de força)
-Triset obrigatório: A1=MI (knee/hip dominant) | A2=MS (push ou pull) | A3=Core/Corretivo
+Triset obrigatório: A1=MI knee dominant | A2=MS push ou pull | A3=Core/Corretivo
 Volume: 3-4 séries x 4-8 reps, descanso 60-90s por exercício.
 Formato de output:
 "STRENGTH POD 1:
@@ -6115,7 +6192,7 @@ A3) Exercício - séries x reps - descanso"
 REGRA INVIOLÁVEL: STRENGTH POD 1 SEMPRE tem exatamente 3 exercícios: A1, A2 e A3. NUNCA gerar POD com 1 ou 2 exercícios. Se não houver exercício de core adequado, usar Dead Bug, Plank Hold ou Pallof Press como A3 padrão.
 
 STRENGTH POD 2 — TRISET (bloco secundário de força)
-Triset obrigatório: B1=MI (padrão oposto ao A1) | B2=MS (oposto ao A2) | B3=Core/Corretivo
+Triset obrigatório: B1=MI hip dominant | B2=MS oposto ao A2 | B3=Core/Corretivo
 Volume: 3-4 séries x 6-10 reps, descanso 60s.
 Formato de output:
 "STRENGTH POD 2:
@@ -6123,6 +6200,16 @@ B1) Exercício - séries x reps - descanso
 B2) Exercício - séries x reps - descanso
 B3) Exercício - séries x reps - descanso"
 REGRA INVIOLÁVEL: STRENGTH POD 2 SEMPRE tem exatamente 3 exercícios: B1, B2 e B3. NUNCA gerar POD com 1 ou 2 exercícios. Se não houver exercício de core adequado, usar Dead Bug, Plank Hold ou Pallof Press como B3 padrão.
+
+STRENGTH POD 3 — TRISET OPCIONAL (bloco terciário, apenas se sessão 60min+)
+Triset obrigatório: C1=Acessório unilateral | C2=Carry/Loaded movement | C3=Core rotacional
+Volume: 2-3 séries x 8-12 reps, descanso 45-60s.
+Formato de output:
+"STRENGTH POD 3:
+C1) Exercício - séries x reps - descanso
+C2) Exercício - séries x reps - descanso
+C3) Exercício - séries x reps - descanso"
+REGRA INVIOLÁVEL: Se POD 3 existir, SEMPRE 3 exercícios: C1, C2 e C3.
 
 ESD / CONDITIONING (8-12min)
 Energia: aeróbico de baixa intensidade (Z2) ou circuito metabólico.
