@@ -347,6 +347,8 @@
   .ex-tag { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px; font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
   .session-card-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
   .btn-start-soon { padding: 5px 12px; background: none; border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.2); border-radius: 8px; font-size: 11px; font-weight: 700; cursor: not-allowed; font-family: var(--font-body); letter-spacing: 0.5px; white-space: nowrap; }
+  .btn-start-session { padding: 5px 12px; background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.35); color: var(--green); border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; font-family: var(--font-body); letter-spacing: 0.5px; white-space: nowrap; transition: all 0.2s; }
+  .btn-start-session:hover { background: rgba(0,255,135,0.2); box-shadow: 0 0 12px rgba(0,255,135,0.15); }
   .session-card-body { display: none; border-top: 1px solid var(--border); }
   .session-card-body.open { display: block; animation: fadeUp 0.25s ease; }
 
@@ -1641,6 +1643,8 @@
       <button class="nav-item active" onclick="navigate(&#39;dashboard&#39;)"><span class="icon">⚡</span><span class="label">Dashboard</span></button>
       <button class="nav-item" onclick="navigate(&#39;workouts&#39;)"><span class="icon">🏋️</span><span class="label">Treinos</span></button>
       <button class="nav-item" id="nav-chat-btn" onclick="navigate(&#39;chat&#39;)"><span class="icon" id="nav-chat-icon">🤖</span><span class="label">Coach IA</span></button>
+      <div class="nav-section-label">Nutrição</div>
+      <button class="nav-item" id="nav-nutrition-btn" onclick="navigate(&#39;nutrition&#39;)"><span class="icon">🥗</span><span class="label">Nutrição</span></button>
       <div class="nav-section-label">Avaliação</div>
       <button class="nav-item" onclick="navigate(&#39;diagnosis&#39;)"><span class="icon">📸</span><span class="label">Diagnóstico</span></button>
       <div class="nav-section-label">Conta</div>
@@ -1694,10 +1698,10 @@
           <button class="stat-link" onclick="navigate(&#39;workouts&#39;)">Ver treinos →</button>
         </div>
         <div class="stat-card purple">
-          <div class="stat-icon">📊</div>
-          <div class="stat-value" id="stat-sessions">0</div>
-          <div class="stat-label">Sessões realizadas</div>
-          <button class="stat-link" onclick="navigate(&#39;workouts&#39;)">Ver histórico →</button>
+          <div class="stat-icon">🥗</div>
+          <div id="nutri-dash-phrase" style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:8px;min-height:40px;">—</div>
+          <div class="stat-label">Nutrição de Hoje</div>
+          <button class="stat-link" onclick="openNutritionModal()">VER DETALHES →</button>
         </div>
       </div>
 
@@ -1733,6 +1737,10 @@
               <div class="streak-stat-block">
                 <div class="streak-stat-value" id="adherence-pct">0%</div>
                 <div class="streak-stat-label">ADERÊNCIA</div>
+              </div>
+              <div class="streak-stat-block">
+                <div class="streak-stat-value" id="sessions-count">0</div>
+                <div class="streak-stat-label">SESSÕES</div>
               </div>
             </div>
             <div class="streak-grid" id="streak-grid"></div>
@@ -1843,6 +1851,16 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- ── NUTRITION ── -->
+    <div class="page" id="page-nutrition">
+      <div class="page-header">
+        <h1>NUTRIÇÃO</h1>
+        <p>Orientações baseadas no seu protocolo de treino ativo.</p>
+      </div>
+
+      <div id="nutri-page-body"></div>
     </div>
 
     <!-- ── DIAGNOSIS / FMS ── -->
@@ -3523,6 +3541,7 @@ async function navigate(page) {
   if (page === 'workouts') renderWorkouts();
   if (page === 'diagnosis') renderFmsResults();
   if (page === 'profile') { loadProfile(); loadProfileHealth(); }
+  if (page === 'nutrition') renderNutrition();
 }
 
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('mobile-open'); document.getElementById('overlay').classList.toggle('mobile-open'); }
@@ -3616,7 +3635,7 @@ function renderWorkouts() {
                 <div class="session-preview">${tags || '<span class="ex-tag" style="opacity:0.45;">Abrir para ver exercícios</span>'}</div>
               </div>
               <div class="session-card-actions">
-                <button class="btn-start-soon" disabled title="Em breve">▶ Iniciar Treino</button>
+                ${!isDone ? `<button class="btn-start-session" onclick="event.stopPropagation();startSessionById(${t.id},this)">▶ Iniciar Treino</button>` : ''}
                 <button onclick="event.stopPropagation();deleteTreinoIA(${t.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;" title="Excluir">🗑️</button>
               </div>
             </div>
@@ -3630,25 +3649,19 @@ function renderWorkouts() {
     html += `</div>`;
   });
 
-  // ── SESSÕES AVULSAS ───────────────────────────────────────────────────────
-  if (avulsos.length) {
-    const aTotal = avulsos.length;
-    const aDone  = avulsos.filter(s => s.concluida || s.completed).length;
-    const aPct   = aTotal ? Math.round(aDone / aTotal * 100) : 0;
+  // ── SESSÕES AVULSAS (apenas pendentes) ───────────────────────────────────
+  const avulsosPendentes = avulsos.filter(t => !(t.concluida || t.completed));
+  if (avulsosPendentes.length) {
     html += `<div class="phase-group">
       <div class="phase-header-bar" onclick="toggleFaseBody('avulsos-grp')">
         <div class="phase-header-left">
           <span class="phase-header-name">SESSÕES AVULSAS</span>
-          <span class="phase-header-meta">${aTotal} sessões · Coach IA</span>
+          <span class="phase-header-meta">${avulsosPendentes.length} pendente${avulsosPendentes.length !== 1 ? 's' : ''} · Coach IA</span>
         </div>
         <span class="fase-toggle-icon">▼</span>
       </div>
-      <div class="phase-progress-wrap">
-        <div class="phase-progress-bar"><div class="phase-progress-fill" style="width:${aPct}%"></div></div>
-        <div class="phase-progress-label">${aDone} de ${aTotal} sessões concluídas</div>
-      </div>
       <div class="fase-body" id="avulsos-grp">`;
-    avulsos.forEach(t => {
+    avulsosPendentes.forEach(t => {
       const preview = _extractExercisePreview(t.conteudo);
       const tags    = preview.slice(0, 3).map(e => `<span class="ex-tag">${e}</span>`).join('');
       html += `<div class="session-card">
@@ -3662,7 +3675,7 @@ function renderWorkouts() {
             <div class="session-preview">${tags}</div>
           </div>
           <div class="session-card-actions">
-            <button class="btn-start-soon" disabled title="Em breve">▶ Iniciar Treino</button>
+            ${!(t.concluida || t.completed) ? `<button class="btn-start-session" onclick="event.stopPropagation();startSessionById(${t.id},this)">▶ Iniciar Treino</button>` : ''}
             <button onclick="event.stopPropagation();deleteTreinoIA(${t.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;" title="Excluir">🗑️</button>
           </div>
         </div>
@@ -3730,7 +3743,7 @@ function renderWorkouts() {
                 <div style="font-size:12px;color:var(--muted);font-family:var(--font-mono);margin-top:3px;">${new Date(w.date).toLocaleDateString('pt-BR')}</div>
               </div>
               <div class="session-card-actions">
-                <button class="btn-start-soon" disabled title="Em breve">▶ Iniciar Treino</button>
+                ${!w.completed ? `<button class="btn-start-session" onclick="event.stopPropagation();startSessionByWorkout(${i},this)">▶ Iniciar Treino</button>` : ''}
                 <div style="display:flex;gap:6px;align-items:center;">
                   ${!w.completed ? `<button onclick="event.stopPropagation();completeWorkout(${i})" style="padding:4px 10px;border:1px solid var(--green);background:none;color:var(--green);border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;">MARCAR FEITO</button>` : ''}
                   <button onclick="event.stopPropagation();deleteWorkout(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;" title="Excluir">🗑️</button>
@@ -3745,11 +3758,159 @@ function renderWorkouts() {
     });
   }
 
+  html += `<div id="completed-sessions-section" style="margin-top:8px;"></div>`;
   c.innerHTML = html;
+  renderCompletedSessions();
 }
 
 function completeWorkout(i) { state.workouts[i].completed = true; saveWorkouts(); renderWorkouts(); refreshDashboard(); showToast('Treino marcado como concluído! 💪'); }
 function deleteWorkout(i) { state.workouts.splice(i,1); saveWorkouts(); renderWorkouts(); refreshDashboard(); }
+
+// ═══════════════════════════════════════════════
+//  TREINOS CONCLUÍDOS
+// ═══════════════════════════════════════════════
+function _fmtDuration(secs) {
+  if (!secs) return '00:00';
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  const mm = String(m).padStart(2,'0');
+  const ss = String(s).padStart(2,'0');
+  return h > 0 ? `${String(h).padStart(2,'0')}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+function _fmtDateTime(isoStr) {
+  if (!isoStr) return '—';
+  const d = new Date(isoStr);
+  return d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+async function renderCompletedSessions() {
+  const container = document.getElementById('completed-sessions-section');
+  if (!container) return;
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) { container.innerHTML = ''; return; }
+  const userId = user.id;
+
+  container.innerHTML = `<div style="color:var(--muted);font-size:12px;font-family:var(--font-mono);padding:16px 0;letter-spacing:1px;">Carregando sessões...</div>`;
+
+  const { data: logs, error } = await supabase
+    .from('session_logs')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  if (error) { console.warn('[completed sessions]', error.message); container.innerHTML = ''; return; }
+
+  const rpeLabels = ['','Muito leve','Muito leve','Muito leve','Moderado','Moderado','Difícil','Difícil','Muito difícil','Muito difícil','Máximo'];
+  const treinos   = loadTreinosIA();
+  const grpId     = 'completed-sessions-body';
+
+  if (!logs || !logs.length) {
+    container.innerHTML = `
+      <div class="phase-group">
+        <div class="phase-header-bar" style="cursor:default;">
+          <div class="phase-header-left">
+            <span class="phase-header-name">TREINOS CONCLUÍDOS</span>
+            <span class="phase-header-meta">0 sessões</span>
+          </div>
+        </div>
+        <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;border:1px dashed var(--border);border-radius:10px;margin-top:4px;">
+          Nenhum treino concluído ainda.
+        </div>
+      </div>`;
+    return;
+  }
+
+  let cards = '';
+  logs.forEach(log => {
+    const treino   = treinos.find(t => String(t.id) === String(log.workout_id));
+    const titulo   = treino?.titulo || 'Treino sem título';
+    const cat      = treino?.categoria || 'fullbody';
+    const rpe      = parseInt(log.rpe) || 0;
+    const rpeLabel = rpeLabels[rpe] || '—';
+    const ua       = parseFloat(log.ua || 0).toFixed(1);
+    const logId    = log.id || log.created_at?.replace(/\W/g,'');
+
+    // Exercises + Notes (expandable)
+    let expandableHTML = '';
+    if (treino?.conteudo) {
+      const blocks = treino.conteudo.split(' | ').map(b => b.trim()).filter(Boolean);
+      if (blocks.length > 1) {
+        expandableHTML += `
+          <div style="padding:12px 16px;border-top:1px solid var(--border);">
+            <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">Exercícios</div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+              ${blocks.map(b => `<div style="padding:7px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);line-height:1.4;">${b}</div>`).join('')}
+            </div>
+          </div>`;
+      }
+    }
+    if (log.notes) {
+      expandableHTML += `<div style="padding:10px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.5;">📝 <em>${log.notes}</em></div>`;
+    }
+
+    const hasExpand  = expandableHTML.length > 0;
+    const toggleBtn  = hasExpand
+      ? `<button onclick="event.stopPropagation();toggleCompletedCard('${logId}')" id="csd-arrow-${logId}"
+           style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:4px 6px;border-radius:6px;flex-shrink:0;line-height:1;transition:color 0.2s;" title="Ver detalhes">▼</button>`
+      : '';
+
+    cards += `
+      <div class="session-card completed" style="margin-bottom:8px;">
+        <div style="padding:14px 18px;display:flex;align-items:flex-start;gap:12px;${hasExpand ? 'cursor:pointer;' : ''}"
+             ${hasExpand ? `onclick="toggleCompletedCard('${logId}')"` : ''}>
+          <div class="session-status-dot done" style="flex-shrink:0;margin-top:1px;">✅</div>
+          <div style="flex:1;min-width:0;">
+            <div class="session-title-row">
+              ${titulo}
+              <span class="s-badge cat-${cat}" style="text-transform:uppercase;">${cat.toUpperCase()}</span>
+            </div>
+            <div style="font-size:12px;color:var(--muted);font-family:var(--font-mono);margin-top:3px;">${_fmtDateTime(log.created_at)}</div>
+          </div>
+          ${toggleBtn}
+        </div>
+        <div style="display:flex;border-top:1px solid var(--border);">
+          <div style="flex:1;padding:10px 14px;text-align:center;border-right:1px solid var(--border);">
+            <div style="font-size:10px;color:var(--muted);font-family:var(--font-mono);letter-spacing:1px;margin-bottom:3px;">⏱ DURAÇÃO</div>
+            <div style="font-family:var(--font-display);font-size:15px;letter-spacing:1px;">${_fmtDuration(log.duration_seconds)}</div>
+          </div>
+          <div style="flex:1;padding:10px 14px;text-align:center;border-right:1px solid var(--border);">
+            <div style="font-size:10px;color:var(--muted);font-family:var(--font-mono);letter-spacing:1px;margin-bottom:3px;">💪 RPE</div>
+            <div style="font-family:var(--font-display);font-size:15px;letter-spacing:1px;">${rpe} <span style="font-size:11px;font-family:var(--font-body);color:var(--muted);">${rpeLabel}</span></div>
+          </div>
+          <div style="flex:1;padding:10px 14px;text-align:center;">
+            <div style="font-size:10px;color:var(--muted);font-family:var(--font-mono);letter-spacing:1px;margin-bottom:3px;">⚡ UA</div>
+            <div style="font-family:var(--font-display);font-size:15px;letter-spacing:1px;">${ua}</div>
+          </div>
+        </div>
+        ${hasExpand ? `<div id="csd-body-${logId}" style="display:none;">${expandableHTML}</div>` : ''}
+      </div>`;
+  });
+
+  container.innerHTML = `
+    <div class="phase-group">
+      <div class="phase-header-bar" onclick="toggleFaseBody('${grpId}')">
+        <div class="phase-header-left">
+          <span class="phase-header-name">TREINOS CONCLUÍDOS</span>
+          <span class="phase-header-meta">${logs.length} sessão${logs.length !== 1 ? 'ões' : ''} · últimas 10</span>
+        </div>
+        <span class="fase-toggle-icon">▼</span>
+      </div>
+      <div class="fase-body" id="${grpId}">${cards}</div>
+    </div>`;
+}
+
+function toggleCompletedCard(id) {
+  const body  = document.getElementById('csd-body-' + id);
+  const arrow = document.getElementById('csd-arrow-' + id);
+  if (!body) return;
+  const open = body.style.display === 'none';
+  body.style.display  = open ? 'block' : 'none';
+  if (arrow) arrow.textContent = open ? '▲' : '▼';
+}
 
 async function getSupaToken() {
   const { data, error } = await supabase.auth.getSession();
@@ -3971,15 +4132,13 @@ function renderStreakGrid(sessionDates) {
 }
 
 async function updateStreakAndConsistency() {
-  const sessions = await fetchTrainingSessions();
-  const statSessions = document.getElementById('stat-sessions');
-  if (statSessions) statSessions.textContent = String(sessions.length);
-
+  const sessionsCountEl = document.getElementById('sessions-count');
   const streakCount = document.getElementById('streak-count');
   const adherenceEl = document.getElementById('adherence-pct');
   const streakBadge = document.getElementById('streak-badge');
 
-  if (!sessions.length) {
+  const setEmptyState = () => {
+    if (sessionsCountEl) sessionsCountEl.textContent = '0';
     if (streakCount) streakCount.textContent = '0';
     if (adherenceEl) adherenceEl.textContent = '0%';
     if (streakBadge) {
@@ -3987,55 +4146,84 @@ async function updateStreakAndConsistency() {
       streakBadge.textContent = 'Últimos 28 dias';
     }
     renderStreakGrid([]);
-    return;
-  }
+  };
 
-  const sessionDates = [...new Set(
-    sessions
-      .map(s => (s.completed_at || s.created_at || s.date || '').split('T')[0])
-      .filter(Boolean)
-  )].sort().reverse();
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setEmptyState(); return; }
+    const userId = user.id;
+    console.log('userId em updateStreakAndConsistency:', userId);
 
-  let streak = 0;
-  const todayDate = new Date();
-  todayDate.setHours(0, 0, 0, 0);
+    const twentyEightDaysAgo = new Date();
+    twentyEightDaysAgo.setDate(twentyEightDaysAgo.getDate() - 28);
+    const sinceIso = twentyEightDaysAgo.toISOString();
 
-  for (let i = 0; i < sessionDates.length; i++) {
-    const sessionDate = new Date(sessionDates[i]);
-    sessionDate.setHours(0, 0, 0, 0);
-    const expectedDate = new Date(todayDate);
-    expectedDate.setDate(todayDate.getDate() - i);
+    const [recentResp, totalResp] = await Promise.all([
+      supabase
+        .from('session_logs')
+        .select('created_at')
+        .eq('user_id', userId)
+        .gte('created_at', sinceIso)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('session_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+    ]);
 
-    if (sessionDate.getTime() === expectedDate.getTime()) {
-      streak++;
-    } else {
-      break;
+    if (recentResp.error) throw recentResp.error;
+    if (totalResp.error) throw totalResp.error;
+
+    const recentLogs = Array.isArray(recentResp.data) ? recentResp.data : [];
+    const totalSessions = typeof totalResp.count === 'number' ? totalResp.count : 0;
+
+    if (sessionsCountEl) sessionsCountEl.textContent = String(totalSessions);
+
+    const sessionDates = [...new Set(
+      recentLogs
+        .map(s => (s.created_at || '').split('T')[0])
+        .filter(Boolean)
+    )];
+
+    const sessionSet = new Set(sessionDates);
+    let streak = 0;
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 28; i++) {
+      const expectedDate = new Date(todayDate);
+      expectedDate.setDate(todayDate.getDate() - i);
+      const expectedDateStr = expectedDate.toISOString().split('T')[0];
+      if (sessionSet.has(expectedDateStr)) {
+        streak++;
+      } else {
+        break;
+      }
     }
-  }
 
-  if (streakCount) streakCount.textContent = String(streak);
+    const adherence = Math.round((sessionSet.size / 28) * 100);
 
-  const twentyEightDaysAgo = new Date();
-  twentyEightDaysAgo.setDate(twentyEightDaysAgo.getDate() - 28);
-  const recentSessions = sessionDates.filter(d => new Date(d) >= twentyEightDaysAgo);
-  const adherence = Math.round((recentSessions.length / 28) * 100);
+    if (streakCount) streakCount.textContent = String(streak);
+    if (adherenceEl) adherenceEl.textContent = `${adherence}%`;
 
-  if (adherenceEl) adherenceEl.textContent = `${adherence}%`;
-
-  if (streakBadge) {
-    if (adherence >= 70) {
-      streakBadge.className = 'insight-card-badge badge-green';
-      streakBadge.textContent = `${adherence}% aderência`;
-    } else if (adherence >= 40) {
-      streakBadge.className = 'insight-card-badge badge-amber';
-      streakBadge.textContent = `${adherence}% aderência`;
-    } else {
-      streakBadge.className = 'insight-card-badge badge-muted';
-      streakBadge.textContent = 'Últimos 28 dias';
+    if (streakBadge) {
+      if (adherence >= 70) {
+        streakBadge.className = 'insight-card-badge badge-green';
+        streakBadge.textContent = `${adherence}% aderência`;
+      } else if (adherence >= 40) {
+        streakBadge.className = 'insight-card-badge badge-amber';
+        streakBadge.textContent = `${adherence}% aderência`;
+      } else {
+        streakBadge.className = 'insight-card-badge badge-muted';
+        streakBadge.textContent = 'Últimos 28 dias';
+      }
     }
-  }
 
-  renderStreakGrid(sessionDates);
+    renderStreakGrid(sessionDates);
+  } catch (err) {
+    console.warn('[updateStreakAndConsistency]', err?.message || err);
+    setEmptyState();
+  }
 }
 
 async function updateReadinessCard() {
@@ -4113,6 +4301,7 @@ async function refreshDashboard() {
   renderFmsPreviewCard();
   refreshDashboardCards();
   refreshPendingAlert();
+  renderDashboardNutritionCard();
 
   await Promise.all([
     updateStreakAndConsistency(),
@@ -4537,7 +4726,7 @@ function renderWorkoutBlocks(conteudo, treinoId, isDone) {
   } else {
     html += `<button class="btn-complete-session" onclick="event.stopPropagation();completarTreinoIA(${treinoId})">✓ Concluir Sessão</button>`;
   }
-  html += `<button class="btn-start-soon" disabled title="Em breve">▶ Iniciar Treino</button>`;
+  if (!isDone) html += `<button class="btn-start-session" onclick="event.stopPropagation();startSessionById(${treinoId},this)">▶ Iniciar Treino</button>`;
   html += `</div>`;
   html += '</div>';
 
@@ -4587,6 +4776,725 @@ async function completarTreinoIA(id) {
   renderWorkouts();
   refreshDashboard();
   showToast('Sessão concluída! 💪');
+}
+
+// ═══════════════════════════════════════════════
+//  SESSION EXECUTION FLOW
+// ═══════════════════════════════════════════════
+let _activeTimer     = null;
+let _sessionElapsed  = 0;
+let _sessionContext  = null; // { workoutId, title, startedAt, card }
+let _sessionState = {
+  blocosSession: [],
+  blocoAtualIdx: 0,
+  exercicioAtualIdx: 0,
+  setAtual: 1,
+  modoDescanso: false,
+  tempoDescanso: 0,
+  tempoTotal: 0,
+  aguardandoDescanso: false,
+  descansoConcluido: false
+};
+
+function _formatClock(totalSeconds) {
+  const sec = Math.max(0, parseInt(totalSeconds || 0, 10));
+  const min = String(Math.floor(sec / 60)).padStart(2, '0');
+  const s = String(sec % 60).padStart(2, '0');
+  return `${min}:${s}`;
+}
+
+function _resetSessionState() {
+  _sessionState = {
+    blocosSession: [],
+    blocoAtualIdx: 0,
+    exercicioAtualIdx: 0,
+    setAtual: 1,
+    modoDescanso: false,
+    tempoDescanso: 0,
+    tempoTotal: 0,
+    aguardandoDescanso: false,
+    descansoConcluido: false
+  };
+}
+
+function _parseDescansoSegundos(texto) {
+  const src = String(texto || '');
+  const minMatch = src.match(/(\d+)\s*min/i);
+  if (minMatch) return parseInt(minMatch[1], 10) * 60;
+  const secMatch = src.match(/(\d+)\s*s\b/i);
+  if (secMatch) return parseInt(secMatch[1], 10);
+  return 60;
+}
+
+function _parseExerciseLine(rawLine) {
+  if (!rawLine) return null;
+  const clean = String(rawLine)
+    .replace(/[–—]/g, '-')
+    .replace(/^[•\-\u2022]\s*/, '')
+    .trim();
+
+  const match = clean.match(/^([A-Z]{1,3}\d+)\)\s*(.+)$/i);
+  if (!match) return null;
+
+  const id = match[1].toUpperCase();
+  const body = match[2].trim();
+  const parts = body.split(/\s*-\s*/).map(p => p.trim()).filter(Boolean);
+  const nome = parts.shift() || body;
+  const prescricao = parts.join(' - ').trim();
+  const parseBase = prescricao || body;
+  const setsMatch = parseBase.match(/(\d+)\s*x\s*([0-9]+(?:\/[A-Za-zÀ-ÿ]+)?(?:-[0-9]+)?)/i);
+
+  return {
+    id,
+    nome,
+    prescricao: prescricao || '',
+    setsTotal: setsMatch ? parseInt(setsMatch[1], 10) : 3,
+    repsPrescricao: setsMatch ? setsMatch[2] : '',
+    descansoSegundos: _parseDescansoSegundos(parseBase)
+  };
+}
+
+function parseTreino(conteudo) {
+  const original = String(conteudo || '').trim();
+  if (!original) {
+    return [{ bloco: 'TREINO', tipo: 'warmup', navegavel: false, descricao: '', exercicios: [] }];
+  }
+
+  const normalized = original
+    .replace(/\r\n?/g, '\n')
+    .replace(/[–—]/g, '-')
+    .replace(/\s+\|\s+/g, '\n')
+    .replace(/\n{2,}/g, '\n');
+
+  const lines = normalized.split('\n').map(l => l.trim()).filter(Boolean);
+  const blocks = [];
+  let current = null;
+
+  const fallback = [{ bloco: 'TREINO', tipo: 'warmup', navegavel: false, descricao: original, exercicios: [] }];
+
+  const extractDuration = (line) => {
+    const m = line.match(/\(([^)]*min[^)]*)\)/i);
+    return m ? m[1].trim() : '';
+  };
+
+  const extractAfterColon = (line) => {
+    const idx = line.indexOf(':');
+    return idx >= 0 ? line.slice(idx + 1).trim() : '';
+  };
+
+  const createBlock = (bloco, tipo, navegavel, duracao = '', descricao = '') => ({
+    bloco,
+    tipo,
+    duracao,
+    navegavel,
+    descricao: descricao || '',
+    exercicios: []
+  });
+
+  const flushCurrent = () => {
+    if (!current) return;
+    if (!Array.isArray(current.exercicios)) current.exercicios = [];
+    blocks.push(current);
+    current = null;
+  };
+
+  const detectHeader = (line) => {
+    const upper = line.toUpperCase();
+    const duracao = extractDuration(line);
+    const descricao = extractAfterColon(line);
+
+    if (/^FOAM\s*ROLL\b/i.test(line)) {
+      return { bloco: 'FOAM ROLL', tipo: 'warmup', navegavel: false, duracao, descricao };
+    }
+
+    if (/^PILLAR\s*PREP\b/i.test(line)) {
+      const legacyExpand = /FOAM\s*ROLL\s*\+\s*MOBILIDADE\s*\+\s*ATIVA(?:Ç|C)[AÃ]O\s*\+\s*DIN[ÂA]MICO/i.test(upper);
+      return { bloco: 'PILLAR PREP', tipo: 'warmup', navegavel: false, duracao, descricao, legacyExpand };
+    }
+
+    if (/^WARM[\s-]*UP\b/i.test(line)) {
+      return { bloco: 'WARM-UP', tipo: 'warmup', navegavel: false, duracao, descricao };
+    }
+
+    if (/^HEAVY\s*POWER\b/i.test(line)) {
+      return { bloco: 'HEAVY POWER', tipo: 'power', navegavel: true, duracao, descricao };
+    }
+
+    if (/^POWER\b/i.test(line) && !/^HEAVY\s*POWER\b/i.test(line)) {
+      return { bloco: 'POWER', tipo: 'power', navegavel: true, duracao, descricao };
+    }
+
+    if (/^STRENGTH\s*POD\s*1\b/i.test(line) || /^POD\s*1\b/i.test(line)) {
+      return { bloco: 'STRENGTH POD 1', tipo: 'strength', navegavel: true, duracao, descricao };
+    }
+
+    if (/^STRENGTH\s*POD\s*2\b/i.test(line) || /^POD\s*2\b/i.test(line)) {
+      return { bloco: 'STRENGTH POD 2', tipo: 'strength', navegavel: true, duracao, descricao };
+    }
+
+    if (/^POD\s*3\b/i.test(line)) {
+      return { bloco: 'STRENGTH POD 2', tipo: 'strength', navegavel: true, duracao, descricao, mergePod2: true };
+    }
+
+    if (/^(ESD|CONDITIONING)\b/i.test(line)) {
+      return { bloco: 'ESD', tipo: 'conditioning', navegavel: false, duracao, descricao };
+    }
+
+    return null;
+  };
+
+  for (const lineRaw of lines) {
+    const line = lineRaw.replace(/^[•\-\u2022]\s*/, '').trim();
+    const header = detectHeader(line);
+
+    if (header) {
+      if (header.legacyExpand) {
+        flushCurrent();
+        blocks.push(createBlock('FOAM ROLL', 'warmup', false, '3min', 'Foam Roll'));
+        blocks.push(createBlock('PILLAR PREP', 'warmup', false, header.duracao || '', 'Mobilidade + Ativação'));
+        blocks.push(createBlock('WARM-UP', 'warmup', false, '5min', 'Dinâmico'));
+        continue;
+      }
+
+      if (header.mergePod2) {
+        if (current && current.bloco === 'STRENGTH POD 2') {
+          if (header.descricao) {
+            const exInline = _parseExerciseLine(header.descricao);
+            if (exInline) current.exercicios.push(exInline);
+          }
+          continue;
+        }
+
+        flushCurrent();
+        if (blocks.length && blocks[blocks.length - 1].bloco === 'STRENGTH POD 2') {
+          current = blocks.pop();
+          if (header.descricao) {
+            const exInline = _parseExerciseLine(header.descricao);
+            if (exInline) current.exercicios.push(exInline);
+          }
+          continue;
+        }
+      }
+
+      flushCurrent();
+      current = createBlock(header.bloco, header.tipo, header.navegavel, header.duracao, header.descricao || '');
+
+      if (header.descricao && current.navegavel) {
+        const exInline = _parseExerciseLine(header.descricao);
+        if (exInline) {
+          current.exercicios.push(exInline);
+          current.descricao = '';
+        }
+      }
+      continue;
+    }
+
+    if (!current) continue;
+
+    if (current.navegavel) {
+      const ex = _parseExerciseLine(line);
+      if (ex) {
+        current.exercicios.push(ex);
+      } else {
+        current.descricao = [current.descricao, line].filter(Boolean).join(' ');
+      }
+    } else {
+      current.descricao = [current.descricao, line].filter(Boolean).join(' ');
+    }
+  }
+
+  flushCurrent();
+
+  if (!blocks.length) return fallback;
+  return blocks;
+}
+
+function startSessionById(id, btn) {
+  const treino = loadTreinosIA().find(t => t.id == id);
+  if (!treino) { showToast('Treino não encontrado.', true); return; }
+  const card = btn?.closest('.session-card') || null;
+  _openSessionWidget(String(id), treino.titulo || 'Treino', treino.conteudo || treino.content || '', card);
+}
+
+function startSessionByWorkout(idx, btn) {
+  const w = state.workouts[idx];
+  if (!w) { showToast('Treino não encontrado.', true); return; }
+  const card = btn?.closest('.session-card') || null;
+  _openSessionWidget(String(w.id || idx), w.title || 'Treino', w.conteudo || w.content || w.details || '', card);
+}
+
+function _openSessionWidget(workoutId, title, conteudo, card) {
+  if (document.getElementById('session-widget')) return;
+
+  const blocos = parseTreino(conteudo);
+  _sessionElapsed = 0;
+  _sessionContext = { workoutId, title, startedAt: new Date().toISOString(), card };
+  _sessionState = {
+    blocosSession: blocos,
+    blocoAtualIdx: 0,
+    exercicioAtualIdx: 0,
+    setAtual: 1,
+    modoDescanso: false,
+    tempoDescanso: 0,
+    tempoTotal: 0,
+    aguardandoDescanso: false,
+    descansoConcluido: false
+  };
+
+  if (card) {
+    card.style.borderColor = 'rgba(0,255,135,0.55)';
+    card.style.boxShadow = '0 0 0 1px rgba(0,255,135,0.2)';
+  }
+
+  const widget = document.createElement('div');
+  widget.id = 'session-widget';
+  widget.style.cssText = 'margin-top:12px;background:#0b0f18;border:1px solid rgba(0,255,135,0.22);border-radius:14px;overflow:hidden;';
+
+  if (card) {
+    card.appendChild(widget);
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } else {
+    const target = document.getElementById('all-workouts') || document.getElementById('page-dashboard') || document.body;
+    target.prepend(widget);
+  }
+
+  _startSessionClock();
+  _sessionRenderWidget();
+}
+
+function _startSessionClock() {
+  clearInterval(_activeTimer);
+  _activeTimer = setInterval(() => {
+    if (!_sessionContext) return;
+
+    _sessionState.tempoTotal += 1;
+    _sessionElapsed = _sessionState.tempoTotal;
+
+    if (_sessionState.modoDescanso && _sessionState.tempoDescanso > 0) {
+      _sessionState.tempoDescanso -= 1;
+      if (_sessionState.tempoDescanso <= 0) {
+        _sessionState.tempoDescanso = 0;
+        _sessionState.modoDescanso = false;
+        _sessionState.descansoConcluido = true;
+        _notifyRestDone();
+      }
+    }
+
+    _sessionRenderWidget();
+  }, 1000);
+}
+
+function _notifyRestDone() {
+  try {
+    if (navigator?.vibrate) navigator.vibrate([200, 100, 200]);
+  } catch (_) {}
+
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 440;
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.2);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.2);
+    setTimeout(() => { try { ctx.close(); } catch (_) {} }, 300);
+  } catch (_) {}
+}
+
+function _getCurrentBlock() {
+  return _sessionState.blocosSession[_sessionState.blocoAtualIdx] || null;
+}
+
+function _getCurrentExercise() {
+  const block = _getCurrentBlock();
+  if (!block || !block.navegavel || !Array.isArray(block.exercicios)) return null;
+  return block.exercicios[_sessionState.exercicioAtualIdx] || null;
+}
+
+function _goToPosition(blocoIdx, exercicioIdx = 0) {
+  _sessionState.blocoAtualIdx = Math.max(0, Math.min(blocoIdx, _sessionState.blocosSession.length - 1));
+  const block = _getCurrentBlock();
+
+  if (block?.navegavel && block.exercicios.length > 0) {
+    _sessionState.exercicioAtualIdx = Math.max(0, Math.min(exercicioIdx, block.exercicios.length - 1));
+  } else {
+    _sessionState.exercicioAtualIdx = 0;
+  }
+
+  _sessionState.setAtual = 1;
+  _sessionState.modoDescanso = false;
+  _sessionState.tempoDescanso = 0;
+  _sessionState.aguardandoDescanso = false;
+  _sessionState.descansoConcluido = false;
+}
+
+function _sessionNext() {
+  const blocks = _sessionState.blocosSession;
+  if (!blocks.length) return;
+
+  const bIdx = _sessionState.blocoAtualIdx;
+  const block = _getCurrentBlock();
+
+  if (!block) return;
+
+  if (!block.navegavel || !block.exercicios.length) {
+    if (bIdx < blocks.length - 1) _goToPosition(bIdx + 1, 0);
+    _sessionRenderWidget();
+    return;
+  }
+
+  if (_sessionState.exercicioAtualIdx < block.exercicios.length - 1) {
+    _goToPosition(bIdx, _sessionState.exercicioAtualIdx + 1);
+  } else if (bIdx < blocks.length - 1) {
+    _goToPosition(bIdx + 1, 0);
+  }
+
+  _sessionRenderWidget();
+}
+
+function _sessionPrev() {
+  const blocks = _sessionState.blocosSession;
+  if (!blocks.length) return;
+
+  const bIdx = _sessionState.blocoAtualIdx;
+  const block = _getCurrentBlock();
+
+  if (!block) return;
+
+  if (block.navegavel && block.exercicios.length && _sessionState.exercicioAtualIdx > 0) {
+    _goToPosition(bIdx, _sessionState.exercicioAtualIdx - 1);
+    _sessionRenderWidget();
+    return;
+  }
+
+  if (bIdx > 0) {
+    const prevBlock = blocks[bIdx - 1];
+    const prevExIdx = (prevBlock.navegavel && prevBlock.exercicios.length)
+      ? prevBlock.exercicios.length - 1
+      : 0;
+    _goToPosition(bIdx - 1, prevExIdx);
+  }
+
+  _sessionRenderWidget();
+}
+
+function _sessionMarkSetDone() {
+  const block = _getCurrentBlock();
+  const ex = _getCurrentExercise();
+  if (!block || !block.navegavel || !ex) return;
+
+  const setsTotal = Math.max(1, ex.setsTotal || 3);
+  if (_sessionState.setAtual > setsTotal) return;
+
+  _sessionState.setAtual += 1;
+
+  if (_sessionState.setAtual <= setsTotal) {
+    _sessionState.aguardandoDescanso = true;
+    _sessionState.descansoConcluido = false;
+    _sessionState.tempoDescanso = ex.descansoSegundos || 60;
+  } else {
+    _sessionState.aguardandoDescanso = false;
+    _sessionState.modoDescanso = false;
+    _sessionState.tempoDescanso = 0;
+  }
+
+  _sessionRenderWidget();
+}
+
+function _sessionStartRest() {
+  const ex = _getCurrentExercise();
+  if (!ex) return;
+
+  _sessionState.modoDescanso = true;
+  _sessionState.aguardandoDescanso = false;
+  _sessionState.descansoConcluido = false;
+  if (_sessionState.tempoDescanso <= 0) {
+    _sessionState.tempoDescanso = ex.descansoSegundos || 60;
+  }
+
+  _sessionRenderWidget();
+}
+
+function _sessionRenderWidget() {
+  const widget = document.getElementById('session-widget');
+  if (!widget || !_sessionContext) return;
+
+  const blocks = _sessionState.blocosSession;
+  const block = _getCurrentBlock();
+  const ex = _getCurrentExercise();
+
+  if (!blocks.length || !block) {
+    widget.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:13px;">Treino sem blocos reconhecidos.</div>';
+    return;
+  }
+
+  const bIdx = _sessionState.blocoAtualIdx;
+  const canPrev = bIdx > 0 || _sessionState.exercicioAtualIdx > 0;
+  const canNext = (() => {
+    if (!block.navegavel || !block.exercicios.length) return bIdx < blocks.length - 1;
+    if (_sessionState.exercicioAtualIdx < block.exercicios.length - 1) return true;
+    return bIdx < blocks.length - 1;
+  })();
+
+  const pills = blocks.map((b, i) => {
+    const isDone = i < bIdx;
+    const isCurrent = i === bIdx;
+    const bg = isCurrent ? 'rgba(0,255,135,0.2)' : isDone ? 'rgba(76,175,80,0.18)' : 'rgba(255,255,255,0.06)';
+    const color = isCurrent ? 'var(--green)' : isDone ? '#9fe870' : '#707885';
+    const label = isDone ? `✓ ${b.bloco}` : b.bloco;
+    return `<span style="padding:4px 8px;border-radius:999px;background:${bg};color:${color};font-size:10px;font-weight:700;letter-spacing:0.8px;white-space:nowrap;">${label}</span>`;
+  }).join('');
+
+  let contentHtml = '';
+
+  if (!block.navegavel || !block.exercicios.length) {
+    contentHtml = `
+      <div style="padding:16px 18px 10px;">
+        <div style="font-size:20px;font-family:var(--font-display);letter-spacing:1px;color:#fff;line-height:1.1;">${block.bloco}</div>
+        ${block.duracao ? `<div style="margin-top:4px;color:var(--muted);font-size:12px;font-family:var(--font-mono);">${block.duracao}</div>` : ''}
+        <div style="margin-top:10px;color:#c9d0dc;font-size:13px;line-height:1.5;">${block.descricao || 'Siga as instruções deste bloco e avance quando finalizar.'}</div>
+      </div>`;
+  } else {
+    const setsTotal = Math.max(1, ex.setsTotal || 3);
+    const reps = ex.repsPrescricao || '-';
+    const descanso = ex.descansoSegundos || 60;
+
+    const nomeMatch = String(ex.nome || '').match(/^(.*?)\s*\((.*?)\)\s*$/);
+    const nomeBase = nomeMatch ? nomeMatch[1].trim() : ex.nome;
+    const nomePt = nomeMatch ? nomeMatch[2].trim() : '';
+
+    let setsHtml = '';
+    for (let i = 1; i <= setsTotal; i++) {
+      const done = i < _sessionState.setAtual || _sessionState.setAtual > setsTotal;
+      const current = i === _sessionState.setAtual && _sessionState.setAtual <= setsTotal;
+      const symbol = done ? '●' : current ? '►' : '○';
+      const suffix = done ? ' ✓' : current ? ' (atual)' : '';
+      setsHtml += `<div style="font-size:13px;color:${current ? 'var(--green)' : done ? '#d5f8a2' : '#9aa3b2'};line-height:1.4;">${symbol} Set ${i}${suffix}</div>`;
+    }
+
+    let restPanel = '';
+    if (_sessionState.modoDescanso) {
+      restPanel = `
+        <div style="margin-top:12px;padding:14px;border-radius:12px;background:linear-gradient(135deg,#2b130c,#3a1b10);border:1px solid rgba(255,120,70,0.45);text-align:center;">
+          <div style="font-family:var(--font-display);font-size:38px;letter-spacing:2px;color:#ffb38f;line-height:1;">${_formatClock(_sessionState.tempoDescanso)}</div>
+          <div style="margin-top:6px;font-size:12px;color:#ff9f6a;letter-spacing:1px;font-family:var(--font-mono);">◄ descanso</div>
+        </div>`;
+    } else if (_sessionState.aguardandoDescanso && _sessionState.setAtual <= setsTotal) {
+      restPanel = `
+        <div style="margin-top:12px;padding:10px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);text-align:center;">
+          <div style="font-family:var(--font-display);font-size:30px;letter-spacing:1px;color:#ffcf6e;line-height:1;">${_formatClock(_sessionState.tempoDescanso)}</div>
+          <button onclick="event.stopPropagation();_sessionStartRest()" style="margin-top:8px;padding:9px 14px;background:#2c1f0f;border:1px solid #e8a53a;color:#ffd27c;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.8px;">INICIAR DESCANSO</button>
+        </div>`;
+    } else if (_sessionState.descansoConcluido && _sessionState.setAtual <= setsTotal) {
+      restPanel = `
+        <div style="margin-top:12px;padding:10px;border-radius:12px;background:rgba(0,255,135,0.06);border:1px solid rgba(0,255,135,0.3);text-align:center;">
+          <div style="font-size:12px;color:var(--green);font-weight:700;letter-spacing:1px;">PRÓXIMA SÉRIE</div>
+        </div>`;
+    } else if (_sessionState.setAtual <= setsTotal) {
+      restPanel = `
+        <div style="margin-top:12px;padding:10px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);text-align:center;">
+          <button onclick="event.stopPropagation();_sessionMarkSetDone()" style="padding:9px 14px;background:rgba(0,255,135,0.15);border:1px solid rgba(0,255,135,0.4);color:var(--green);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.8px;">MARCAR SET CONCLUÍDO</button>
+        </div>`;
+    } else {
+      restPanel = `
+        <div style="margin-top:12px;padding:10px;border-radius:12px;background:rgba(0,255,135,0.06);border:1px solid rgba(0,255,135,0.25);text-align:center;">
+          <div style="font-size:12px;color:var(--green);font-weight:700;letter-spacing:1px;">EXERCÍCIO CONCLUÍDO</div>
+        </div>`;
+    }
+
+    contentHtml = `
+      <div style="padding:16px 18px 10px;">
+        <div style="font-size:12px;color:#8f97a5;margin-bottom:8px;">Exercício ${_sessionState.exercicioAtualIdx + 1} de ${block.exercicios.length}</div>
+        <div style="font-size:22px;font-family:var(--font-display);letter-spacing:1px;color:#fff;line-height:1.1;">${ex.id} — ${nomeBase}</div>
+        ${nomePt ? `<div style="margin-top:2px;color:#9aa3b2;font-size:13px;">(${nomePt})</div>` : ''}
+        <div style="margin-top:6px;color:var(--muted);font-size:12px;font-family:var(--font-mono);">${setsTotal} séries · ${reps} reps · ${descanso}s descanso</div>
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:4px;">${setsHtml}</div>
+        ${restPanel}
+      </div>`;
+  }
+
+  widget.innerHTML = `
+    <div style="padding:12px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02);">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+        <div style="font-size:14px;font-weight:700;color:#fff;">🏋️ ${block.bloco} · ${bIdx + 1} de ${blocks.length} blocos</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${pills}</div>
+    </div>
+
+    ${contentHtml}
+
+    <div style="padding:12px 14px;border-top:1px solid var(--border);background:rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+      <div style="display:flex;gap:8px;">
+        <button onclick="event.stopPropagation();_sessionPrev()" ${canPrev ? '' : 'disabled'} style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:${canPrev ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)'};color:${canPrev ? '#d5dbe6' : '#626a77'};cursor:${canPrev ? 'pointer' : 'not-allowed'};font-size:12px;font-weight:700;">← ANTERIOR</button>
+        <button onclick="event.stopPropagation();_sessionNext()" ${canNext ? '' : 'disabled'} style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:${canNext ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)'};color:${canNext ? '#d5dbe6' : '#626a77'};cursor:${canNext ? 'pointer' : 'not-allowed'};font-size:12px;font-weight:700;">PRÓXIMO →</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button onclick="event.stopPropagation();_concludeSession()" style="padding:9px 14px;background:var(--green);color:#000;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.8px;">CONCLUIR SESSÃO</button>
+        <span style="font-family:var(--font-mono);font-size:12px;color:#9aa3b2;">⏱ ${_formatClock(_sessionState.tempoTotal)} total</span>
+      </div>
+    </div>
+
+    <div style="padding:0 14px 12px;display:flex;justify-content:flex-end;">
+      <button onclick="event.stopPropagation();_cancelSession()" style="background:none;border:none;color:#67707f;font-size:11px;cursor:pointer;">cancelar</button>
+    </div>`;
+}
+
+function _concludeSession() {
+  clearInterval(_activeTimer);
+  _activeTimer = null;
+  const finishedAt = new Date().toISOString();
+  const duration = _sessionState.tempoTotal;
+  _removeSessionWidget();
+  _openFeedbackModal(finishedAt, duration);
+}
+
+function _cancelSession() {
+  clearInterval(_activeTimer);
+  _activeTimer = null;
+  _removeSessionWidget();
+  _sessionContext = null;
+  _sessionElapsed = 0;
+  _resetSessionState();
+}
+
+function _removeSessionWidget() {
+  const widget = document.getElementById('session-widget');
+  const card = _sessionContext?.card;
+  if (card) {
+    card.style.borderColor = '';
+    card.style.boxShadow = '';
+  }
+  widget?.remove();
+}
+
+function _openFeedbackModal(finishedAt, duration) {
+  const title      = _sessionContext?.title || 'Treino';
+  const durationMin = Math.floor(duration / 60);
+  const durationSec = duration % 60;
+  const initialRpe  = 7;
+  const initialUa   = (initialRpe * (duration / 60)).toFixed(1);
+
+  const modal = document.createElement('div');
+  modal.id = 'session-feedback-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:1001;display:flex;align-items:center;justify-content:center;padding:24px 16px;background:rgba(0,0,0,0.8);';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;max-width:480px;animation:fadeUp 0.3s ease;max-height:92vh;overflow-y:auto;">
+      <div style="padding:20px 24px;border-bottom:1px solid var(--border);">
+        <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--green);text-transform:uppercase;margin-bottom:4px;">✅ Sessão Concluída</div>
+        <div style="font-family:var(--font-display);font-size:18px;letter-spacing:1px;">${title}</div>
+        <div style="font-size:12px;color:var(--muted);font-family:var(--font-mono);margin-top:4px;">${durationMin}min ${durationSec}s</div>
+      </div>
+      <div style="padding:24px;display:flex;flex-direction:column;gap:20px;">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);">Esforço Percebido (RPE)</div>
+            <div style="display:flex;align-items:baseline;gap:6px;">
+              <span id="rpe-value" style="font-family:var(--font-display);font-size:32px;color:var(--green);">${initialRpe}</span>
+              <span id="rpe-label" style="font-size:12px;color:var(--muted);">Difícil</span>
+            </div>
+          </div>
+          <input type="range" id="rpe-slider" min="1" max="10" value="${initialRpe}" oninput="_updateRpeFeedback(this.value,${duration})"
+            style="width:100%;accent-color:var(--green);cursor:pointer;height:6px;">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:var(--font-mono);margin-top:6px;">
+            <span>1 · Muito leve</span><span>5 · Moderado</span><span>10 · Máximo</span>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);">Carga Interna (UA)</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;">RPE × Duração (min)</div>
+          </div>
+          <div id="ua-value" style="font-family:var(--font-display);font-size:36px;letter-spacing:1px;color:var(--text);">${initialUa}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Observações (opcional)</div>
+          <textarea id="session-notes" placeholder="Como foi a sessão? Algo a registrar..."
+            style="width:100%;padding:12px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-body);font-size:13px;resize:vertical;min-height:80px;outline:none;transition:border-color 0.2s;"
+            onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+        </div>
+      </div>
+      <div style="padding:16px 24px;border-top:1px solid var(--border);">
+        <button id="btn-save-session" onclick="_saveSession('${finishedAt}',${duration})"
+          style="width:100%;padding:14px;background:var(--green);color:#000;font-family:var(--font-display);font-size:18px;letter-spacing:2px;border:none;border-radius:12px;cursor:pointer;transition:opacity 0.2s;">SALVAR SESSÃO</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function _updateRpeFeedback(rpe, duration) {
+  const n = parseInt(rpe);
+  const labels = ['', 'Muito leve', 'Muito leve', 'Muito leve', 'Moderado', 'Moderado', 'Difícil', 'Difícil', 'Muito difícil', 'Muito difícil', 'Máximo'];
+  const el = document.getElementById('rpe-value');
+  const lbl = document.getElementById('rpe-label');
+  const ua  = document.getElementById('ua-value');
+  if (el)  el.textContent  = n;
+  if (lbl) lbl.textContent = labels[n] || '';
+  if (ua)  ua.textContent  = (n * (duration / 60)).toFixed(1);
+}
+
+async function _saveSession(finishedAt, duration) {
+  const rpe   = parseInt(document.getElementById('rpe-slider')?.value || 7);
+  const notes = document.getElementById('session-notes')?.value.trim() || null;
+  const ua    = parseFloat((rpe * (duration / 60)).toFixed(2));
+  const { workoutId, startedAt } = _sessionContext || {};
+
+  const btn = document.getElementById('btn-save-session');
+  if (btn) { btn.disabled = true; btn.textContent = 'SALVANDO...'; btn.style.opacity = '0.6'; }
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+    if (!userId) throw new Error('Usuário não autenticado');
+
+    const { error: logErr } = await supabase.from('session_logs').insert({
+      user_id:          userId,
+      workout_id:       workoutId || null,
+      started_at:       startedAt,
+      finished_at:      finishedAt,
+      duration_seconds: duration,
+      rpe,
+      ua,
+      notes,
+    });
+    if (logErr) console.warn('[session_logs insert]', logErr.message);
+
+    const { error: wErr } = await supabase.from('workouts')
+      .update({ status: 'completed' })
+      .eq('id', workoutId);
+    if (wErr) console.warn('[workouts update status]', wErr.message);
+
+  } catch (err) {
+    console.warn('[_saveSession]', err.message);
+  }
+
+  document.getElementById('session-feedback-modal')?.remove();
+
+  // Marcar treino como concluído no localStorage para sair de "SESSÕES AVULSAS"
+  if (workoutId) {
+    const treinos = loadTreinosIA();
+    const t = treinos.find(x => String(x.id) === String(workoutId));
+    if (t) {
+      t.concluida   = true;
+      t.completed   = true;
+      t.completedAt = finishedAt;
+      localStorage.setItem('axisai_treinos', JSON.stringify(treinos));
+    }
+  }
+
+  _sessionContext = null;
+  _sessionElapsed = 0;
+  _resetSessionState();
+
+  showToast('Sessão registrada! 💪');
+  renderWorkouts();
+  updateStreakAndConsistency();
 }
 
 // ── Save individual set load to localStorage (axisai_cargas) ──────────────
@@ -4848,16 +5756,82 @@ Iniciante zero (<3m): 80% R1-R2 / 20% B | Intermediário (6-24m): 80% B / 20% R1
 Restrições de progressão: Clean → ≥ 6m de experiência | Back Squat / BB Bench / Deadlift convencional → ≥ 12m + domínio unilateral + sem lesão
 Fallbacks de equipamento: Sem parede → usar "Slam" | Sem barra → usar "Halteres"
 
-8) ESTRUTURA DA SESSÃO MBSC (60min)
-25min Pillar Prep + 25min Força (Tri-sets) + 10min ESD
-TRI-SET: A1=MI(knee/hip) | A2=MS(push/pull) | A3=Core/Corretivo. Frequência não informada → PERGUNTAR antes de gerar treino.
+8) ESTRUTURA DA SESSÃO MBSC — SEQUÊNCIA OBRIGATÓRIA
+A sessão segue SEMPRE esta ordem. Nunca omitir blocos, nunca reordenar.
 
-9) PILLAR PREP (ORDEM IMUTÁVEL)
-1. Foam Roll (2-3min): glúteos, posterior de coxa, quadríceps, panturrilha, coluna torácica
-2. Mobilidade: 90/90, Spiderman, T-Spine Rotation, Ankle Mob, flexores do quadril, adutores
-3. Ativação: Respiração PRI, Floor Slides, Leg Lowering, Cook Hip Lift, Mini-Band, Plank
-4. Dinâmico (5min): Squat Matrix, Bear Crawl, Knee Hug, Skip, Shuffle, Carioca
-Regras obrigatórias: SLDL/hinge unilateral no treino → Leg Lowering obrigatório no Prep | OH/pressão vertical no treino → Floor Slides obrigatório no Prep
+FOAM ROLL (2-3min)
+Glúteos, posterior de coxa, quadríceps, panturrilha, coluna torácica.
+Formato de output: "FOAM ROLL (3min): Glúteos - IT Band - Quadríceps - Panturrilha - Coluna Torácica"
+
+PILLAR PREP — MOBILITY + MOTOR CONTROL (8-10min)
+Mobilidade articular e controle motor. Sem cardio, sem dinâmico aqui.
+Sequência: 90/90 Hip Rotation, Spiderman + Rotation, T-Spine Rotation, Ankle Mob,
+           Flexor de Quadril, Adutores, Respiração PRI, Floor Slides, Leg Lowering,
+           Cook Hip Lift, Mini-Band Walk, Plank Hold.
+Regras: SLDL/hinge unilateral no treino → Leg Lowering obrigatório |
+        OH/pressão vertical → Floor Slides obrigatório
+Formato de output: "PILLAR PREP (10min): 90/90 Hip Rotation - Spiderman + Rotation - ..."
+
+WARM-UP (5min)
+Preparação cardiovascular e neuromuscular. Static stretches + movimento dinâmico.
+Sequência: Squat Matrix, Knee Hug to Lunge, Skip A, Lateral Shuffle, Carioca,
+           Bear Crawl, Jump Rope ou equivalente.
+Formato de output: "WARM-UP (5min): Squat Matrix - Knee Hug to Lunge - Skip A - Shuffle"
+
+POWER — LIGHT POWER (todos os clientes com nível intermediate+)
+1 exercício de potência leve. Objetivo: recrutamento do SNC, não fadiga.
+Volume: 3-4 séries x 3-5 reps, descanso 60-90s.
+Exercícios elegíveis: Jump Squat Stick, Broad Jump, Med Ball Slam, Box Jump (baixo),
+                      Lateral Bound, Skater Jump.
+Formato de output:
+"POWER:
+P1) Jump Squat Stick - 3x4 - 90s"
+
+HEAVY POWER — somente clientes advanced (nível=advanced)
+Biset: 1 exercício de alta potência + 1 acessório de core.
+Volume: 3-4 séries x 2-4 reps no power + 6-8 reps no core, descanso 90-120s.
+Exercícios elegíveis power: Trap Bar Jump, Loaded Jump Squat, Push Press,
+                             Hang Clean (se dominado).
+Exercícios elegíveis core: Pallof Press, Anti-Rotation Hold, Dead Bug,
+                            RKC Plank, Ab Wheel.
+Formato de output:
+"HEAVY POWER:
+HP1) Trap Bar Jump - 3x3 - 90s
+HP2) Pallof Press - 3x8/lado - 90s"
+
+STRENGTH POD 1 — TRISET (bloco principal de força)
+Triset obrigatório: A1=MI (knee/hip dominant) | A2=MS (push ou pull) | A3=Core/Corretivo
+Volume: 3-4 séries x 4-8 reps, descanso 60-90s por exercício.
+Formato de output:
+"STRENGTH POD 1:
+A1) Exercício - séries x reps - descanso
+A2) Exercício - séries x reps - descanso
+A3) Exercício - séries x reps - descanso"
+
+STRENGTH POD 2 — TRISET (bloco secundário de força)
+Triset obrigatório: B1=MI (padrão oposto ao A1) | B2=MS (oposto ao A2) | B3=Core/Corretivo
+Volume: 3-4 séries x 6-10 reps, descanso 60s.
+Formato de output:
+"STRENGTH POD 2:
+B1) Exercício - séries x reps - descanso
+B2) Exercício - séries x reps - descanso
+B3) Exercício - séries x reps - descanso"
+
+ESD / CONDITIONING (8-12min)
+Energia: aeróbico de baixa intensidade (Z2) ou circuito metabólico.
+Não prescrever se sessão já passou de 55min de trabalho.
+Formato de output: "ESD: Bike Zone 2 10min" ou "ESD: Circuito 3 rounds — Kettlebell Swing 10x / Sled Push / Row"
+
+9) REGRA DE OMISSÃO:
+- Foam Roll sempre presente
+- Pillar Prep sempre presente
+- Warm-Up sempre presente
+- Power: omitir apenas para beginner
+- Heavy Power: apenas para advanced
+- Strength POD 1: sempre presente
+- Strength POD 2: sempre presente
+- ESD: omitir se cliente reportou Prontidão Baixa no check-in
+
 
 10) MASTER SCHEDULE — CONTRATO DE SLOTS (OBRIGATÓRIO)
 Seleção de aba por frequência: 2x/semana → Sample 2 Day | 3x/semana → Sample 3 Day | 4x/semana → Sample 4 Day. Frequência não informada → PERGUNTAR antes de gerar.
@@ -6048,6 +7022,161 @@ function inferPhaseFromWorkouts() {
     nextPhase: `${nextPhase.name}: ${nextPhase.focus}`,
     planTitle: planoTitulo
   };
+}
+
+// ═══════════════════════════════════════════════
+//  NUTRITION PAGE
+// ═══════════════════════════════════════════════
+// ── Shared nutrition data helper ───────────────────────────────────────────
+function getNutritionData() {
+  const phase = getPhaseData() || inferPhaseFromWorkouts();
+  const treinos = loadTreinosIA();
+
+  let dayType = 'treino_normal';
+  let phaseName = '—';
+  let phaseObjective = '—';
+  let volumeLabel = 'Moderado';
+
+  if (phase) {
+    phaseName = phase.name || phase.phaseName || '—';
+    phaseObjective = phase.focus || phase.objective || '—';
+    const nameLC = phaseName.toLowerCase();
+    if (nameLC.includes('deload') || nameLC.includes('recuper')) {
+      dayType = 'deload'; volumeLabel = 'Baixo';
+    } else if (nameLC.includes('realização') || nameLC.includes('intensid') || nameLC.includes('transmut')) {
+      dayType = 'treino_pesado'; volumeLabel = 'Alto';
+    }
+  }
+
+  const dayLabel = dayType === 'deload' ? 'Deload / Recuperação'
+                 : dayType === 'treino_pesado' ? 'Treino Intenso'
+                 : 'Treino Moderado';
+  const dayIcon  = dayType === 'deload' ? '🔄' : dayType === 'treino_pesado' ? '🔥' : '💪';
+
+  const phrase = phase
+    ? dayType === 'treino_pesado'
+      ? 'Dia pesado — priorize carboidrato pré e proteína pós'
+      : dayType === 'deload'
+      ? 'Semana de deload — foco em recuperação e proteína distribuída'
+      : 'Dia de treino — mantenha proteína e carboidrato equilibrados'
+    : 'Consulte a aba Nutrição para orientações';
+
+  const suggestions = {
+    treino_pesado: [
+      { icon: '🍚', title: 'Carboidrato pré-treino', desc: 'Priorize carboidratos de fácil digestão antes da sessão para garantir energia disponível durante o esforço de alta intensidade.' },
+      { icon: '🥚', title: 'Proteína pós-treino — prioridade alta', desc: 'A janela pós-treino é crítica em sessões intensas. Inclua uma fonte proteica de qualidade na refeição seguinte ao treino.' },
+      { icon: '💧', title: 'Hidratação aumentada', desc: 'Sessões de alta intensidade elevam a perda de líquidos e eletrólitos. Hidrate-se bem antes, durante e após o treino.' },
+    ],
+    treino_normal: [
+      { icon: '🍠', title: 'Carboidrato moderado', desc: 'Mantenha um aporte adequado de carboidratos para sustentar o desempenho, sem exageros em dias de treino moderado.' },
+      { icon: '🥩', title: 'Proteína de manutenção', desc: 'Distribua proteína ao longo do dia para suportar a recuperação e preservar a massa muscular.' },
+      { icon: '💧', title: 'Hidratação normal', desc: 'Mantenha o padrão habitual de ingestão de líquidos ao longo do dia.' },
+    ],
+    deload: [
+      { icon: '🧘', title: 'Foco em recuperação', desc: 'O deload é o momento ideal para nutrir a recuperação. Alimentos anti-inflamatórios (peixes, vegetais coloridos, frutas) são bem-vindos.' },
+      { icon: '🥗', title: 'Proteína distribuída ao longo do dia', desc: 'Mesmo com volume reduzido de treino, mantenha a ingestão proteica para preservar a musculatura construída.' },
+      { icon: '🚫', title: 'Evite déficit calórico acentuado', desc: 'O corpo está em recuperação — cortar calorias drasticamente nesta fase pode prejudicar a regeneração muscular.' },
+    ],
+  };
+
+  let lastDate = '—';
+  if (treinos.length) lastDate = treinos[0].data || treinos[0].date || '—';
+
+  return { dayType, phaseName, phaseObjective, volumeLabel, dayLabel, dayIcon, phrase, suggestions, lastDate };
+}
+
+// ── Única fonte de verdade do HTML de nutrição ────────────────────────────
+function buildNutritionBodyHTML() {
+  const { dayType, phaseName, phaseObjective, volumeLabel, dayLabel, dayIcon, suggestions, lastDate } = getNutritionData();
+  const items = suggestions[dayType] || suggestions.treino_normal;
+
+  const contextCardsHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-family:var(--font-mono);letter-spacing:1px;">FASE ATUAL</div>
+      <div style="font-size:15px;font-weight:700;">${phaseName}</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-family:var(--font-mono);letter-spacing:1px;">TIPO DE DIA</div>
+      <div style="font-size:15px;font-weight:700;">${dayIcon} ${dayLabel}</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-family:var(--font-mono);letter-spacing:1px;">VOLUME ESPERADO</div>
+      <div style="font-size:15px;font-weight:700;">${volumeLabel}</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-family:var(--font-mono);letter-spacing:1px;">OBJETIVO DA SESSÃO</div>
+      <div style="font-size:13px;font-weight:600;line-height:1.4;">${phaseObjective}</div>
+    </div>`;
+
+  const suggestionsHTML = items.map(s => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:flex-start;gap:12px;">
+      <span style="font-size:20px;flex-shrink:0;">${s.icon}</span>
+      <div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px;">${s.title}</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;">${s.desc}</div>
+      </div>
+    </div>`).join('');
+
+  return `
+    <div style="background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.35);border-radius:14px;padding:18px 22px;margin-bottom:28px;display:flex;align-items:flex-start;gap:14px;">
+      <span style="font-size:22px;flex-shrink:0;margin-top:1px;">⚠️</span>
+      <p style="font-size:13px;color:#fbbf24;line-height:1.7;margin:0;">As informações nutricionais apresentadas aqui são sugestões geradas com base no tipo e volume de treino recomendado pela plataforma. Elas não substituem a avaliação de um nutricionista habilitado. Consulte um profissional antes de fazer alterações significativas na sua dieta.</p>
+    </div>
+    <div style="margin-bottom:28px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Contexto do Treino</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">${contextCardsHTML}</div>
+    </div>
+    <div style="margin-bottom:28px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Sugestões para o Período Atual</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">${suggestionsHTML}</div>
+    </div>
+    <div style="margin-bottom:28px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Dicas Gerais</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:flex-start;gap:12px;"><span style="font-size:18px;flex-shrink:0;">🥩</span><p style="font-size:13px;line-height:1.6;margin:0;"><strong style="color:var(--text);">Priorize proteína em todas as refeições</strong><br><span style="color:var(--muted);">Proteína é o principal nutriente para reparação muscular e saciedade. Inclua uma fonte em cada refeição do dia.</span></p></div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:flex-start;gap:12px;"><span style="font-size:18px;flex-shrink:0;">💧</span><p style="font-size:13px;line-height:1.6;margin:0;"><strong style="color:var(--text);">Hidratação — monitore a cor da urina</strong><br><span style="color:var(--muted);">Urina amarela clara indica boa hidratação. Cor escura sinaliza necessidade de aumentar a ingestão de líquidos.</span></p></div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:flex-start;gap:12px;"><span style="font-size:18px;flex-shrink:0;">⏱️</span><p style="font-size:13px;line-height:1.6;margin:0;"><strong style="color:var(--text);">Evite treinar em jejum prolongado (&gt;16h) se o objetivo é performance</strong><br><span style="color:var(--muted);">Jejuns muito longos podem comprometer força e foco durante sessões intensas. Considere uma refeição leve antes.</span></p></div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:flex-start;gap:12px;"><span style="font-size:18px;flex-shrink:0;">😴</span><p style="font-size:13px;line-height:1.6;margin:0;"><strong style="color:var(--text);">Sono e nutrição são complementares</strong><br><span style="color:var(--muted);">Déficit de sono aumenta o catabolismo muscular e desregula hormônios da fome. Dormir bem é parte do protocolo.</span></p></div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:flex-start;gap:12px;"><span style="font-size:18px;flex-shrink:0;">🌾</span><p style="font-size:13px;line-height:1.6;margin:0;"><strong style="color:var(--text);">Alimentos integrais &gt; suplementos como base da dieta</strong><br><span style="color:var(--muted);">Suplementos complementam, mas não substituem uma alimentação variada e rica em nutrientes reais.</span></p></div>
+      </div>
+    </div>
+    <p style="font-size:11px;color:var(--muted);font-family:var(--font-mono);text-align:center;padding-top:8px;border-top:1px solid var(--border);">Conteúdo gerado automaticamente com base no protocolo de treino ativo. Última atualização: ${lastDate}</p>`;
+}
+
+function renderNutrition() {
+  const body = document.getElementById('nutri-page-body');
+  if (body) body.innerHTML = buildNutritionBodyHTML();
+}
+
+function renderDashboardNutritionCard() {
+  const el = document.getElementById('nutri-dash-phrase');
+  if (el) el.textContent = getNutritionData().phrase;
+}
+
+function openNutritionModal() {
+  if (document.getElementById('nutri-modal')) return;
+  const modal = document.createElement('div');
+  modal.id = 'nutri-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;background:rgba(0,0,0,0.7);overflow-y:auto;';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;max-width:640px;display:flex;flex-direction:column;animation:fadeUp 0.3s ease;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div style="font-family:var(--font-display);font-size:22px;letter-spacing:2px;">🥗 NUTRIÇÃO</div>
+        <button onclick="closeNutritionModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:8px;line-height:1;">✕</button>
+      </div>
+      <div id="nutri-modal-body" style="padding:24px;overflow-y:auto;max-height:70vh;"></div>
+      <div style="padding:16px 24px;border-top:1px solid var(--border);flex-shrink:0;">
+        <button onclick="closeNutritionModal();navigate('nutrition');" style="width:100%;padding:12px;background:var(--green);color:#000;font-family:var(--font-display);font-size:16px;letter-spacing:2px;border:none;border-radius:10px;cursor:pointer;">ABRIR ABA COMPLETA →</button>
+      </div>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) closeNutritionModal(); });
+  document.body.appendChild(modal);
+  document.getElementById('nutri-modal-body').innerHTML = buildNutritionBodyHTML();
+}
+
+function closeNutritionModal() {
+  const m = document.getElementById('nutri-modal');
+  if (m) m.remove();
 }
 
 function renderPhaseCard() {
