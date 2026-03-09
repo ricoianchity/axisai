@@ -18,10 +18,10 @@ export default async function handler(req) {
   try {
     const body = await req.json();
 
-    // Extrair dados do body
-    const { messages, readiness, checkin, profile, fmsLatest, ...rest } = body;
+    // Extrair dados relevantes do body
+    const { readiness } = body;
 
-    console.log('[api/chat] model:', rest.model, '| messages:', messages?.length, '| readiness_score:', readiness?.readiness_score ?? 'n/a');
+    console.log('[api/chat] model:', body.model, '| messages:', body.messages?.length, '| readiness_score:', readiness?.readiness_score ?? 'n/a');
 
     // Construir contexto de prontidão — usa 'readiness' (novo) se disponível, senão tenta 'checkin' legacy
     let readinessContext = '';
@@ -51,10 +51,12 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
       readinessContext = '\n\nSem dados de prontidão hoje — prescreva com base no histórico recente e no planejamento de fase.';
     }
 
-    // O system prompt já vem completo do frontend (inclui perfil, FMS e readiness).
-    // Apenas garantimos que o contexto de prontidão está presente se o frontend não o incluiu
-    // (compatibilidade com versões antigas do cliente).
-    const updatedSystem = rest.system ? rest.system : readinessContext;
+    const anthropicPayload = {
+      model: body.model || 'claude-sonnet-4-20250514',
+      max_tokens: body.max_tokens || 2048,
+      system: body.system || readinessContext,
+      messages: body.messages || [],
+    };
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -63,7 +65,7 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
         'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify({ ...rest, messages, system: updatedSystem }),
+      body: JSON.stringify(anthropicPayload),
     });
 
     const data = await response.json();
