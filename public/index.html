@@ -4826,32 +4826,98 @@ function _parseDescansoSegundos(texto) {
   return 60;
 }
 
-function _parseExerciseLine(rawLine) {
+function _parseExerciseLine(rawLine, fallbackId = '') {
   if (!rawLine) return null;
   const clean = String(rawLine)
     .replace(/[–—]/g, '-')
     .replace(/^[•\-\u2022]\s*/, '')
     .trim();
 
-  const match = clean.match(/^([A-Z]{1,3}\d+)\)\s*(.+)$/i);
-  if (!match) return null;
+  if (!clean) return null;
 
-  const id = match[1].toUpperCase();
-  const body = match[2].trim();
-  const parts = body.split(/\s*-\s*/).map(p => p.trim()).filter(Boolean);
-  const nome = parts.shift() || body;
-  const prescricao = parts.join(' - ').trim();
-  const parseBase = prescricao || body;
-  const setsMatch = parseBase.match(/(\d+)\s*x\s*([0-9]+(?:\/[A-Za-zÀ-ÿ]+)?(?:-[0-9]+)?)/i);
-
-  return {
-    id,
-    nome,
-    prescricao: prescricao || '',
-    setsTotal: setsMatch ? parseInt(setsMatch[1], 10) : 3,
-    repsPrescricao: setsMatch ? setsMatch[2] : '',
-    descansoSegundos: _parseDescansoSegundos(parseBase)
+  const buildExercise = (idValue, nomeValue, prescricaoValue) => {
+    const parseBase = String(prescricaoValue || '').trim();
+    const setsMatch = parseBase.match(/(\d+)\s*x\s*([^\s-]+)/i);
+    return {
+      id: String(idValue || fallbackId || '').toUpperCase(),
+      nome: String(nomeValue || '').trim(),
+      prescricao: parseBase,
+      setsTotal: setsMatch ? parseInt(setsMatch[1], 10) : 3,
+      repsPrescricao: setsMatch ? setsMatch[2] : '',
+      descansoSegundos: _parseDescansoSegundos(parseBase || clean)
+    };
   };
+
+  const explicitLegacy = clean.match(/^([A-Z]+\d*)\)\s+(.+?)\s+-\s+(\d+x[\w\/]+)\s+-\s+(\d+s|\d+min)\b/i);
+  if (explicitLegacy) {
+    return buildExercise(explicitLegacy[1], explicitLegacy[2], `${explicitLegacy[3]} - ${explicitLegacy[4]}`);
+  }
+
+  const withId = clean.match(/^([A-Z]+\d*)\)\s*(.+)$/i);
+  if (withId) {
+    const id = withId[1];
+    const body = withId[2].trim();
+    const parts = body.split(/\s*-\s*/).map(p => p.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      const nome = parts.shift();
+      return buildExercise(id, nome, parts.join(' - '));
+    }
+    const compact = body.match(/^(.+?)\s+(\d+x[\w\/]+)(?:\s*-\s*(\d+s|\d+min))?$/i);
+    if (compact) {
+      return buildExercise(id, compact[1], compact[3] ? `${compact[2]} - ${compact[3]}` : compact[2]);
+    }
+    return buildExercise(id, body, '');
+  }
+
+  const withoutId = clean.match(/^(.+?)\s+-\s+(\d+x[\w\/]+)\s+-\s+(\d+s|\d+min)\b/i);
+  if (withoutId) {
+    return buildExercise('', withoutId[1], `${withoutId[2]} - ${withoutId[3]}`);
+  }
+
+  const withoutIdNoRest = clean.match(/^(.+?)\s+-\s+(\d+x[\w\/]+)\b/i);
+  if (withoutIdNoRest) {
+    return buildExercise('', withoutIdNoRest[1], withoutIdNoRest[2]);
+  }
+
+  const compactNoDash = clean.match(/^(.+?)\s+(\d+x[\w\/]+)(?:\s*-\s*(\d+s|\d+min))?$/i);
+  if (compactNoDash) {
+    return buildExercise('', compactNoDash[1], compactNoDash[3] ? `${compactNoDash[2]} - ${compactNoDash[3]}` : compactNoDash[2]);
+  }
+
+  return null;
+}
+
+function _blockExercisePrefix(bloco) {
+  if (bloco === 'STRENGTH POD 1') return 'A';
+  if (bloco === 'STRENGTH POD 2') return 'B';
+  if (bloco === 'HEAVY POWER') return 'HP';
+  return 'P';
+}
+
+function _parseExerciseEntries(rawLine, bloco, currentCount = 0) {
+  if (!rawLine) return [];
+  const line = String(rawLine).trim();
+  if (!line) return [];
+
+  const setsHits = line.match(/\d+\s*x\s*[\w\/]+/gi) || [];
+  const shouldSplitByPlus = line.includes('+') && setsHits.length >= 2;
+  const chunks = shouldSplitByPlus
+    ? line.split(/\s*\+\s*/).map(s => s.trim()).filter(Boolean)
+    : [line];
+
+  const prefix = _blockExercisePrefix(bloco);
+  let next = currentCount + 1;
+  const parsed = [];
+
+  for (const chunk of chunks) {
+    const ex = _parseExerciseLine(chunk, `${prefix}${next}`);
+    if (!ex) continue;
+    if (!ex.id) ex.id = `${prefix}${next}`;
+    parsed.push(ex);
+    next += 1;
+  }
+
+  return parsed;
 }
 
 function parseTreino(conteudo) {
@@ -4860,7 +4926,12 @@ function parseTreino(conteudo) {
     return [{ bloco: 'TREINO', tipo: 'warmup', navegavel: false, descricao: '', exercicios: [] }];
   }
 
-  const normalized = original
+  let normalizedSource = original;
+  if (!normalizedSource.includes('\n') && normalizedSource.includes('|')) {
+    normalizedSource = normalizedSource.split('|').map(s => s.trim()).join('\n');
+  }
+
+  const normalized = normalizedSource
     .replace(/\r\n?/g, '\n')
     .replace(/[–—]/g, '-')
     .replace(/\s+\|\s+/g, '\n')
@@ -4959,8 +5030,8 @@ function parseTreino(conteudo) {
       if (header.mergePod2) {
         if (current && current.bloco === 'STRENGTH POD 2') {
           if (header.descricao) {
-            const exInline = _parseExerciseLine(header.descricao);
-            if (exInline) current.exercicios.push(exInline);
+            const exInline = _parseExerciseEntries(header.descricao, current.bloco, current.exercicios.length);
+            if (exInline.length) current.exercicios.push(...exInline);
           }
           continue;
         }
@@ -4969,8 +5040,8 @@ function parseTreino(conteudo) {
         if (blocks.length && blocks[blocks.length - 1].bloco === 'STRENGTH POD 2') {
           current = blocks.pop();
           if (header.descricao) {
-            const exInline = _parseExerciseLine(header.descricao);
-            if (exInline) current.exercicios.push(exInline);
+            const exInline = _parseExerciseEntries(header.descricao, current.bloco, current.exercicios.length);
+            if (exInline.length) current.exercicios.push(...exInline);
           }
           continue;
         }
@@ -4980,9 +5051,9 @@ function parseTreino(conteudo) {
       current = createBlock(header.bloco, header.tipo, header.navegavel, header.duracao, header.descricao || '');
 
       if (header.descricao && current.navegavel) {
-        const exInline = _parseExerciseLine(header.descricao);
-        if (exInline) {
-          current.exercicios.push(exInline);
+        const exInline = _parseExerciseEntries(header.descricao, current.bloco, current.exercicios.length);
+        if (exInline.length) {
+          current.exercicios.push(...exInline);
           current.descricao = '';
         }
       }
@@ -4992,9 +5063,9 @@ function parseTreino(conteudo) {
     if (!current) continue;
 
     if (current.navegavel) {
-      const ex = _parseExerciseLine(line);
-      if (ex) {
-        current.exercicios.push(ex);
+      const ex = _parseExerciseEntries(line, current.bloco, current.exercicios.length);
+      if (ex.length) {
+        current.exercicios.push(...ex);
       } else {
         current.descricao = [current.descricao, line].filter(Boolean).join(' ');
       }
