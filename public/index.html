@@ -3619,8 +3619,6 @@ function renderWorkouts() {
         const multiWeek = Object.keys(semanas).length > 1;
         if (multiWeek) html += `<div class="week-group"><div class="week-label">Semana ${semNum}</div>`;
         sessoes.forEach(t => {
-          const preview  = _extractExercisePreview(t.conteudo);
-          const tags     = preview.slice(0, 3).map(e => `<span class="ex-tag">${e}</span>`).join('');
           const isDone   = t.concluida || t.completed;
           html += `<div class="session-card ${isDone ? 'completed' : ''}">
             <div class="session-card-header" onclick="toggleSessionCard('scb-${t.id}')">
@@ -3632,7 +3630,7 @@ function renderWorkouts() {
                   <span class="s-badge s-badge-week">Sem ${semNum}</span>
                   ${isDone ? '<span class="s-badge s-badge-done">✓ FEITO</span>' : ''}
                 </div>
-                <div class="session-preview">${tags || '<span class="ex-tag" style="opacity:0.45;">Abrir para ver exercícios</span>'}</div>
+                <div class="session-preview">${_buildBlocksPreviewHTML(t.conteudo)}</div>
               </div>
               <div class="session-card-actions">
                 ${!isDone ? `<button class="btn-start-session" onclick="event.stopPropagation();startSessionById(${t.id},this)">▶ Iniciar Treino</button>` : ''}
@@ -3662,8 +3660,6 @@ function renderWorkouts() {
       </div>
       <div class="fase-body" id="avulsos-grp">`;
     avulsosPendentes.forEach(t => {
-      const preview = _extractExercisePreview(t.conteudo);
-      const tags    = preview.slice(0, 3).map(e => `<span class="ex-tag">${e}</span>`).join('');
       html += `<div class="session-card">
         <div class="session-card-header" onclick="toggleSessionCard('scb-${t.id}')">
           <div class="session-status-dot pending">🤖</div>
@@ -3672,7 +3668,7 @@ function renderWorkouts() {
               ${t.titulo}
               <span class="s-badge s-badge-phase cat-${t.categoria||'fullbody'}">${(t.categoria||'IA').toUpperCase()}</span>
             </div>
-            <div class="session-preview">${tags}</div>
+            <div class="session-preview">${_buildBlocksPreviewHTML(t.conteudo)}</div>
           </div>
           <div class="session-card-actions">
             ${!(t.concluida || t.completed) ? `<button class="btn-start-session" onclick="event.stopPropagation();startSessionById(${t.id},this)">▶ Iniciar Treino</button>` : ''}
@@ -4347,6 +4343,37 @@ function toggleSessionCard(bodyId) {
   const body = document.getElementById(bodyId);
   if (!body) return;
   body.classList.toggle('open');
+}
+
+// Build a full block-by-block preview HTML using parseTreino
+function _buildBlocksPreviewHTML(conteudo) {
+  try {
+    const blocos = parseTreino(conteudo);
+    if (!blocos || !blocos.length) throw new Error('empty');
+    const iconMap = {
+      foam_roll: '🔵', pillar_prep: '🔵', warm_up: '🔵',
+      power: '🟡', strength: '🟠', conditioning: '🟣'
+    };
+    return blocos.map(b => {
+      const icon = iconMap[b.tipo] || '⚪';
+      const name = b.bloco;
+      const dur  = b.duracao ? `<span style="margin-left:6px;color:var(--muted);font-size:11px;">${b.duracao}</span>` : '';
+      let detail = '';
+      if ((b.tipo === 'strength' || b.tipo === 'power') && b.exercicios && b.exercicios.length) {
+        detail = `<span style="margin-left:6px;color:var(--muted);font-size:11px;">${b.exercicios.map(e => e.id || e.nome).join(' · ')}</span>`;
+      } else if (b.tipo === 'conditioning') {
+        const desc = b.descricao || (b.itens && b.itens.length ? b.itens[0].nome : '');
+        if (desc) detail = `<span style="margin-left:6px;color:var(--muted);font-size:11px;">${desc.slice(0, 50)}</span>`;
+      }
+      return `<div style="display:flex;align-items:baseline;gap:4px;padding:1px 0;font-size:12px;line-height:1.5;">`
+        + `<span>${icon}</span>`
+        + `<span style="font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">${name}</span>`
+        + dur + detail
+        + `</div>`;
+    }).join('');
+  } catch(e) {
+    return `<span style="font-size:11px;color:var(--muted);">${String(conteudo||'').slice(0,120)}</span>`;
+  }
 }
 
 // Extract first N exercise names from AI-generated workout text for preview tags
@@ -6085,6 +6112,7 @@ Formato de output:
 A1) Exercício - séries x reps - descanso
 A2) Exercício - séries x reps - descanso
 A3) Exercício - séries x reps - descanso"
+REGRA INVIOLÁVEL: STRENGTH POD 1 SEMPRE tem exatamente 3 exercícios: A1, A2 e A3. NUNCA gerar POD com 1 ou 2 exercícios. Se não houver exercício de core adequado, usar Dead Bug, Plank Hold ou Pallof Press como A3 padrão.
 
 STRENGTH POD 2 — TRISET (bloco secundário de força)
 Triset obrigatório: B1=MI (padrão oposto ao A1) | B2=MS (oposto ao A2) | B3=Core/Corretivo
@@ -6094,6 +6122,7 @@ Formato de output:
 B1) Exercício - séries x reps - descanso
 B2) Exercício - séries x reps - descanso
 B3) Exercício - séries x reps - descanso"
+REGRA INVIOLÁVEL: STRENGTH POD 2 SEMPRE tem exatamente 3 exercícios: B1, B2 e B3. NUNCA gerar POD com 1 ou 2 exercícios. Se não houver exercício de core adequado, usar Dead Bug, Plank Hold ou Pallof Press como B3 padrão.
 
 ESD / CONDITIONING (8-12min)
 Energia: aeróbico de baixa intensidade (Z2) ou circuito metabólico.
