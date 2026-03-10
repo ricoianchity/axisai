@@ -5886,9 +5886,14 @@ function _normalizeWorkoutTextPreserveNewlines(raw) {
   if (Array.isArray(raw)) {
     return raw.map(_normalizeWorkoutTextPreserveNewlines).join('\n');
   }
-  return String(raw)
+  let text = String(raw)
     .replace(/\r\n?/g, '\n')
     .replace(/\\n/g, '\n');
+  // Defensive fix: recover legacy single-line content collapsed with pipe separators.
+  if (!text.includes('\n') && text.includes('|')) {
+    text = text.split('|').map(s => s.trim()).filter(Boolean).join('\n');
+  }
+  return text;
 }
 
 function _normalizeAxisWorkoutPayload(payload) {
@@ -5955,7 +5960,7 @@ function aceitarTreino(id) {
   const data = window._axisWorkouts[id];
   if (!data) return;
   const treinos = loadTreinosIA();
-  treinos.unshift({ id: Date.now(), data: new Date().toLocaleDateString('pt-BR'), titulo: data.titulo, categoria: data.categoria||'fullbody', conteudo: data.conteudo||'', tipo: 'sessao', faseNum: null, faseNome: null, planoTitulo: null, fonte: 'coach_ia' });
+  treinos.unshift({ id: Date.now(), data: new Date().toLocaleDateString('pt-BR'), titulo: data.titulo, categoria: data.categoria||'fullbody', conteudo: _normalizeWorkoutTextPreserveNewlines(data.conteudo||''), tipo: 'sessao', faseNum: null, faseNome: null, planoTitulo: null, fonte: 'coach_ia' });
   saveTreinosIA(treinos);
   delete window._axisWorkouts[id];
   document.getElementById('axiscard-' + id)?.remove();
@@ -5970,7 +5975,7 @@ function aceitarPlanoCompleto(id) {
   const agora = new Date().toLocaleDateString('pt-BR');
   (data.fases||[]).forEach(f => {
     (f.sessoes||[]).forEach(s => {
-      treinos.unshift({ id: Date.now() + Math.random(), data: agora, titulo: s.titulo, categoria: s.categoria||'fullbody', conteudo: s.conteudo||'', tipo: 'plano_sessao', faseNum: f.fase, faseNome: f.nome||`Fase ${f.fase}`, planoTitulo: data.titulo, fonte: 'coach_ia' });
+      treinos.unshift({ id: Date.now() + Math.random(), data: agora, titulo: s.titulo, categoria: s.categoria||'fullbody', conteudo: _normalizeWorkoutTextPreserveNewlines(s.conteudo||''), tipo: 'plano_sessao', faseNum: f.fase, faseNome: f.nome||`Fase ${f.fase}`, planoTitulo: data.titulo, fonte: 'coach_ia' });
     });
   });
   saveTreinosIA(treinos);
@@ -5995,7 +6000,7 @@ function aceitarSessoesSelecionadas(id) {
     (f.sessoes||[]).forEach((s,si) => {
       const chk = document.getElementById(`axischk-${id}-${f.fase}-${si}`);
       if (chk && chk.checked) {
-        treinos.unshift({ id: Date.now() + Math.random(), data: agora, titulo: s.titulo, categoria: s.categoria||'fullbody', conteudo: s.conteudo||'', tipo: 'plano_sessao', faseNum: f.fase, faseNome: f.nome||`Fase ${f.fase}`, planoTitulo: data.titulo, fonte: 'coach_ia' });
+        treinos.unshift({ id: Date.now() + Math.random(), data: agora, titulo: s.titulo, categoria: s.categoria||'fullbody', conteudo: _normalizeWorkoutTextPreserveNewlines(s.conteudo||''), tipo: 'plano_sessao', faseNum: f.fase, faseNome: f.nome||`Fase ${f.fase}`, planoTitulo: data.titulo, fonte: 'coach_ia' });
         count++;
       }
     });
@@ -6212,6 +6217,14 @@ Composição obrigatória por POD:
 - Posição 3 (A3/B3/C3): Core/Corretivo — anti-extensão (POD 1) ou anti-rotação (POD 2) ou rotacional (POD 3)
 
 BLOCO 6 — STRENGTH POD 1 [TODOS OS NÍVEIS]
+VERIFICAÇÃO OBRIGATÓRIA ANTES DE PRESCREVER A1:
+Pergunta: Este exercício envolve salto, arremesso, explosão máxima ou é classificado como potência?
+- SIM → NÃO use aqui. Use no bloco LIGHT POWER antes.
+- NÃO → pode usar como A1.
+Jump Squat Stick = POTÊNCIA → vai em LIGHT POWER, NUNCA em A1.
+Goblet Squat = FORÇA → correto para A1.
+Box Jump = POTÊNCIA → vai em LIGHT POWER, NUNCA em A1.
+Split Squat = FORÇA → correto para A1.
 Formato de output:
 "STRENGTH POD 1:
 A1) Goblet Squat - 3x6 - 60s
