@@ -6248,6 +6248,26 @@ Formato de output:
 - Carioca: 2x10m
 - Bear Crawl: 2x10m"
 
+CLASSIFICAÇÃO OBRIGATÓRIA DE EXERCÍCIOS DE POTÊNCIA:
+Os exercícios abaixo são EXCLUSIVAMENTE de potência.
+NUNCA prescrever em STRENGTH POD 1, 2 ou 3.
+SEMPRE prescrever em LIGHT POWER ou HEAVY POWER.
+Lista completa de exercícios de potência:
+- Jump Squat Stick / Jump Squat
+- Broad Jump / Broad Jump Stick
+- Box Jump / Box Jump Stick
+- Lateral Bound / Lateral Bound Stick
+- Skater Jump / Skater Hop
+- Continuous Jump Squat
+- Med Ball Slam / MB Slam
+- MB Chest Pass / MB Side Toss / MB Overhead Throw
+- MB Rotational Throw
+- Push Press / Push Jerk
+- Hang Clean / Hang Power Clean
+- Trap Bar Jump / Loaded Jump Squat
+- Any exercise with 'Jump', 'Bound', 'Hop', 'Throw', 'Slam' no nome
+Se um destes exercícios aparecer prescrito dentro de STRENGTH POD, você cometeu um erro grave. Corrija imediatamente movendo para LIGHT POWER.
+
 BLOCO 4 — LIGHT POWER [TODOS OS NÍVEIS]
 Biset: 1 exercício de potência leve + 1 exercício de core. Objetivo: ativar SNC, não gerar fadiga.
 Volume: 3x3-5 no power + 3x6-8 no core. Descanso 60-90s.
@@ -6284,6 +6304,9 @@ Formato de output:
 A1) Goblet Squat - 3x6 - 60s
 A2) Push-Up - 3x8 - 60s
 A3) Dead Bug - 3x8/lado - 60s"
+ATENÇÃO: A1 NUNCA é um exercício de potência.
+A1 é sempre MI knee dominant (Squat, Split Squat, Step-Up, Lunge).
+Se quiser prescrever potência, use o bloco LIGHT POWER antes.
 REGRA INVIOLÁVEL: STRENGTH POD 1 SEMPRE tem exatamente 3 exercícios: A1, A2 e A3. NUNCA gerar POD com 1 ou 2 exercícios. Se não houver exercício de core adequado, usar Dead Bug, Plank Hold ou Pallof Press como A3 padrão.
 
 BLOCO 7 — STRENGTH POD 2 [TODOS OS NÍVEIS]
@@ -6292,6 +6315,8 @@ Formato de output:
 B1) Single Leg RDL - 3x6/lado - 60s
 B2) TRX Row - 3x8 - 60s
 B3) Pallof Press - 3x8/lado - 60s"
+ATENÇÃO: B1 NUNCA é um exercício de potência.
+B1 é sempre MI hip dominant (RDL, SLDL, Hip Hinge, Bridge).
 REGRA INVIOLÁVEL: STRENGTH POD 2 SEMPRE tem exatamente 3 exercícios: B1, B2 e B3. NUNCA gerar POD com 1 ou 2 exercícios. Se não houver exercício de core adequado, usar Dead Bug, Plank Hold ou Pallof Press como B3 padrão.
 
 BLOCO 8 — STRENGTH POD 3 [apenas ADVANCED, sessão 45min+]
@@ -6483,7 +6508,23 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
     }
     const systemPrompt = CORE_PROMPT + profileCtx + fmsCtx + flagCtx + healthCtx + readinessCtx + (needsReference ? REF_TABLES : '');
 
-    console.log('[chat] Enviando para /api/chat:', { messages: state.chatHistory.length, model: 'claude-sonnet-4-20250514', readinessScore: rdToday?.readiness_score ?? 'n/a' });
+    const historico = Array.isArray(state.chatHistory) ? state.chatHistory : [];
+    let mensagensParaEnviar = historico.slice(-10);
+    if (mensagensParaEnviar.length > 1 && mensagensParaEnviar[0]?.role === 'assistant') {
+      mensagensParaEnviar = mensagensParaEnviar.slice(1);
+    }
+    const ultimaMensagem = mensagensParaEnviar[mensagensParaEnviar.length - 1];
+    if (!ultimaMensagem || ultimaMensagem.role !== 'user' || ultimaMensagem.content !== text) {
+      mensagensParaEnviar.push({ role: 'user', content: text });
+    }
+    if (mensagensParaEnviar.length > 10) {
+      mensagensParaEnviar = mensagensParaEnviar.slice(-10);
+      if (mensagensParaEnviar.length > 1 && mensagensParaEnviar[0]?.role === 'assistant') {
+        mensagensParaEnviar = mensagensParaEnviar.slice(1);
+      }
+    }
+
+    console.log('[chat] Enviando para /api/chat:', { messages: mensagensParaEnviar.length, messagesTotal: state.chatHistory.length, model: 'claude-sonnet-4-20250514', readinessScore: rdToday?.readiness_score ?? 'n/a' });
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -6491,7 +6532,7 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2048,
         system: systemPrompt,
-        messages: state.chatHistory,
+        messages: mensagensParaEnviar,
         readiness: state.readiness || null,
         checkin: state.checkin || null,
         profile: state.profile || null,
