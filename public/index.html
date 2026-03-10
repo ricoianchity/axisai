@@ -6025,94 +6025,7 @@ function toggleTreino(bodyId, btn) {
 // ═══════════════════════════════════════════════
 function quickSend(msg) { document.getElementById('chat-input').value = msg; sendMessage(); }
 
-async function clearChat() {
-  state.chatHistory = [];
-  const box = document.getElementById('chat-messages');
-  const typingId = 'typing-init-' + Date.now();
-  box.innerHTML = `<div class="msg bot" id="${typingId}"><div class="msg-avatar" style="background:transparent;"><svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" style="width:30px;height:30px;"><defs><linearGradient id="cg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00ff87"/><stop offset="100%" style="stop-color:#00c8ff"/></linearGradient></defs><circle cx="15" cy="6" r="4" fill="url(#cg)"/><path d="M12,10 L7,20 L12,19 L14,24 L18,16 L22,18 L18,11 Z" fill="url(#cg)"/><path d="M10,13 L3,9 L4,14 L10,17 Z" fill="url(#cg)"/><path d="M16,17 L23,26 L20,25 L14,19 Z" fill="url(#cg)"/></svg></div><div class="msg-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>`;
-  box.scrollTop = box.scrollHeight;
-
-  const _initMsg = { role: 'user', content: 'Olá! Apresente-se brevemente.' };
-  const _initPayload = {
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 2048,
-    system: 'Você é o AxisAI, coach de Performance Humana baseado em evidência. PT-BR obrigatório em toda comunicação. Nunca use Markdown, asteriscos, cerquilhas ou formatação especial — apenas texto limpo e emojis. Apresente-se brevemente: seu nome, missão e como pode ajudar (treinos personalizados, FMS, periodização, nutrição esportiva). Seja direto e amigável.',
-    messages: [_initMsg]
-  };
-
-  try {
-    console.log('[clearChat] Enviando init para /api/chat:', _initPayload);
-    const _initResp = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(_initPayload)
-    });
-    const _initData = await _initResp.json();
-    const _initReply = _initData.content?.[0]?.text || 'Olá! Sou o AxisAI, seu coach de performance. Como posso te ajudar hoje? 💪';
-    document.getElementById(typingId)?.remove();
-    appendMsg('bot', _initReply);
-    state.chatHistory.push(_initMsg);
-    state.chatHistory.push({ role: 'assistant', content: _initReply });
-  } catch (err) {
-    console.error('[clearChat] Erro na inicialização do chat:', err);
-    document.getElementById(typingId)?.remove();
-    appendMsg('bot', 'Conversa reiniciada! Como posso te ajudar? 💪');
-  }
-}
-
-async function sendMessage() {
-  const input = document.getElementById('chat-input');
-  const text = input.value.trim();
-  if (!text) return;
-
-  // ── FIX BUG 2: Guard — require authenticated session before sending ──
-  if (!state.user?.id) {
-    appendMsg('bot', 'Sua sessão expirou. Faça login novamente para continuar.');
-    return;
-  }
-  // Ensure profile is loaded — if not, attempt to load it now
-  if (!state.profile) {
-    try {
-      await loadUserData(state.user.id);
-      loadProfile();
-      refreshChatSidebar();
-    } catch (e) {
-      console.warn('[chat] Failed to load profile before sending:', e);
-    }
-  }
-
-  input.value = ''; input.style.height = '44px';
-  appendMsg('user', text);
-  state.chatHistory.push({ role: 'user', content: text });
-  // Persistir mensagem do usuário no Supabase
-  if (state.user?.id) {
-    supabase.from('chat_messages').insert({ user_id: state.user.id, role: 'user', content: text }).then(({ error }) => { if (error) console.warn('chat_messages insert error:', error); });
-  }
-
-  const typingId = 'typing-' + Date.now();
-  const box = document.getElementById('chat-messages');
-  const uid = 'tg' + typingId;
-  box.innerHTML += `<div class="msg bot" id="${typingId}"><div class="msg-avatar" style="background:transparent;"><svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" style="width:30px;height:30px;"><defs><linearGradient id="${uid}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00ff87"/><stop offset="100%" style="stop-color:#00c8ff"/></linearGradient></defs><circle cx="15" cy="6" r="4" fill="url(#${uid})"/><path d="M12,10 L7,20 L12,19 L14,24 L18,16 L22,18 L18,11 Z" fill="url(#${uid})"/></svg></div><div class="msg-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>`;
-  box.scrollTop = box.scrollHeight;
-
-  try {
-    const p = state.profile;
-    const profileCtx = p ? `\n\n## PERFIL DO USUÁRIO\nIdade: ${p.age||'?'} | Peso: ${p.weight||'?'}kg | Altura: ${p.height||'?'}cm | Sexo: ${p.sex||'?'} | Nível: ${p.level||'?'} | Objetivo: ${p.goal||'?'} | Local: ${p.gym||'?'} | Frequência: ${p.frequency||'?'}/semana | Tempo/sessão: ${p.sessionTime||'?'} | Equipamentos: ${(Array.isArray(p.equipment) ? p.equipment : []).join(', ')||'?'} | Lesões: ${p.injuries||'Nenhuma'} | PAR-Q cardíaco: ${p.parq==='yes'?'Sim — recomendado acompanhamento médico':'Não'}.\nProfissão: ${p.profissao||'?'} | Jornada: ${p.horasTrabalho||'?'}h/dia | Perfil postural: ${p.perfilPostural||'?'}${p.perfilPostural==='Misto'?' ('+( p.horasSentado||'?')+'h sentado)':''} | Estresse ocupacional: ${p.estresseOcup||'?'} | Turno: ${p.turnoTrabalho||'?'}.` : '\n\n## PERFIL\nNão preenchido — pergunte dados essenciais.';
-    const fmsTotal = p?.fms ? (p.fms.dos??0)+(p.fms.il??0)+(p.fms.hs??0)+(p.fms.sm??0)+(p.fms.aslr??0) : null;
-    const fmsFlags = (Array.isArray(p?.riskFlags) ? p.riskFlags : []).filter(f=>f!=='none');
-    const fmsFlagMap = { squat_dysfunction:'Deep Squat ≤1', lunge_dysfunction:'Inline Lunge ≤1', hip_instability:'Hurdle Step ≤1', shoulder_restriction:'Shoulder Mobility ≤1', hamstring_restriction:'ASLR ≤1', toe_touch_negative:'Toe Touch negativo' };
-    const _ttLabel = p?.fms?.tt === 'positive' ? 'Sim' : p?.fms?.tt === 'negative' ? 'Não' : '?';
-    const fmsCtx = p?.fms ? `\n\n## SCORES FMS\nFMS Total: ${fmsTotal}/15 | DOS: ${p.fms.dos??'?'} | IL: ${p.fms.il??'?'} | HS: ${p.fms.hs??'?'} | SM: ${p.fms.sm??'?'} | ASLR: ${p.fms.aslr??'?'} | Toe Touch: ${_ttLabel}\nFlags: ${fmsFlags.length>0?fmsFlags.map(f=>fmsFlagMap[f]||f).join(', '):'Nenhuma'}` : '';
-    const flagMap = { shoulder_restriction:'Restrição de Ombro', hamstring_restriction:'Restrição de Isquiotibiais', hip_instability:'Instabilidade de Quadril', squat_dysfunction:'Disfunção de Agachamento', lunge_dysfunction:'Disfunção de Avanço', apt:'APT/Hiperlordose', rib_flare:'Costelas Abertas', knee_valgus:'Valgo de Joelho', toe_touch_negative:'Toe Touch Negativo' };
-    const activeFlags = (Array.isArray(p?.riskFlags) ? p.riskFlags : []).filter(f => f !== 'none');
-    const flagCtx = activeFlags.length > 0 ? `\n\n## FLAGS ATIVAS\n${activeFlags.map(f => '⚠️ ' + (flagMap[f]||f)).join('\n')}` : '\n\n## FLAGS\nNenhuma disfunção.';
-
-    // ── DETECT if user is requesting a workout/prescription ──
-    const prescriptionTriggers = /treino|exerc[ií]cio|s[ée]rie|programa|prescrever|monte|gerar|plano|aquecimento|pillar|prep|warm|workout|periodiza/i;
-    const needsReference = prescriptionTriggers.test(text);
-
-    // ── CORE PROMPT (always sent — v16.0) ──
-    const CORE_PROMPT = `REGRA ABSOLUTA DE FORMATAÇÃO — VIOLAÇÃO GRAVE:
+const CORE_PROMPT = `REGRA ABSOLUTA DE FORMATAÇÃO — VIOLAÇÃO GRAVE:
 Nunca use Markdown em nenhuma circunstância.
 Proibido absolutamente: **, __, ##, ###, *, -, > (blockquote), backticks inline, blocos de código.
 Use APENAS: texto limpo, emojis, --- para separar seções, letras maiúsculas para ênfase.
@@ -6431,6 +6344,95 @@ Plano multi-fase: <AXIS_WORKOUT>{"tipo":"plano","titulo":"Título do Plano","fas
 Categorias válidas: superior | inferior | fullbody | mobilidade | condicionamento
 
 FIM DO SYSTEM PROMPT — AXISAI PERFORMANCE OS v16.0`;
+
+async function clearChat() {
+  state.chatHistory = [];
+  const box = document.getElementById('chat-messages');
+  const typingId = 'typing-init-' + Date.now();
+  box.innerHTML = `<div class="msg bot" id="${typingId}"><div class="msg-avatar" style="background:transparent;"><svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" style="width:30px;height:30px;"><defs><linearGradient id="cg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00ff87"/><stop offset="100%" style="stop-color:#00c8ff"/></linearGradient></defs><circle cx="15" cy="6" r="4" fill="url(#cg)"/><path d="M12,10 L7,20 L12,19 L14,24 L18,16 L22,18 L18,11 Z" fill="url(#cg)"/><path d="M10,13 L3,9 L4,14 L10,17 Z" fill="url(#cg)"/><path d="M16,17 L23,26 L20,25 L14,19 Z" fill="url(#cg)"/></svg></div><div class="msg-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>`;
+  box.scrollTop = box.scrollHeight;
+
+  const _initMsg = { role: 'user', content: 'Olá' };
+  const _initPayload = {
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 2048,
+    system: CORE_PROMPT,
+    messages: [_initMsg]
+  };
+
+  try {
+    console.log('[clearChat] Enviando init para /api/chat:', _initPayload);
+    const _initResp = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(_initPayload)
+    });
+    const _initData = await _initResp.json();
+    const _initReply = _initData.content?.[0]?.text || 'Olá! Sou o AxisAI, seu coach de performance. Como posso te ajudar hoje? 💪';
+    document.getElementById(typingId)?.remove();
+    appendMsg('bot', _initReply);
+    state.chatHistory.push(_initMsg);
+    state.chatHistory.push({ role: 'assistant', content: _initReply });
+  } catch (err) {
+    console.error('[clearChat] Erro na inicialização do chat:', err);
+    document.getElementById(typingId)?.remove();
+    appendMsg('bot', 'Conversa reiniciada! Como posso te ajudar? 💪');
+  }
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  // ── FIX BUG 2: Guard — require authenticated session before sending ──
+  if (!state.user?.id) {
+    appendMsg('bot', 'Sua sessão expirou. Faça login novamente para continuar.');
+    return;
+  }
+  // Ensure profile is loaded — if not, attempt to load it now
+  if (!state.profile) {
+    try {
+      await loadUserData(state.user.id);
+      loadProfile();
+      refreshChatSidebar();
+    } catch (e) {
+      console.warn('[chat] Failed to load profile before sending:', e);
+    }
+  }
+
+  input.value = ''; input.style.height = '44px';
+  appendMsg('user', text);
+  state.chatHistory.push({ role: 'user', content: text });
+  // Persistir mensagem do usuário no Supabase
+  if (state.user?.id) {
+    supabase.from('chat_messages').insert({ user_id: state.user.id, role: 'user', content: text }).then(({ error }) => { if (error) console.warn('chat_messages insert error:', error); });
+  }
+
+  const typingId = 'typing-' + Date.now();
+  const box = document.getElementById('chat-messages');
+  const uid = 'tg' + typingId;
+  box.innerHTML += `<div class="msg bot" id="${typingId}"><div class="msg-avatar" style="background:transparent;"><svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" style="width:30px;height:30px;"><defs><linearGradient id="${uid}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00ff87"/><stop offset="100%" style="stop-color:#00c8ff"/></linearGradient></defs><circle cx="15" cy="6" r="4" fill="url(#${uid})"/><path d="M12,10 L7,20 L12,19 L14,24 L18,16 L22,18 L18,11 Z" fill="url(#${uid})"/></svg></div><div class="msg-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>`;
+  box.scrollTop = box.scrollHeight;
+
+  try {
+    const p = state.profile;
+    const profileCtx = p ? `\n\n## PERFIL DO USUÁRIO\nIdade: ${p.age||'?'} | Peso: ${p.weight||'?'}kg | Altura: ${p.height||'?'}cm | Sexo: ${p.sex||'?'} | Nível: ${p.level||'?'} | Objetivo: ${p.goal||'?'} | Local: ${p.gym||'?'} | Frequência: ${p.frequency||'?'}/semana | Tempo/sessão: ${p.sessionTime||'?'} | Equipamentos: ${(Array.isArray(p.equipment) ? p.equipment : []).join(', ')||'?'} | Lesões: ${p.injuries||'Nenhuma'} | PAR-Q cardíaco: ${p.parq==='yes'?'Sim — recomendado acompanhamento médico':'Não'}.\nProfissão: ${p.profissao||'?'} | Jornada: ${p.horasTrabalho||'?'}h/dia | Perfil postural: ${p.perfilPostural||'?'}${p.perfilPostural==='Misto'?' ('+( p.horasSentado||'?')+'h sentado)':''} | Estresse ocupacional: ${p.estresseOcup||'?'} | Turno: ${p.turnoTrabalho||'?'}.` : '\n\n## PERFIL\nNão preenchido — pergunte dados essenciais.';
+    const fmsTotal = p?.fms ? (p.fms.dos??0)+(p.fms.il??0)+(p.fms.hs??0)+(p.fms.sm??0)+(p.fms.aslr??0) : null;
+    const fmsFlags = (Array.isArray(p?.riskFlags) ? p.riskFlags : []).filter(f=>f!=='none');
+    const fmsFlagMap = { squat_dysfunction:'Deep Squat ≤1', lunge_dysfunction:'Inline Lunge ≤1', hip_instability:'Hurdle Step ≤1', shoulder_restriction:'Shoulder Mobility ≤1', hamstring_restriction:'ASLR ≤1', toe_touch_negative:'Toe Touch negativo' };
+    const _ttLabel = p?.fms?.tt === 'positive' ? 'Sim' : p?.fms?.tt === 'negative' ? 'Não' : '?';
+    const fmsCtx = p?.fms ? `\n\n## SCORES FMS\nFMS Total: ${fmsTotal}/15 | DOS: ${p.fms.dos??'?'} | IL: ${p.fms.il??'?'} | HS: ${p.fms.hs??'?'} | SM: ${p.fms.sm??'?'} | ASLR: ${p.fms.aslr??'?'} | Toe Touch: ${_ttLabel}\nFlags: ${fmsFlags.length>0?fmsFlags.map(f=>fmsFlagMap[f]||f).join(', '):'Nenhuma'}` : '';
+    const flagMap = { shoulder_restriction:'Restrição de Ombro', hamstring_restriction:'Restrição de Isquiotibiais', hip_instability:'Instabilidade de Quadril', squat_dysfunction:'Disfunção de Agachamento', lunge_dysfunction:'Disfunção de Avanço', apt:'APT/Hiperlordose', rib_flare:'Costelas Abertas', knee_valgus:'Valgo de Joelho', toe_touch_negative:'Toe Touch Negativo' };
+    const activeFlags = (Array.isArray(p?.riskFlags) ? p.riskFlags : []).filter(f => f !== 'none');
+    const flagCtx = activeFlags.length > 0 ? `\n\n## FLAGS ATIVAS\n${activeFlags.map(f => '⚠️ ' + (flagMap[f]||f)).join('\n')}` : '\n\n## FLAGS\nNenhuma disfunção.';
+
+    // ── DETECT if user is requesting a workout/prescription ──
+    const prescriptionTriggers = /treino|exerc[ií]cio|s[ée]rie|programa|prescrever|monte|gerar|plano|aquecimento|pillar|prep|warm|workout|periodiza/i;
+    const needsReference = prescriptionTriggers.test(text);
+
+    // ── CORE PROMPT (always sent — v16.0) ──
+
 
     // ── REFERENCE TABLES (injected only when prescribing) ──
     const REF_TABLES = `
