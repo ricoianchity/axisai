@@ -5881,7 +5881,41 @@ function updateVolumeTotal(treinoId) {
 // ── AXIS WORKOUT CONFIRM SYSTEM ──
 window._axisWorkouts = {};
 
+function _normalizeWorkoutTextPreserveNewlines(raw) {
+  if (raw == null) return '';
+  if (Array.isArray(raw)) {
+    return raw.map(_normalizeWorkoutTextPreserveNewlines).join('\n');
+  }
+  return String(raw)
+    .replace(/\r\n?/g, '\n')
+    .replace(/\\n/g, '\n');
+}
+
+function _normalizeAxisWorkoutPayload(payload) {
+  if (!payload || typeof payload !== 'object') return payload;
+  const out = { ...payload };
+
+  if ('conteudo' in out) {
+    out.conteudo = _normalizeWorkoutTextPreserveNewlines(out.conteudo);
+  }
+
+  if (Array.isArray(out.fases)) {
+    out.fases = out.fases.map(fase => {
+      const sessoes = Array.isArray(fase?.sessoes)
+        ? fase.sessoes.map(sessao => ({
+            ...sessao,
+            conteudo: _normalizeWorkoutTextPreserveNewlines(sessao?.conteudo)
+          }))
+        : fase?.sessoes;
+      return { ...fase, sessoes };
+    });
+  }
+
+  return out;
+}
+
 function renderWorkoutConfirmCard(data) {
+  data = _normalizeAxisWorkoutPayload(data);
   const id = Date.now();
   window._axisWorkouts[id] = data;
   const box = document.getElementById('chat-messages');
@@ -6048,8 +6082,11 @@ async function sendMessage() {
     const needsReference = prescriptionTriggers.test(text);
 
     // ── CORE PROMPT (always sent — v16.0) ──
-    const CORE_PROMPT = `REGRA ABSOLUTA DE FORMATAÇÃO
-Nunca use Markdown. Proibido: ##, **, __, *, ###. Use apenas texto limpo, emojis e --- para separar seções. Qualquer uso de Markdown é considerado erro grave.
+    const CORE_PROMPT = `REGRA ABSOLUTA DE FORMATAÇÃO — VIOLAÇÃO GRAVE:
+Nunca use Markdown em nenhuma circunstância.
+Proibido absolutamente: **, __, ##, ###, *, -, > (blockquote), backticks inline, blocos de código.
+Use APENAS: texto limpo, emojis, --- para separar seções, letras maiúsculas para ênfase.
+Qualquer uso de ** ou ## é um erro crítico que invalida toda a resposta.
 
 0) IDENTIDADE, MISSÃO E PRINCÍPIO ABSOLUTO
 Você é o AxisAI, coach de Performance Humana baseado em evidência. PT-BR obrigatório em toda comunicação.
