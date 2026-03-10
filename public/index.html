@@ -6025,9 +6025,39 @@ function toggleTreino(bodyId, btn) {
 // ═══════════════════════════════════════════════
 function quickSend(msg) { document.getElementById('chat-input').value = msg; sendMessage(); }
 
-function clearChat() {
+async function clearChat() {
   state.chatHistory = [];
-  document.getElementById('chat-messages').innerHTML = `<div class="msg bot"><div class="msg-avatar" style="background:transparent;"><svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" style="width:30px;height:30px;"><defs><linearGradient id="cg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00ff87"/><stop offset="100%" style="stop-color:#00c8ff"/></linearGradient></defs><circle cx="15" cy="6" r="4" fill="url(#cg)"/><path d="M12,10 L7,20 L12,19 L14,24 L18,16 L22,18 L18,11 Z" fill="url(#cg)"/><path d="M10,13 L3,9 L4,14 L10,17 Z" fill="url(#cg)"/><path d="M16,17 L23,26 L20,25 L14,19 Z" fill="url(#cg)"/></svg></div><div class="msg-bubble">Conversa reiniciada! Como posso te ajudar? 💪</div></div>`;
+  const box = document.getElementById('chat-messages');
+  const typingId = 'typing-init-' + Date.now();
+  box.innerHTML = `<div class="msg bot" id="${typingId}"><div class="msg-avatar" style="background:transparent;"><svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" style="width:30px;height:30px;"><defs><linearGradient id="cg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00ff87"/><stop offset="100%" style="stop-color:#00c8ff"/></linearGradient></defs><circle cx="15" cy="6" r="4" fill="url(#cg)"/><path d="M12,10 L7,20 L12,19 L14,24 L18,16 L22,18 L18,11 Z" fill="url(#cg)"/><path d="M10,13 L3,9 L4,14 L10,17 Z" fill="url(#cg)"/><path d="M16,17 L23,26 L20,25 L14,19 Z" fill="url(#cg)"/></svg></div><div class="msg-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>`;
+  box.scrollTop = box.scrollHeight;
+
+  const _initMsg = { role: 'user', content: 'Olá! Apresente-se brevemente.' };
+  const _initPayload = {
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 2048,
+    system: 'Você é o AxisAI, coach de Performance Humana baseado em evidência. PT-BR obrigatório em toda comunicação. Nunca use Markdown, asteriscos, cerquilhas ou formatação especial — apenas texto limpo e emojis. Apresente-se brevemente: seu nome, missão e como pode ajudar (treinos personalizados, FMS, periodização, nutrição esportiva). Seja direto e amigável.',
+    messages: [_initMsg]
+  };
+
+  try {
+    console.log('[clearChat] Enviando init para /api/chat:', _initPayload);
+    const _initResp = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(_initPayload)
+    });
+    const _initData = await _initResp.json();
+    const _initReply = _initData.content?.[0]?.text || 'Olá! Sou o AxisAI, seu coach de performance. Como posso te ajudar hoje? 💪';
+    document.getElementById(typingId)?.remove();
+    appendMsg('bot', _initReply);
+    state.chatHistory.push(_initMsg);
+    state.chatHistory.push({ role: 'assistant', content: _initReply });
+  } catch (err) {
+    console.error('[clearChat] Erro na inicialização do chat:', err);
+    document.getElementById(typingId)?.remove();
+    appendMsg('bot', 'Conversa reiniciada! Como posso te ajudar? 💪');
+  }
 }
 
 async function sendMessage() {
