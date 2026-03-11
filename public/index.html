@@ -1226,6 +1226,238 @@
     padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s;
   }
   .fms-photo-trigger.has-photo { border-color: #4CAF50; color: #4CAF50; background: #0a1f0a; }
+
+  /* ── LANDING PAGE ── */
+  #landing-page {
+    font-family: 'Inter', sans-serif;
+    background: #0A0A0F;
+    color: #F0F0F0;
+    width: 100%;
+    overflow-x: hidden;
+  }
+  #lp-hero {
+    position: relative;
+    min-height: 112vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+    padding-top: clamp(96px, 14vh, 190px);
+  }
+  #axisCanvas, #axisCanvasFooter {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+  #axisCanvas {
+    z-index: 2;
+    opacity: 0.98;
+    transition: opacity 0.6s ease;
+  }
+  #axisCanvasFooter {
+    z-index: 0;
+  }
+  #lp-hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    padding: 40px 24px;
+    margin-top: clamp(12px, 2vh, 32px);
+    opacity: 0.08;
+    filter: blur(2px);
+    transform: translateY(10px) scale(0.99);
+    animation: lpGhost 2.8s ease-in-out infinite;
+    transition: opacity 0.55s ease, filter 0.55s ease, transform 0.55s ease;
+  }
+  #landing-page.lp-text-revealed #lp-hero-content {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+    animation: lpFadeIn 0.8s ease-out forwards;
+  }
+  #landing-page.lp-text-revealed #axisCanvas {
+    opacity: 0.24;
+  }
+  #lp-tag {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    color: #00FF88;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  #lp-title {
+    font-size: clamp(36px, 6vw, 72px);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 24px;
+    color: #FFFFFF;
+  }
+  #lp-subtitle {
+    font-size: clamp(16px, 2vw, 20px);
+    color: #8A8A9A;
+    line-height: 1.6;
+    margin-bottom: 40px;
+  }
+  #lp-cta-primary {
+    display: inline-block;
+    background: #00FF88;
+    color: #0A0A0F;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 16px 36px;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 0 24px rgba(0,255,136,0.5);
+    animation: lpPulse 2.4s ease-in-out infinite;
+    transition: transform 0.2s;
+  }
+  #lp-cta-primary:hover { transform: scale(1.05); }
+  #lp-cta-secondary {
+    display: block;
+    margin-top: 20px;
+    color: #8A8A9A;
+    font-size: 14px;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  #lp-cta-secondary:hover { color: #00FF88; }
+  .lp-section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 100px 24px;
+    position: relative;
+  }
+  .lp-section-tag {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    color: #00FF88;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .lp-section h2 {
+    font-size: clamp(28px, 4vw, 52px);
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 28px;
+    color: #FFFFFF;
+  }
+  .lp-section p {
+    font-size: 17px;
+    color: #8A8A9A;
+    line-height: 1.8;
+    max-width: 680px;
+    margin-bottom: 16px;
+  }
+  .lp-section-sub { margin-bottom: 60px !important; }
+  .lp-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 32px;
+  }
+  .lp-pills span {
+    padding: 10px 20px;
+    border: 1px solid #00FF88;
+    border-radius: 50px;
+    font-size: 13px;
+    color: #00FF88;
+    background: rgba(0,255,136,0.05);
+  }
+  .lp-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  @media (max-width: 900px) { .lp-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 768px) {
+    #lp-hero {
+      min-height: 106vh;
+      padding-top: clamp(78px, 10vh, 130px);
+    }
+  }
+  @media (max-width: 560px) { .lp-grid { grid-template-columns: 1fr; } }
+  .lp-card {
+    background: #111118;
+    border: 1px solid #1E1E2A;
+    border-radius: 16px;
+    padding: 28px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .lp-card:hover {
+    border-color: #00FF88;
+    box-shadow: 0 0 20px rgba(0,255,136,0.1);
+  }
+  .lp-card span { font-size: 28px; display: block; margin-bottom: 14px; }
+  .lp-card h3 { font-size: 16px; font-weight: 700; color: #F0F0F0; margin-bottom: 10px; }
+  .lp-card p  { font-size: 14px; color: #6A6A7A; line-height: 1.7; margin: 0; }
+  .lp-stats { display: flex; gap: 60px; margin-top: 60px; flex-wrap: wrap; }
+  .lp-stats div { text-align: left; }
+  .lp-stats span { display: block; font-size: 64px; font-weight: 800; color: #00FF88; line-height: 1; }
+  .lp-stats p { font-size: 14px; color: #6A6A7A; margin: 8px 0 0; max-width: 140px; }
+  #lp-manifesto {
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    color: #FFFFFF !important;
+    font-style: italic;
+    border-left: 3px solid #00FF88;
+    padding-left: 20px;
+    margin-top: 32px !important;
+  }
+  #lp-cta-final {
+    text-align: center;
+    background: linear-gradient(180deg, #0A0A0F 0%, #0D1A12 100%);
+    overflow: hidden;
+  }
+  #lp-cta-final h2 { max-width: 100%; }
+  #lp-cta-final button {
+    background: #00FF88;
+    color: #0A0A0F;
+    font-weight: 700;
+    font-size: 17px;
+    padding: 18px 42px;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 0 30px rgba(0,255,136,0.4);
+    margin-top: 32px;
+    transition: transform 0.2s;
+  }
+  #lp-cta-final button:hover { transform: scale(1.04); }
+  #lp-cta-final small { display: block; margin-top: 16px; color: #444455; font-size: 13px; }
+  .lp-hidden {
+    opacity: 0;
+    transform: translateY(32px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .lp-visible { opacity: 1; transform: translateY(0); }
+  @keyframes lpFadeIn {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes lpGhost {
+    0%, 100% { opacity: 0.04; filter: blur(3px); }
+    50%      { opacity: 0.18; filter: blur(1px); }
+  }
+  @keyframes lpPulse {
+    0%, 100% { box-shadow: 0 0 24px rgba(0,255,136,0.5); }
+    50%       { box-shadow: 0 0 42px rgba(0,255,136,0.85); }
+  }
+
+/* Logo fix */
+.auth-logo img,
+.sidebar-logo img,
+.chat-avatar img,
+.msg.bot img:first-child {
+  background: transparent !important;
+  mix-blend-mode: normal;
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -1236,6 +1468,147 @@
   <div class="spinner"></div>
   <div class="loading-text">Carregando AxisAI...</div>
 </div>
+
+<!-- ════════════ LANDING PAGE ════════════ -->
+<section id="landing-page" style="display:none;">
+
+  <!-- HERO -->
+  <div id="lp-hero">
+    <canvas id="axisCanvas"></canvas>
+    <div id="lp-hero-content">
+      <span id="lp-tag">PERFORMANCE HUMANA POTENCIALIZADA POR IA</span>
+      <h1 id="lp-title">
+        Bem-vindo à revolução<br>do treinamento inteligente.
+      </h1>
+      <p id="lp-subtitle">
+        O primeiro sistema de coaching adaptativo que pensa,<br>
+        aprende e evolui junto com o seu corpo.
+      </p>
+      <button id="lp-cta-primary" onclick="showAuthFromLanding('register')">
+        Começar agora — é grátis
+      </button>
+      <a id="lp-cta-secondary" href="#"
+         onclick="showAuthFromLanding('login'); return false;">
+        Já tenho uma conta →
+      </a>
+    </div>
+  </div>
+
+  <!-- O QUE É -->
+  <div id="lp-what" class="lp-section">
+    <span class="lp-section-tag">O QUE É</span>
+    <h2>Não é um app de treino.<br>É o seu coach de alta performance.</h2>
+    <p>
+      AxisAI é um sistema de coaching de performance humana alimentado
+      por inteligência artificial. Ele combina protocolos de treinamento
+      baseados em ciência com aprendizado contínuo sobre o seu corpo,
+      seus padrões de recuperação e seus objetivos reais.
+    </p>
+    <p>
+      Diferente de planilhas genéricas, o AxisAI adapta cada sessão ao
+      seu estado físico do dia — considerando sono, estresse, histórico
+      de lesões e benchmarks de movimento.
+    </p>
+    <div class="lp-pills">
+      <span>🧬 Baseado em evidências científicas</span>
+      <span>⚡ Adaptação em tempo real</span>
+      <span>🎯 Protocolo personalizado por atleta</span>
+    </div>
+  </div>
+
+  <!-- COMO AJUDA -->
+  <div id="lp-how" class="lp-section">
+    <span class="lp-section-tag">COMO AJUDA</span>
+    <h2>Do diagnóstico ao treino.<br>Em segundos.</h2>
+    <p class="lp-section-sub">
+      O AxisAI guia você por cada etapa da sua jornada de performance —
+      com a precisão de um coach de elite e a disponibilidade de um app.
+    </p>
+    <div class="lp-grid">
+      <div class="lp-card">
+        <span>🔍</span>
+        <h3>Diagnóstico de Movimento</h3>
+        <p>Avalie 7 padrões fundamentais (FMS) com análise por IA.
+        O sistema identifica compensações e riscos antes de prescrever
+        qualquer exercício.</p>
+      </div>
+      <div class="lp-card">
+        <span>📊</span>
+        <h3>Prontidão Inteligente</h3>
+        <p>Responda 4 perguntas rápidas sobre sono, energia, dor e
+        estresse. O AxisAI calibra automaticamente a intensidade
+        do treino do dia.</p>
+      </div>
+      <div class="lp-card">
+        <span>🤖</span>
+        <h3>Coach Disponível 24/7</h3>
+        <p>Converse com seu coach de IA a qualquer hora. Respostas
+        baseadas no seu perfil completo, não em respostas genéricas.</p>
+      </div>
+      <div class="lp-card">
+        <span>📅</span>
+        <h3>Periodização Automatizada</h3>
+        <p>Fases de Acumulação, Intensificação, Realização e Deload
+        estruturadas automaticamente. Carga progressiva com
+        inteligência.</p>
+      </div>
+      <div class="lp-card">
+        <span>▶️</span>
+        <h3>Sessão Guiada em Tempo Real</h3>
+        <p>Execute o treino com cronômetro, registro de carga por série
+        e progresso visual por bloco. Tudo durante o treino.</p>
+      </div>
+      <div class="lp-card">
+        <span>🥗</span>
+        <h3>Nutrição para Performance</h3>
+        <p>Orientações nutricionais alinhadas ao seu nível de treino
+        e objetivos. Hábitos alimentares baseados em ciência.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- POR QUE IMPORTA -->
+  <div id="lp-why" class="lp-section">
+    <span class="lp-section-tag">POR QUE IMPORTA</span>
+    <h2>
+      O treinamento genérico está te custando<br>
+      resultados que você merece.
+    </h2>
+    <p>
+      A maioria das pessoas treina com planilhas criadas para outra pessoa,
+      em outro corpo, em outro momento da vida.
+    </p>
+    <p>O resultado? Estagnação. Lesões. Frustração.</p>
+    <p>
+      O AxisAI existe para mudar isso. Combinamos os melhores protocolos
+      de treinamento do mundo — usados por atletas de elite — com
+      inteligência artificial para tornar esse nível de coaching
+      acessível a qualquer atleta comprometido.
+    </p>
+    <p id="lp-manifesto">Porque performance não é privilégio. É método.</p>
+    <div class="lp-stats">
+      <div><span>7</span><p>Padrões de movimento avaliados</p></div>
+      <div><span>4</span><p>Fases de periodização estruturadas</p></div>
+      <div><span>∞</span><p>Sessões adaptadas ao seu corpo</p></div>
+    </div>
+  </div>
+
+  <!-- CTA FINAL -->
+  <div id="lp-cta-final" class="lp-section">
+    <canvas id="axisCanvasFooter"></canvas>
+    <h2>Pronto para treinar de forma inteligente?</h2>
+    <p>
+      Junte-se ao beta fechado do AxisAI e transforme
+      seu treinamento com IA de verdade.
+    </p>
+    <button onclick="showAuthFromLanding('register')">
+      Criar minha conta grátis
+    </button>
+    <small>Sem cartão de crédito. Beta fechado — vagas limitadas.</small>
+  </div>
+
+</section>
+<!-- ════════════ FIM LANDING PAGE ════════════ -->
 
 <!-- ═══ AUTH ═══ -->
 <div id="screen-auth" style="display: none;">
@@ -2732,6 +3105,216 @@ async function loadUserData(userId) {
   updateCoachNavIndicator();
 }
 
+/* ── LANDING PAGE ── */
+
+function showAuthFromLanding(tab) {
+  // Ocultar landing e exibir screen-auth no tab correto
+  const lp = document.getElementById('landing-page');
+  if (lp) lp.style.display = 'none';
+  const auth = document.getElementById('screen-auth');
+  if (auth) auth.style.display = 'flex';
+  if (typeof switchTab === 'function') switchTab(tab);
+}
+
+let _lpHeroRevealBound = false;
+
+function showLandingPage() {
+  // Ocultar screens do app (lista explícita — não toca em toast nem modais)
+  ['screen-auth', 'screen-onboarding', 'screen-app',
+   'loading-overlay', 'overlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+
+  // Exibir landing
+  const lp = document.getElementById('landing-page');
+  if (lp) {
+    lp.style.display = 'block';
+    lp.classList.remove('lp-text-revealed');
+  }
+
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+
+  // Iniciar efeitos visuais (com pequeno delay para o DOM estar pronto)
+  requestAnimationFrame(() => {
+    initParticles('axisCanvas', 680);
+    initParticles('axisCanvasFooter', 210);
+    initScrollFade();
+    initHeroReveal();
+  });
+}
+
+function initParticles(canvasId, count) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  if (canvas.dataset.lpParticlesInit === '1') return;
+  canvas.dataset.lpParticlesInit = '1';
+  const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
+  if (!ctx) return;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+  const fps = canvasId === 'axisCanvas' ? 30 : 24;
+  const frameInterval = 1000 / fps;
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const sprite = document.createElement('canvas');
+  sprite.width = 48;
+  sprite.height = 48;
+  const spriteCtx = sprite.getContext('2d');
+  if (!spriteCtx) return;
+  const gradient = spriteCtx.createRadialGradient(24, 24, 0, 24, 24, 24);
+  gradient.addColorStop(0, 'rgba(0,255,136,0.9)');
+  gradient.addColorStop(0.45, 'rgba(0,255,136,0.35)');
+  gradient.addColorStop(1, 'rgba(0,255,136,0)');
+  spriteCtx.fillStyle = gradient;
+  spriteCtx.fillRect(0, 0, 48, 48);
+
+  let width = 0;
+  let height = 0;
+  let centerX = 0;
+  let centerY = 0;
+  let cloudX = 0;
+  let cloudY = 0;
+  let spread = 0;
+  let lastTs = 0;
+  let centerRefreshTick = 0;
+
+  const area = (window.innerWidth || 1280) * (window.innerHeight || 720);
+  const densityFactor = Math.min(1, area / (1920 * 1080));
+  const motionFactor = reduceMotion ? 0.22 : 1;
+  const particleCount = Math.max(32, Math.round(count * densityFactor * motionFactor));
+  const particles = [];
+
+  class Particle {
+    constructor() { this.reset(true); }
+    reset(randomAge) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = Math.sqrt(Math.random()) * spread;
+      this.x = cloudX + Math.cos(angle) * radius;
+      this.y = cloudY + Math.sin(angle) * radius;
+      this.vx = (Math.random() - 0.5) * 0.35;
+      this.vy = (Math.random() - 0.5) * 0.35;
+      this.alpha = Math.random() * 0.45 + 0.1;
+      this.radius = Math.random() * 9 + 5;
+      this.life = Math.random() * 260 + 220;
+      this.age = randomAge ? Math.random() * this.life : 0;
+    }
+    draw(dt) {
+      const progress = this.age / this.life;
+      const fade = 1 - progress;
+      const size = this.radius * (0.9 + progress * 0.35);
+      ctx.globalAlpha = this.alpha * fade;
+      ctx.drawImage(sprite, this.x - size, this.y - size, size * 2, size * 2);
+      const pull = canvasId === 'axisCanvas' ? 0.0015 : 0.0011;
+      this.vx += (cloudX - this.x) * pull * dt;
+      this.vy += (cloudY - this.y) * pull * dt;
+      this.vx *= 0.992;
+      this.vy *= 0.992;
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      this.age += dt;
+      if (this.age >= this.life) this.reset(false);
+    }
+  }
+
+  function updateCloudCenter() {
+    if (canvasId !== 'axisCanvas') {
+      cloudX = centerX;
+      cloudY = centerY;
+      return;
+    }
+    const heroContent = document.getElementById('lp-hero-content');
+    if (!heroContent) {
+      cloudX = centerX;
+      cloudY = centerY;
+      return;
+    }
+    const contentRect = heroContent.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+    cloudX = (contentRect.left - canvasRect.left) + contentRect.width * 0.5;
+    cloudY = (contentRect.top - canvasRect.top) + contentRect.height * 0.46;
+  }
+
+  function resizeCanvas() {
+    width = canvas.clientWidth || window.innerWidth;
+    height = canvas.clientHeight || window.innerHeight;
+    canvas.width = Math.floor(width * dpr);
+    canvas.height = Math.floor(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    centerX = width * 0.5;
+    centerY = height * 0.5;
+    spread = Math.min(width, height) * (canvasId === 'axisCanvas' ? 0.46 : 0.70);
+    updateCloudCenter();
+  }
+
+  resizeCanvas();
+
+  for (let i = 0; i < particleCount; i++) particles.push(new Particle());
+
+  function animate(ts) {
+    requestAnimationFrame(animate);
+    if (document.hidden || canvas.offsetParent === null) return;
+    if (!lastTs) lastTs = ts;
+    const elapsed = ts - lastTs;
+    if (elapsed < frameInterval) return;
+    lastTs = ts;
+    const dt = Math.min(2.2, elapsed / 16.67);
+    if (canvasId === 'axisCanvas') {
+      centerRefreshTick++;
+      if (centerRefreshTick % 8 === 0) updateCloudCenter();
+    }
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < particles.length; i++) particles[i].draw(dt);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+  }
+
+  requestAnimationFrame(animate);
+  window.addEventListener('resize', resizeCanvas, { passive: true });
+  document.addEventListener('visibilitychange', () => { lastTs = 0; });
+}
+
+function initHeroReveal() {
+  const lp = document.getElementById('landing-page');
+  if (!lp) return;
+
+  const updateReveal = () => {
+    if (window.scrollY > 40) {
+      lp.classList.add('lp-text-revealed');
+      return;
+    }
+    lp.classList.remove('lp-text-revealed');
+  };
+
+  if (!_lpHeroRevealBound) {
+    window.addEventListener('scroll', updateReveal, { passive: true });
+    _lpHeroRevealBound = true;
+  }
+
+  updateReveal();
+}
+
+function initScrollFade() {
+  const targets = document.querySelectorAll(
+    '#lp-what, #lp-how, #lp-why, #lp-cta-final, .lp-card'
+  );
+  targets.forEach(el => el.classList.add('lp-hidden'));
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.remove('lp-hidden');
+        entry.target.classList.add('lp-visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  targets.forEach(el => observer.observe(el));
+}
+
 async function initApp() {
   renderFMSGrid();
   updateCoachNavIndicator();
@@ -2741,7 +3324,7 @@ async function initApp() {
     if (error) {
       console.error('Session error:', error);
       document.getElementById('loading-overlay').style.display = 'none';
-      document.getElementById('screen-auth').style.display = 'flex';
+      showLandingPage();
       _authResolving = false;
       return;
     }
@@ -2762,7 +3345,7 @@ async function initApp() {
       enterApp();
     } else {
       // No valid session — show auth screen
-      document.getElementById('screen-auth').style.display = 'flex';
+      showLandingPage();
       updateCoachNavIndicator();
     }
     document.getElementById('loading-overlay').style.display = 'none';
@@ -2770,7 +3353,7 @@ async function initApp() {
   } catch (e) {
     console.error('initApp error:', e);
     document.getElementById('loading-overlay').style.display = 'none';
-    document.getElementById('screen-auth').style.display = 'flex';
+    showLandingPage();
     _authResolving = false;
   }
 }
