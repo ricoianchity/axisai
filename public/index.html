@@ -401,6 +401,130 @@
   .wb-tab-panel   { padding:4px 0; }
   .wb-tab-group-label { font-size:11px; font-weight:700; color:rgba(249,115,22,0.65); text-transform:uppercase; letter-spacing:0.06em; padding:8px 14px 2px; font-family:var(--font-mono); }
 
+/* Sprint 5 — MBSC Pod renderer */
+#workout-plan-container { margin-bottom: 24px; }
+#workout-plan-container .workout-block { margin-bottom: 24px; }
+
+#workout-plan-container .workout-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+#workout-plan-container .section-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary, #888);
+}
+
+#workout-plan-container .pod-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(255,140,0,0.15);
+  color: #ff8c00;
+  border: 1px solid rgba(255,140,0,0.3);
+}
+
+#workout-plan-container .pod-container {
+  border-left: 3px solid rgba(255,140,0,0.4);
+  padding-left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#workout-plan-container .pod-border-A { border-left-color: #ff8c00; }
+#workout-plan-container .pod-border-B { border-left-color: #4caf50; }
+#workout-plan-container .pod-border-C { border-left-color: #2196f3; }
+#workout-plan-container .pod-border-D { border-left-color: #9c27b0; }
+
+#workout-plan-container .exercise-card {
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+#workout-plan-container .exercise-label-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#workout-plan-container .pod-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ff8c00;
+  min-width: 20px;
+}
+
+#workout-plan-container .exercise-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary, #fff);
+}
+
+#workout-plan-container .exercise-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+#workout-plan-container .sets-reps {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ff8c00;
+}
+
+#workout-plan-container .rest-info {
+  font-size: 10px;
+  color: var(--text-secondary, #888);
+}
+
+#workout-plan-container .exercise-notes {
+  font-size: 11px;
+  color: var(--text-secondary, #888);
+  margin-top: 4px;
+  width: 100%;
+}
+
+#workout-plan-container .workout-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+#workout-plan-container .workout-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+#workout-plan-container .phase-badge {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--green);
+  background: rgba(0, 255, 135, 0.1);
+  border: 1px solid rgba(0, 255, 135, 0.25);
+  border-radius: 999px;
+  padding: 4px 8px;
+}
   /* Pillar Prep mini exercise cards */
   .pillar-group        { margin-bottom:10px; }
   .pillar-group-label  { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:rgba(59,130,246,0.75); font-family:var(--font-mono); padding:2px 0 6px; }
@@ -1782,6 +1906,13 @@
     <!-- ── WORKOUTS ── -->
     <div class="page" id="page-workouts">
       <div class="page-header"><h1>MEUS TREINOS</h1><p>Linha do tempo de periodização com seus planos personalizados.</p></div>
+      <div id="workout-plan-container">
+        <div class="empty-state">
+          <div class="empty-icon">📋</div>
+          <div class="empty-title">SEM PRESCRIÇÃO ATIVA</div>
+          <div class="empty-desc">Converse com o Coach IA para gerar sua prescrição em Pods.</div>
+        </div>
+      </div>
       <div class="workout-list" id="all-workouts">
         <div class="empty-state">
           <div class="empty-icon">🏋️</div>
@@ -3538,7 +3669,10 @@ async function navigate(page) {
   });
   closeSidebar();
   if (page === 'dashboard') refreshDashboard();
-  if (page === 'workouts') renderWorkouts();
+  if (page === 'workouts') {
+    renderWorkouts();
+    if (state.user?.id) loadUserWorkouts(state.user.id, state.user.email);
+  }
   if (page === 'diagnosis') renderFmsResults();
   if (page === 'profile') { loadProfile(); loadProfileHealth(); }
   if (page === 'nutrition') renderNutrition();
@@ -3552,6 +3686,118 @@ function closeSidebar() { document.getElementById('sidebar').classList.remove('m
 // ═══════════════════════════════════════════════
 function loadWorkouts() { state.workouts = JSON.parse(localStorage.getItem('axisai_workouts') || '[]'); }
 function saveWorkouts() { localStorage.setItem('axisai_workouts', JSON.stringify(state.workouts)); }
+
+function _escapeWorkoutHTML(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// RENDERIZAÇÃO DE PODS MBSC
+function renderWorkoutPlan(plan) {
+  if (!plan || !Array.isArray(plan.blocks)) {
+    return '<p class="empty-state">Sem prescrição disponível.</p>';
+  }
+
+  return plan.blocks.map(block => {
+    const exercises = Array.isArray(block.exercises) ? block.exercises : [];
+    const hasPod = block.pod !== null && block.pod !== undefined && String(block.pod).trim() !== '';
+    const podKey = hasPod ? _escapeWorkoutHTML(String(block.pod).toUpperCase()) : '';
+    const isPodBlock = hasPod && exercises.length > 1;
+    const blockType = String(block.type || '').toLowerCase();
+    const podLabel = blockType === 'triset' ? 'Triset' : blockType === 'biset' ? 'Biset' : 'Pod';
+
+    const sectionHeader = `
+      <div class="workout-section-header">
+        <span class="section-label">${_escapeWorkoutHTML(block.section || 'Seção')}</span>
+        ${hasPod ? `<span class="pod-badge pod-${podKey}">${podLabel}</span>` : ''}
+      </div>
+    `;
+
+    const exercisesHTML = exercises.map(ex => {
+      const safeName = _escapeWorkoutHTML(ex?.name || 'Exercício');
+      const sets = _escapeWorkoutHTML(ex?.sets ?? '-');
+      const reps = _escapeWorkoutHTML(ex?.reps ?? '-');
+      const notes = ex?.notes ? `<p class="exercise-notes">${_escapeWorkoutHTML(ex.notes)}</p>` : '';
+      const label = ex?.label ? `<span class="pod-label">${_escapeWorkoutHTML(ex.label)}</span>` : '';
+      const rest = ex?.rest_after_pod
+        ? `<span class="rest-info">Descanso: ${_escapeWorkoutHTML(ex.rest_after_pod)}s</span>`
+        : '';
+
+      return `
+        <div class="exercise-card ${isPodBlock ? 'pod-exercise' : 'solo-exercise'}" data-exercise="${safeName}">
+          <div class="exercise-label-wrap">
+            ${label}
+            <span class="exercise-name">${safeName}</span>
+          </div>
+          <div class="exercise-meta">
+            <span class="sets-reps">${sets}x ${reps}</span>
+            ${rest}
+          </div>
+          ${notes}
+        </div>
+      `;
+    }).join('');
+
+    const podContainer = isPodBlock
+      ? `<div class="pod-container pod-border-${podKey}">${exercisesHTML}</div>`
+      : exercisesHTML;
+
+    return `
+      <div class="workout-block">
+        ${sectionHeader}
+        ${podContainer}
+      </div>
+    `;
+  }).join('');
+}
+
+async function loadUserWorkouts(userId, userEmail) {
+  const container = document.getElementById('workout-plan-container');
+  if (!container || !userId) return;
+
+  try {
+    const qs = new URLSearchParams({ user_id: userId });
+    if (userEmail) qs.set('email', userEmail);
+    const res = await fetch(`/api/get-workouts?${qs.toString()}`);
+    const payload = await res.json();
+
+    if (!res.ok) {
+      throw new Error(payload?.error || 'Falha ao carregar treinos');
+    }
+
+    const workouts = Array.isArray(payload?.workouts) ? payload.workouts : [];
+    if (!workouts.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <p>Nenhum treino prescrito ainda.</p>
+          <p>Converse com o Coach IA para gerar sua prescrição.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const currentWorkout = workouts[0];
+    container.innerHTML = `
+      <div class="workout-header">
+        <h2 class="workout-title">${_escapeWorkoutHTML(currentWorkout.title || 'Treino Ativo')}</h2>
+        ${currentWorkout.phase_name ? `<span class="phase-badge">${_escapeWorkoutHTML(currentWorkout.phase_name)}</span>` : ''}
+      </div>
+      ${renderWorkoutPlan(currentWorkout.plan)}
+    `;
+  } catch (err) {
+    console.error('Erro ao carregar treinos:', err);
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>Erro ao carregar prescrição.</p>
+        <p>Tente novamente em instantes.</p>
+      </div>
+    `;
+  }
+}
 
 function renderWorkouts() {
   const c = document.getElementById('all-workouts');
