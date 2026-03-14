@@ -8681,8 +8681,8 @@ function _startInlineSession({ workoutId, title, conteudo, card, source, sourceI
 
   card.classList.add('session-active');
   body.classList.add('open');
-  _injectInlineTimer();
-  _renderInlineSessionBody();
+  _renderInlineSessionBody();  // body.innerHTML setado ANTES da injeção do sticky bar
+  _injectInlineTimer();        // prepend sticky bar DEPOIS — não será sobrescrito
 
   const startBtn = card.querySelector('.btn-start-session');
   if (startBtn) {
@@ -8713,13 +8713,33 @@ function _startInlineSession({ workoutId, title, conteudo, card, source, sourceI
       // Resolver UUID real do workout
       let realWorkoutId = String(workoutId);
       try {
-        const { data: wkRow } = await supabase
+        const { data: wkData, error: wkErr } = await supabase
           .from('workouts')
           .select('supabase_id')
           .eq('id', workoutId)
           .single();
-        if (wkRow?.supabase_id) realWorkoutId = wkRow.supabase_id;
-      } catch (_) {}
+        console.log('[FE-002] supabase_id lookup (_startInlineSession):', { workoutId, wkData, wkErr: wkErr?.message || null });
+        if (wkData?.supabase_id) {
+          // Caso normal: supabase_id já existe
+          realWorkoutId = wkData.supabase_id;
+        } else if (wkData && !wkErr) {
+          // Row existe mas supabase_id é NULL (workout criado antes da migration 010)
+          // Gerar UUID client-side e persistir na row
+          const newUuid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : String(Date.now()) + '-' + Math.random().toString(36).slice(2);
+          const { error: upErr } = await supabase
+            .from('workouts')
+            .update({ supabase_id: newUuid })
+            .eq('id', workoutId);
+          console.log('[FE-002] supabase_id gerado e salvo:', newUuid, 'upErr:', upErr?.message || null);
+          if (!upErr) realWorkoutId = newUuid;
+        } else if (wkErr) {
+          console.warn('[FE-002] lookup error (_startInlineSession):', wkErr.message || wkErr);
+        }
+      } catch (e) {
+        console.warn('[FE-002] lookup exception (_startInlineSession):', e?.message || e);
+      }
       if (_inlineSession) _inlineSession.realWorkoutId = realWorkoutId;
 
       // Criar session_log antecipado para ter UUID disponível para exercise_logs
@@ -9096,13 +9116,31 @@ async function saveSession(workoutId, durationSeconds, volumeKg) {
     let realWorkoutId = _inlineSession.realWorkoutId || String(workoutId);
     if (!_inlineSession.realWorkoutId) {
       try {
-        const { data: wkRow } = await supabase
+        const { data: wkData, error: wkErr } = await supabase
           .from('workouts')
           .select('supabase_id')
           .eq('id', workoutId)
           .single();
-        if (wkRow?.supabase_id) realWorkoutId = wkRow.supabase_id;
-      } catch (_) {}
+        console.log('[FE-002] supabase_id lookup (saveSession):', { workoutId, wkData, wkErr: wkErr?.message || null });
+        if (wkData?.supabase_id) {
+          realWorkoutId = wkData.supabase_id;
+        } else if (wkData && !wkErr) {
+          // supabase_id NULL — gerar e persistir (mesmo handler que _startInlineSession)
+          const newUuid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : String(Date.now()) + '-' + Math.random().toString(36).slice(2);
+          const { error: upErr } = await supabase
+            .from('workouts')
+            .update({ supabase_id: newUuid })
+            .eq('id', workoutId);
+          console.log('[FE-002] supabase_id gerado (saveSession):', newUuid, 'upErr:', upErr?.message || null);
+          if (!upErr) realWorkoutId = newUuid;
+        } else if (wkErr) {
+          console.warn('[FE-002] lookup error (saveSession):', wkErr.message || wkErr);
+        }
+      } catch (e) {
+        console.warn('[FE-002] lookup exception (saveSession):', e?.message || e);
+      }
     }
 
     const sessionPayload = {
