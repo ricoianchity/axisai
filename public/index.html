@@ -350,7 +350,7 @@
   .btn-start-session { padding: 5px 12px; background: rgba(0,255,135,0.1); border: 1px solid rgba(0,255,135,0.35); color: var(--green); border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; font-family: var(--font-body); letter-spacing: 0.5px; white-space: nowrap; transition: all 0.2s; }
   .btn-start-session:hover { background: rgba(0,255,135,0.2); box-shadow: 0 0 12px rgba(0,255,135,0.15); }
   .session-card-body { display: none; border-top: 1px solid var(--border); }
-  .session-card-body.open { display: block; animation: fadeUp 0.25s ease; }
+  .session-card-body.open { display: block; animation: fadeUp 0.25s ease; max-height: 560px; overflow-y: auto; position: relative; }
 
   /* ── WORKOUT TABS + INLINE SESSION (FE-002) ── */
   .workouts-tabs {
@@ -397,6 +397,67 @@
     border-color: rgba(57,224,122,0.35);
     box-shadow: 0 0 0 1px rgba(57,224,122,0.12);
   }
+  /* Ocultar timer do header quando sticky timer está ativo */
+  .session-card.session-active .session-timer-widget { display: none !important; }
+
+  /* ── STICKY TIMER BAR (FE-002) ── */
+  .sticky-timer-bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    height: 52px;
+    max-height: 56px;
+    background: rgba(5,8,16,0.93);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid #00ff88;
+    flex-shrink: 0;
+  }
+  .sticky-timer-bar .sticky-timer-clock {
+    font-size: 18px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: #00ff88;
+    letter-spacing: 2px;
+    font-family: var(--font-mono);
+    flex-shrink: 0;
+  }
+  .sticky-timer-bar .sticky-timer-name {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.45);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sticky-timer-bar .btn-sticky-finish {
+    padding: 5px 12px;
+    background: rgba(0,255,136,0.1);
+    border: 1px solid rgba(0,255,136,0.38);
+    border-radius: 7px;
+    color: #00ff88;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.18s;
+    flex-shrink: 0;
+    font-family: var(--font-body);
+  }
+  .sticky-timer-bar .btn-sticky-finish:hover:not(:disabled) {
+    background: rgba(0,255,136,0.22);
+    box-shadow: 0 0 10px rgba(0,255,136,0.15);
+  }
+  .sticky-timer-bar .btn-sticky-finish:disabled {
+    opacity: 0.38;
+    cursor: default;
+  }
+
   .session-timer-widget {
     display: flex;
     flex-direction: column;
@@ -2140,6 +2201,13 @@
   color: var(--text, #f0f4ff);
 }
 .metrica-icon { font-size: 13px; }
+
+.treino-preview-blocos { margin-top:10px; display:flex; flex-direction:column; gap:6px; padding:10px 12px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid rgba(255,255,255,0.07); }
+.preview-bloco { display:flex; flex-direction:column; gap:3px; }
+.preview-bloco-nome { font-size:10px; font-weight:700; color:#4ade80; letter-spacing:0.08em; text-transform:uppercase; }
+.preview-exercicios { display:flex; flex-wrap:wrap; gap:3px 8px; }
+.preview-exercicios span { font-size:12px; color:rgba(255,255,255,0.5); }
+.preview-exercicios span::before { content:'· '; color:rgba(255,255,255,0.2); }
 
 .treino-body { overflow: hidden; }
 .treino-body.collapsed { max-height: 0; }
@@ -5465,9 +5533,20 @@ function _safeParseJson(value, fallback) {
   }
 }
 
-function _normalizePlanBlocks(blocksRaw) {
-  const blocks = _safeParseJson(blocksRaw, blocksRaw || {});
-  return blocks && typeof blocks === 'object' && !Array.isArray(blocks) ? blocks : {};
+function _normalizePlanBlocks(conteudo) {
+  if (!conteudo) return [];
+  return conteudo
+    .split('\n')
+    .map(function(l) { return l.trim(); })
+    .filter(function(l) { return l.length > 0; })
+    .map(function(linha) {
+      var sep = linha.indexOf(':');
+      if (sep === -1) return { nome: linha, exercicios: [] };
+      var nome = linha.substring(0, sep).trim();
+      var exPart = linha.substring(sep + 1).trim();
+      var exercicios = exPart.split('+').map(function(e) { return e.trim(); }).filter(Boolean);
+      return { nome: nome, exercicios: exercicios };
+    });
 }
 
 function _getPlanStructure(plan) {
@@ -5671,7 +5750,27 @@ function renderTreinosList(container, items, source) {
         </div>`
       : '';
 
-    // Conteúdo: multi-linha → lista visual
+    // Preview de blocos visível por padrão
+    const blocos = _normalizePlanBlocks(item.conteudo || '');
+    const blocosPreview = blocos.length
+      ? `<div class="treino-preview-blocos">
+          ${blocos.map(function(bloco) {
+            const nomeBloco = _escapeWorkoutHTML(bloco?.nome || 'BLOCO');
+            const exercicios = Array.isArray(bloco?.exercicios) ? bloco.exercicios : [];
+            const exSpans = exercicios.length
+              ? exercicios.map(function(e) { return `<span>${_escapeWorkoutHTML(e)}</span>`; }).join('')
+              : '<span>—</span>';
+            return `
+              <div class="preview-bloco">
+                <span class="preview-bloco-nome">${nomeBloco}</span>
+                <div class="preview-exercicios">${exSpans}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>`
+      : '';
+
+    // Conteúdo completo (mantém toggle existente)
     const linhas = item.conteudo
       ? item.conteudo.split('\n').filter(l => l.trim())
       : [];
@@ -5695,6 +5794,7 @@ function renderTreinosList(container, items, source) {
         </div>
         <h3 class="treino-titulo">${item.titulo}</h3>
         ${metricas}
+        ${blocosPreview}
         <div class="treino-body collapsed">
           ${conteudoHtml}
         </div>
@@ -5792,11 +5892,23 @@ async function iniciarTreino() {
     insertErr = firstErr;
 
     if (insertErr) {
+      // FE-002 / TASK 2: buscar supabase_id real antes de inserir
+      let mbscWorkoutId = _activeWorkoutPlan?.id || null;
+      if (mbscWorkoutId) {
+        try {
+          const { data: mbscRow } = await window.supabase
+            .from('workouts')
+            .select('supabase_id')
+            .eq('id', mbscWorkoutId)
+            .single();
+          if (mbscRow?.supabase_id) mbscWorkoutId = mbscRow.supabase_id;
+        } catch (_) {}
+      }
       const { data: secondData, error: secondErr } = await window.supabase
         .from('session_logs')
         .insert({
           user_id: state.user.id,
-          workout_id: _activeWorkoutPlan?.id || null,
+          workout_id: mbscWorkoutId,
           started_at: startedAtIso,
           duration_seconds: 0,
           rpe: null,
@@ -6629,7 +6741,15 @@ function renderWorkouts() {
     const title = _escapeWorkoutHTML(t.titulo || 'Sessão Coach IA');
     const category = _escapeWorkoutHTML(String(t.categoria || 'coach_ia').toUpperCase());
     const dateLabel = _escapeWorkoutHTML(_formatWorkoutDate(t.data || t.created_at));
-    const preview = _buildBlocksPreviewHTML(t.conteudo || t.content || '');
+    const blocos = _normalizePlanBlocks(t.conteudo || t.content || '');
+    const previewHTML = blocos.map(function(b) {
+      return '<div class="preview-bloco">' +
+        '<span class="preview-bloco-nome">' + _escapeWorkoutHTML(b.nome) + '</span>' +
+        '<div class="preview-exercicios">' +
+          b.exercicios.map(function(e) { return '<span>' + _escapeWorkoutHTML(e) + '</span>'; }).join('') +
+        '</div>' +
+        '</div>';
+    }).join('');
 
     html += `
       <div class="session-card treino-card" id="${domId}" data-workout-id="${_escapeWorkoutHTML(t.id)}" data-source="ia">
@@ -6641,7 +6761,7 @@ function renderWorkouts() {
               <span class="s-badge s-badge-phase">${category}</span>
             </div>
             <div style="font-size:12px;color:var(--muted);font-family:var(--font-mono);margin-top:3px;">${dateLabel}</div>
-            <div class="session-preview">${preview}</div>
+            ${previewHTML ? `<div class="treino-preview-blocos">${previewHTML}</div>` : ''}
           </div>
           <div class="session-card-actions">
             <button class="btn-start-session" onclick="event.stopPropagation();startSessionById('${_escapeWorkoutHTML(t.id)}',this)">▶ Iniciar Treino</button>
@@ -6657,7 +6777,15 @@ function renderWorkouts() {
     const bodyId = `scb-${domId}`;
     const title = _escapeWorkoutHTML(w.title || 'Sessão de treino');
     const dateLabel = _escapeWorkoutHTML(_formatWorkoutDate(w.date));
-    const preview = _buildBlocksPreviewHTML(w.conteudo || w.content || w.details || '');
+    const blocos = _normalizePlanBlocks(w.conteudo || w.content || w.details || '');
+    const previewHTML = blocos.map(function(b) {
+      return '<div class="preview-bloco">' +
+        '<span class="preview-bloco-nome">' + _escapeWorkoutHTML(b.nome) + '</span>' +
+        '<div class="preview-exercicios">' +
+          b.exercicios.map(function(e) { return '<span>' + _escapeWorkoutHTML(e) + '</span>'; }).join('') +
+        '</div>' +
+        '</div>';
+    }).join('');
 
     html += `
       <div class="session-card workout-card" id="${domId}" data-workout-id="${_escapeWorkoutHTML(w.id ?? w._idx)}" data-source="state" data-idx="${w._idx}">
@@ -6669,7 +6797,7 @@ function renderWorkouts() {
               <span class="s-badge s-badge-pending">PENDENTE</span>
             </div>
             <div style="font-size:12px;color:var(--muted);font-family:var(--font-mono);margin-top:3px;">${dateLabel}</div>
-            <div class="session-preview">${preview}</div>
+            ${previewHTML ? `<div class="treino-preview-blocos">${previewHTML}</div>` : ''}
           </div>
           <div class="session-card-actions">
             <button class="btn-start-session" onclick="event.stopPropagation();startSessionByWorkout(${w._idx},this)">▶ Iniciar Treino</button>
@@ -6793,12 +6921,9 @@ async function renderCompletedWorkouts() {
     const ua = log.ua != null ? Number(log.ua) : '—';
 
     const conteudoRaw = treino?.conteudo || localWk?.conteudo || localWk?.content || '';
-    const blocos = String(conteudoRaw || '')
-      .split('|')
-      .map(b => b.trim())
-      .filter(Boolean);
+    const blocos = _normalizePlanBlocks(conteudoRaw);
     const blocosHtml = blocos.length
-      ? blocos.map(b => `<div class="completed-block-mini">${_escapeWorkoutHTML(b)}</div>`).join('')
+      ? blocos.map(b => `<div class="completed-block-mini">${_escapeWorkoutHTML(b.nome)}</div>`).join('')
       : `<div class="completed-block-mini">Treino sem blocos detalhados.</div>`;
 
     let volumeKg = 0;
@@ -6923,13 +7048,13 @@ async function renderCompletedSessions() {
     // Exercises + Notes (expandable)
     let expandableHTML = '';
     if (treino?.conteudo) {
-      const blocks = treino.conteudo.split(' | ').map(b => b.trim()).filter(Boolean);
+      const blocks = _normalizePlanBlocks(treino.conteudo);
       if (blocks.length > 1) {
         expandableHTML += `
           <div style="padding:12px 16px;border-top:1px solid var(--border);">
             <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">Exercícios</div>
             <div style="display:flex;flex-direction:column;gap:5px;">
-              ${blocks.map(b => `<div style="padding:7px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);line-height:1.4;">${b}</div>`).join('')}
+              ${blocks.map(b => `<div style="padding:7px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--text);line-height:1.4;">${_escapeWorkoutHTML(b.nome)}${b.exercicios.length ? ': ' + _escapeWorkoutHTML(b.exercicios.join(' + ')) : ''}</div>`).join('')}
             </div>
           </div>`;
       }
@@ -7465,8 +7590,16 @@ async function syncPendingWorkouts() {
   }
 }
 function deleteTreinoIA(id) {
-  const treinos = loadTreinosIA().filter(t => t.id !== id);
-  saveTreinosIA(treinos);
+  if (!confirm('Excluir este treino?')) return;
+
+  const treinosFiltrados = loadTreinosIA().filter(t => String(t.id) !== String(id));
+  saveTreinosIA(treinosFiltrados);
+
+  const treinosContainer = document.getElementById('tab-treinos-content');
+  if (treinosContainer) {
+    renderTreinosList(treinosContainer, treinosFiltrados, 'local');
+  }
+
   refreshDashboard();
   renderWorkouts();
   showToast('Treino removido.');
@@ -8479,12 +8612,9 @@ function _parseExerciseFromLine(line, idx) {
 }
 
 function _buildInlineBlocksFromContent(conteudo) {
-  const segments = String(conteudo || '')
-    .split('|')
-    .map(s => s.trim())
-    .filter(Boolean);
+  const parsed = _normalizePlanBlocks(conteudo);
 
-  if (!segments.length) {
+  if (!parsed.length) {
     return [{
       name: 'BLOCO ÚNICO',
       color: 'rgba(255,255,255,0.3)',
@@ -8494,30 +8624,14 @@ function _buildInlineBlocksFromContent(conteudo) {
     }];
   }
 
-  return segments.map((seg, idx) => {
-    let blockName = seg;
-    let blockBody = seg;
-    const named = seg.match(/^([^:]+):\s*(.+)$/);
-    if (named) {
-      blockName = named[1].trim();
-      blockBody = named[2].trim();
-    }
-
-    const exerciseParts = blockBody
-      .split(/\s*(?:\n|;|•)\s*/)
-      .map(x => x.trim())
-      .filter(Boolean);
-    const finalParts = exerciseParts.length > 1
-      ? exerciseParts
-      : blockBody.split(/\s*,\s*/).map(x => x.trim()).filter(Boolean);
-
-    const exercises = (finalParts.length ? finalParts : [blockBody])
-      .map((line, exIdx) => _parseExerciseFromLine(line, exIdx));
-
+  return parsed.map((block, idx) => {
+    const exercises = block.exercicios.length
+      ? block.exercicios.map((line, exIdx) => _parseExerciseFromLine(line, exIdx))
+      : [{ name: block.nome, spec: 'prescrição livre', sets: 3 }];
     return {
-      name: blockName || `Bloco ${idx + 1}`,
-      color: _detectBlockColor(blockName),
-      hasLoads: _blockNeedsLoads(blockName),
+      name: block.nome || `Bloco ${idx + 1}`,
+      color: _detectBlockColor(block.nome),
+      hasLoads: _blockNeedsLoads(block.nome),
       done: false,
       exercises
     };
@@ -8580,9 +8694,54 @@ function _startInlineSession({ workoutId, title, conteudo, card, source, sourceI
   _inlineSessionTimer = setInterval(() => {
     if (!_inlineSession || _inlineSession.finished) return;
     _inlineSession.timerSecs += 1;
+    const formatted = _formatClock(_inlineSession.timerSecs);
+    // Atualizar header timer (legado, pode estar oculto)
     const timer = document.getElementById(`timer-${_inlineSession.cardDomId}`);
-    if (timer) timer.textContent = _formatClock(_inlineSession.timerSecs);
+    if (timer) timer.textContent = formatted;
+    // Atualizar sticky timer bar
+    const stickyTimer = document.getElementById(`sticky-timer-${_inlineSession.cardDomId}`);
+    if (stickyTimer) stickyTimer.textContent = formatted;
   }, 1000);
+
+  // FE-002 / TASK 2 & 3: lookup supabase_id + criar session_log antecipado (async, não bloqueia UI)
+  (async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+      if (!userId || !_inlineSession) return;
+
+      // Resolver UUID real do workout
+      let realWorkoutId = String(workoutId);
+      try {
+        const { data: wkRow } = await supabase
+          .from('workouts')
+          .select('supabase_id')
+          .eq('id', workoutId)
+          .single();
+        if (wkRow?.supabase_id) realWorkoutId = wkRow.supabase_id;
+      } catch (_) {}
+      if (_inlineSession) _inlineSession.realWorkoutId = realWorkoutId;
+
+      // Criar session_log antecipado para ter UUID disponível para exercise_logs
+      const { data: slData, error: slErr } = await supabase
+        .from('session_logs')
+        .insert({
+          user_id: userId,
+          workout_id: realWorkoutId,
+          started_at: _inlineSession?.startedAtIso || new Date().toISOString(),
+          duration_seconds: 0
+        })
+        .select('id')
+        .single();
+
+      if (!slErr && slData?.id && _inlineSession) {
+        _inlineSession.sessionLogId = slData.id;
+        window.__activeSessionId = slData.id;
+      }
+    } catch (err) {
+      console.warn('[_startInlineSession] early session_log:', err?.message || err);
+    }
+  })();
 }
 
 function _stopInlineSessionTimer() {
@@ -8594,16 +8753,32 @@ function _stopInlineSessionTimer() {
 
 function _injectInlineTimer() {
   if (!_inlineSession?.cardEl) return;
-  const actions = _inlineSession.cardEl.querySelector('.session-card-actions');
-  if (!actions) return;
-  actions.querySelector('.session-timer-widget')?.remove();
-  const timerWrap = document.createElement('div');
-  timerWrap.className = 'session-timer-widget';
-  timerWrap.innerHTML = `
-    <span class="timer-value" id="timer-${_inlineSession.cardDomId}">00:00</span>
-    <span class="timer-label">em andamento</span>
+
+  // Ocultar o widget de timer que fica no header (evitar duplicação)
+  const headerActions = _inlineSession.cardEl.querySelector('.session-card-actions');
+  if (headerActions) {
+    const oldWidget = headerActions.querySelector('.session-timer-widget');
+    if (oldWidget) oldWidget.style.display = 'none';
+  }
+
+  // Injetar sticky timer bar no topo do body
+  const body = _inlineSession.bodyEl;
+  if (!body) return;
+  body.querySelector('.sticky-timer-bar')?.remove();
+
+  const wId = _escapeWorkoutHTML(_inlineSession.workoutId);
+  const titleTrunc = (_inlineSession.title || 'Treino').slice(0, 32);
+  const bar = document.createElement('div');
+  bar.className = 'sticky-timer-bar';
+  bar.innerHTML = `
+    <span class="sticky-timer-clock" id="sticky-timer-${_inlineSession.cardDomId}">00:00</span>
+    <span class="sticky-timer-name">${_escapeWorkoutHTML(titleTrunc)}</span>
+    <button class="btn-sticky-finish"
+      id="sticky-finish-btn-${_inlineSession.cardDomId}"
+      onclick="finishSession('${wId}')"
+      disabled>Concluir</button>
   `;
-  actions.prepend(timerWrap);
+  body.insertBefore(bar, body.firstChild);
 }
 
 function _renderInlineSessionBody() {
@@ -8687,12 +8862,15 @@ function _updateInlineProgress() {
   const total = _inlineSession.blocks.length;
   const done = _inlineSession.blocks.filter(b => b.done).length;
   const pct = total > 0 ? (done / total) * 100 : 0;
+  const allDone = done === total;
   const fill = document.getElementById(`progress-${_inlineSession.cardDomId}`);
   const txt = document.getElementById(`progress-text-${_inlineSession.cardDomId}`);
   const finishBtn = document.getElementById(`btn-finish-${_inlineSession.cardDomId}`);
+  const stickyFinishBtn = document.getElementById(`sticky-finish-btn-${_inlineSession.cardDomId}`);
   if (fill) fill.style.width = `${pct}%`;
   if (txt) txt.textContent = `${done} de ${total} blocos`;
-  if (finishBtn) finishBtn.disabled = done !== total;
+  if (finishBtn) finishBtn.disabled = !allDone;
+  if (stickyFinishBtn) stickyFinishBtn.disabled = !allDone;
 }
 
 function toggleBlock(workoutId, blockIdx) {
@@ -8717,6 +8895,71 @@ function markBlockDone(workoutId, blockIdx, event) {
     if (btn) btn.textContent = block.done ? 'Desmarcar' : 'Marcar como concluído';
   }
   _updateInlineProgress();
+
+  // FE-002 / TASK 3: persistir exercise_logs ao marcar bloco como concluído
+  if (block.done) {
+    _saveBlockExerciseLogs(workoutId, blockIdx, block, blockEl)
+      .catch(e => console.warn('[markBlockDone] exercise_logs:', e?.message || e));
+  }
+}
+
+// FE-002 / TASK 3: salvar exercise_logs quando um bloco é marcado como concluído
+async function _saveBlockExerciseLogs(workoutId, blockIdx, block, blockEl) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+    if (!userId) return;
+
+    const sessionLogId = _inlineSession?.sessionLogId || window.__activeSessionId || null;
+    const realWorkoutId = _inlineSession?.realWorkoutId || String(workoutId);
+    const loggedAt = new Date().toISOString();
+    const rows = [];
+
+    block.exercises.forEach((exercise, exIdx) => {
+      // Extrair reps prescritas de specs como "3x6" → 6
+      const specStr = exercise.spec || '';
+      const repsMatch = specStr.match(/\d+[xX×](\d+)/);
+      const prescReps = repsMatch ? parseInt(repsMatch[1], 10) : null;
+      const sets = Math.max(1, Number(exercise.sets) || 3);
+
+      for (let setIdx = 0; setIdx < sets; setIdx++) {
+        // Ler input de carga do DOM via data-attributes
+        const inputEl = blockEl?.querySelector(
+          `input[data-block="${blockIdx}"][data-exercise="${exIdx}"][data-set="${setIdx}"]`
+        );
+        const rawVal = inputEl ? parseFloat(inputEl.value) : NaN;
+        const loadKg = Number.isFinite(rawVal) && rawVal > 0 ? rawVal : null;
+
+        // Salvar linha se tiver carga OU se for a S1 de qualquer exercício (preserva histórico)
+        if (loadKg !== null || setIdx === 0) {
+          rows.push({
+            user_id: userId,
+            session_log_id: sessionLogId,
+            workout_id: realWorkoutId,
+            exercise_name: exercise.name,
+            block_name: block.name,
+            set_number: setIdx + 1,
+            reps: prescReps,
+            load_kg: loadKg,
+            rpe: null,
+            logged_at: loggedAt
+          });
+        }
+      }
+    });
+
+    if (rows.length === 0) return;
+
+    // Inserir em lotes de 20 para evitar payloads muito grandes
+    for (let i = 0; i < rows.length; i += 20) {
+      const chunk = rows.slice(i, i + 20);
+      const { error } = await supabase.from('exercise_logs').insert(chunk);
+      if (error) console.warn(`[exercise_logs] chunk ${i / 20}:`, error.message || error);
+    }
+    console.log(`[exercise_logs] ${rows.length} linhas salvas — bloco "${block.name}"`);
+  } catch (err) {
+    console.warn('[_saveBlockExerciseLogs]', err?.message || err);
+  }
 }
 
 const _inlineRpeDescMap = {
@@ -8849,16 +9092,45 @@ async function saveSession(workoutId, durationSeconds, volumeKg) {
     const finishedAt = new Date().toISOString();
     const startedAt = _inlineSession.startedAtIso || new Date(Date.now() - Number(durationSeconds || 0) * 1000).toISOString();
 
-    const { error: logErr } = await supabase.from('session_logs').insert({
+    // --- FE-002 / TASK 2: resolver supabase_id real do workout ---
+    let realWorkoutId = _inlineSession.realWorkoutId || String(workoutId);
+    if (!_inlineSession.realWorkoutId) {
+      try {
+        const { data: wkRow } = await supabase
+          .from('workouts')
+          .select('supabase_id')
+          .eq('id', workoutId)
+          .single();
+        if (wkRow?.supabase_id) realWorkoutId = wkRow.supabase_id;
+      } catch (_) {}
+    }
+
+    const sessionPayload = {
       user_id: userId,
-      workout_id: workoutId,
+      workout_id: realWorkoutId,
       started_at: startedAt,
       finished_at: finishedAt,
       duration_seconds: Number(durationSeconds || 0),
       rpe: rpe,
       ua: ua,
       notes: JSON.stringify({ volume_kg: Number(volumeKg || 0) })
-    });
+    };
+
+    let logErr = null;
+    // Se já foi criado um session_log antecipado, ATUALIZAR em vez de inserir
+    if (_inlineSession.sessionLogId) {
+      const { error: updErr } = await supabase
+        .from('session_logs')
+        .update({ workout_id: realWorkoutId, finished_at: finishedAt,
+          duration_seconds: Number(durationSeconds || 0), rpe, ua,
+          notes: JSON.stringify({ volume_kg: Number(volumeKg || 0) }) })
+        .eq('id', _inlineSession.sessionLogId)
+        .eq('user_id', userId);
+      logErr = updErr;
+    } else {
+      const { error: insErr } = await supabase.from('session_logs').insert(sessionPayload);
+      logErr = insErr;
+    }
     if (logErr) throw logErr;
 
     const { error: wErr } = await supabase
@@ -9436,9 +9708,23 @@ async function _saveSession(finishedAt, duration) {
 
     const cargas = _sessionState?.cargasRegistradas || {};
     const cargasPayload = Object.keys(cargas).length ? cargas : null;
+
+    // FE-002 / TASK 2: resolver supabase_id real do workout
+    let realMbscWorkoutId = workoutId || null;
+    if (realMbscWorkoutId) {
+      try {
+        const { data: mbscWk } = await supabase
+          .from('workouts')
+          .select('supabase_id')
+          .eq('id', realMbscWorkoutId)
+          .single();
+        if (mbscWk?.supabase_id) realMbscWorkoutId = mbscWk.supabase_id;
+      } catch (_) {}
+    }
+
     const { error: logErr } = await supabase.from('session_logs').insert({
       user_id:          userId,
-      workout_id:       workoutId || null,
+      workout_id:       realMbscWorkoutId,
       started_at:       startedAt,
       finished_at:      finishedAt,
       duration_seconds: duration,
@@ -11899,6 +12185,101 @@ function showToast(msg, isError = false) {
   t.className = 'toast show' + (isError ? ' error' : '');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ═══════════════════════════════════════════════
+//  EXERCISE LIBRARY — VIDEO LOOKUP
+// ═══════════════════════════════════════════════
+
+function _getMovementPattern(exerciseName) {
+  var name = exerciseName.toLowerCase();
+  if (name.includes('squat') && !name.includes('split') && !name.includes('rfess')) return 'knee_dominant_bilateral';
+  if (name.includes('split squat') || name.includes('rfess') || name.includes('step')) return 'knee_dominant_unilateral';
+  if (name.includes('deadlift') && (name.includes('sldl') || name.includes('unilateral') || name.includes('1 db'))) return 'hip_dominant_unilateral';
+  if (name.includes('deadlift') || name.includes('hip hinge') || name.includes('toe touch')) return 'hip_dominant_bilateral';
+  if (name.includes('push-up') || name.includes('push up') || (name.includes('press') && name.includes('bench'))) return 'push_horizontal';
+  if (name.includes('press') && (name.includes('shoulder') || name.includes('overhead') || name.includes('db press'))) return 'push_vertical';
+  if (name.includes('row') && !name.includes('chin') && !name.includes('pull')) return 'pull_horizontal';
+  if (name.includes('chin') || name.includes('pull-up') || name.includes('pulldown')) return 'pull_vertical';
+  if (name.includes('plank') && name.includes('lateral')) return 'anti_lateral_flexion';
+  if (name.includes('plank') || name.includes('rollout') || name.includes('ab wheel')) return 'anti_extension';
+  if (name.includes('chop') || name.includes('lift') || name.includes('rotation') || name.includes('bird')) return 'anti_rotation';
+  if (name.includes('snatch') || name.includes('clean') || name.includes('jump squat')) return 'power_sagittal';
+  if (name.includes('bound') || name.includes('lateral jump') || name.includes('med ball')) return 'power_frontal';
+  if (name.includes('carry') || name.includes('march') || name.includes('walk') || name.includes('farmer')) return 'carry';
+  return null;
+}
+
+async function fetchExerciseVideo(exerciseName, movementPattern) {
+  // CAMADA 1: Match exato por nome
+  var r1 = await supabase
+    .from('exercise_library')
+    .select('name, youtube_id, cues, thumbnail_url, movement_pattern')
+    .ilike('name', exerciseName)
+    .maybeSingle();
+  if (r1.data?.youtube_id) return r1.data;
+
+  // CAMADA 2: Match por name_aliases (contém o nome buscado)
+  var r2 = await supabase
+    .from('exercise_library')
+    .select('name, youtube_id, cues, thumbnail_url, movement_pattern')
+    .contains('name_aliases', [exerciseName])
+    .not('youtube_id', 'is', null)
+    .limit(1)
+    .maybeSingle();
+  if (r2.data?.youtube_id) return r2.data;
+
+  // CAMADA 3: Fallback por movement_pattern
+  if (movementPattern) {
+    var r3 = await supabase
+      .from('exercise_library')
+      .select('name, youtube_id, cues, thumbnail_url, movement_pattern')
+      .eq('movement_pattern', movementPattern)
+      .not('youtube_id', 'is', null)
+      .limit(1)
+      .maybeSingle();
+    if (r3.data?.youtube_id) return r3.data;
+  }
+
+  return r1.data || null;
+}
+
+async function abrirVideoModal(exerciseName) {
+  if (!exerciseName) return;
+  var blocos = _normalizePlanBlocks(window.__currentTreino?.conteudo || '');
+  var bloco = blocos.find(function(b) { return b.exercicios.some(function(e) { return e.includes(exerciseName); }); });
+  var pattern = bloco ? _getMovementPattern(exerciseName) : null;
+  var data = await fetchExerciseVideo(exerciseName, pattern);
+
+  var existing = document.getElementById('exercise-video-modal');
+  if (existing) existing.remove();
+
+  var youtubeEmbed = data?.youtube_id
+    ? '<iframe width="100%" height="220" src="https://www.youtube.com/embed/' + _escapeWorkoutHTML(data.youtube_id) + '?rel=0&modestbranding=1" frameborder="0" allowfullscreen style="border-radius:8px;display:block;"></iframe>'
+    : '<div style="height:120px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.35);font-size:13px;">Vídeo não disponível</div>';
+
+  var cuesHtml = Array.isArray(data?.cues) && data.cues.length
+    ? '<ul style="margin:10px 0 0;padding-left:18px;font-size:13px;color:rgba(255,255,255,0.65);line-height:1.7;">' +
+        data.cues.map(function(c) { return '<li>' + _escapeWorkoutHTML(c) + '</li>'; }).join('') +
+      '</ul>'
+    : '';
+
+  var modal = document.createElement('div');
+  modal.id = 'exercise-video-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.75);display:flex;align-items:flex-end;justify-content:center;';
+  modal.onclick = function(ev) { if (ev.target === modal) modal.remove(); };
+
+  modal.innerHTML =
+    '<div style="background:#0f1420;border-radius:16px 16px 0 0;width:100%;max-width:540px;padding:20px 20px 32px;max-height:85vh;overflow-y:auto;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">' +
+        '<div style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;color:#f0f0f0;">' + _escapeWorkoutHTML(data?.name || exerciseName) + '</div>' +
+        '<button onclick="document.getElementById(\'exercise-video-modal\').remove()" style="background:none;border:1px solid rgba(255,255,255,0.15);color:#a3acbb;border-radius:8px;padding:5px 10px;cursor:pointer;">✕</button>' +
+      '</div>' +
+      youtubeEmbed +
+      cuesHtml +
+    '</div>';
+
+  document.body.appendChild(modal);
 }
 </script>
 
