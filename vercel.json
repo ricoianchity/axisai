@@ -5,6 +5,8 @@
     { "source": "/api/profile", "destination": "/api/profile.js" },
     { "source": "/api/sessions", "destination": "/api/sessions.js" },
     { "source": "/api/chat-history", "destination": "/api/chat-history.js" },
+    { "source": "/api/get-workouts", "destination": "/api/get-workouts.js" },
+    { "source": "/api/save-workout", "destination": "/api/save-workout.js" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

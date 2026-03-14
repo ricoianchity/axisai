@@ -21,15 +21,15 @@ async function fetchWorkoutsByUserId(userId, headers) {
 
 async function resolveUserIdByEmail(email, headers) {
   if (!email) return null;
-  const url = new URL(`${process.env.SUPABASE_URL}/rest/v1/users`);
-  url.searchParams.set('select', 'id');
+  const url = new URL(`${process.env.SUPABASE_URL}/rest/v1/profiles`);
+  url.searchParams.set('select', 'user_id');
   url.searchParams.set('email', `eq.${email}`);
   url.searchParams.set('limit', '1');
 
   const res = await fetch(url.toString(), { headers });
   const data = await fetchJson(res);
   if (!res.ok || !Array.isArray(data) || data.length === 0) return null;
-  return data[0]?.id || null;
+  return data[0]?.user_id || null;
 }
 
 export default async function handler(req, res) {

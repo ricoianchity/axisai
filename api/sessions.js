@@ -50,7 +50,7 @@ export default async function handler(req) {
     }
 
     const res = await fetch(
-      `${process.env.SUPABASE_URL}/rest/v1/training_sessions?user_id=eq.${user.id}&order=completed_at.desc&limit=100`,
+      `${process.env.SUPABASE_URL}/rest/v1/session_logs?user_id=eq.${user.id}&order=finished_at.desc&limit=100`,
       { headers: sbHeaders }
     );
     const data = await res.json();
@@ -59,7 +59,7 @@ export default async function handler(req) {
 
   if (req.method === 'POST') {
     const body = await req.json();
-    const res = await fetch(`${process.env.SUPABASE_URL}/rest/v1/training_sessions`, {
+    const res = await fetch(`${process.env.SUPABASE_URL}/rest/v1/session_logs`, {
       method: 'POST',
       headers: sbHeaders,
       body: JSON.stringify({ ...body, user_id: user.id })

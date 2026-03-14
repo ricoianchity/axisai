@@ -3752,7 +3752,6 @@ function _clearLocalUserCache() {
 
 function _resetRuntimeUserData() {
   state.profile = null;
-  state.checkin = null;
   state.phase = null;
   state.readiness = null;
   state.chatHistory = [];
@@ -3846,13 +3845,12 @@ async function loadUserData(userId) {
   state.chatHistory = [];
 
   const cachedProfile = JSON.parse(localStorage.getItem('axisai_profile') || 'null');
-  const cachedCheckin = JSON.parse(localStorage.getItem('axisai_checkin') || 'null');
-  const cachedPhase = JSON.parse(localStorage.getItem('axisai_phase') || 'null');
+  const cachedPhase   = JSON.parse(localStorage.getItem('axisai_phase')   || 'null');
+  // axisai_checkin mantido apenas para compatibilidade com dados legacy no localStorage
 
-  const [profile, checkin, phase, messages, readiness] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', userId).single(),
-    supabase.from('checkins').select('*').eq('user_id', userId).eq('date', today()).maybeSingle(),
-    supabase.from('training_phases').select('*').eq('user_id', userId).order('started_at', { ascending: false }).limit(1).single(),
+  const [profile, phase, messages, readiness] = await Promise.all([
+    supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
+    supabase.from('training_phases').select('*').eq('user_id', userId).order('started_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('chat_messages').select('*').eq('user_id', userId).order('created_at', { ascending: true }).limit(20),
     supabase.from('readiness_logs').select('*').eq('user_id', userId).eq('date', today()).maybeSingle()
   ]);
@@ -3860,15 +3858,9 @@ async function loadUserData(userId) {
   if (profile.data) {
     state.profile = profile.data;
     localStorage.setItem('axisai_profile', JSON.stringify(profile.data));
-  } else if (cachedProfile && String(cachedProfile.id || '') === String(userId)) {
+  } else if (cachedProfile && (cachedProfile.user_id === userId || String(cachedProfile.id || '') === String(userId))) {
     // Keep same-user cache as fallback when DB read is temporarily unavailable.
     state.profile = cachedProfile;
-  }
-  if (checkin.data) {
-    state.checkin = checkin.data;
-    localStorage.setItem('axisai_checkin', JSON.stringify(checkin.data));
-  } else if (cachedCheckin && String(cachedCheckin.user_id || '') === String(userId)) {
-    state.checkin = cachedCheckin;
   }
   if (phase.data) {
     state.phase = phase.data;
@@ -3876,6 +3868,7 @@ async function loadUserData(userId) {
   } else if (cachedPhase && String(cachedPhase.user_id || '') === String(userId)) {
     state.phase = cachedPhase;
   }
+  // state.checkin é alias de state.readiness (mesma fonte de dados)
   if (messages.data) {
     state.chatHistory = messages.data.map(m => ({ role: m.role, content: m.content }));
   }
@@ -4122,7 +4115,8 @@ async function initApp() {
       // ── FIX BUG 1: Sync onboarding flag from DB profile data ──
       // If the profile has essential fields from onboarding, mark localStorage
       // so returning users are never incorrectly sent to onboarding again
-      if (state.profile && (state.profile.age || state.profile.level || state.profile.goal)) {
+      if (state.profile && (state.profile.onboarding_done === true ||
+                            state.profile.age != null || state.profile.objective != null)) {
         localStorage.setItem('axisai_onboarding_done', '1');
       }
       loadWorkouts();
@@ -4160,7 +4154,8 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     const savedName = cachedUser.id === u.id ? cachedUser.name : null;
     _applyAuthenticatedUser(u, savedName);
     await loadUserData(u.id);
-    if (state.profile && (state.profile.age || state.profile.level || state.profile.goal)) {
+    if (state.profile && (state.profile.onboarding_done === true ||
+                          state.profile.age != null || state.profile.objective != null)) {
       localStorage.setItem('axisai_onboarding_done', '1');
     }
     syncPendingWorkouts();
@@ -4293,22 +4288,38 @@ async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-pass').value;
   if (!email || !pass) return showToast('Preencha email e senha.', true);
-  // Ensure user can switch accounts without stale local cache/session artifacts
-  await supabase.auth.signOut({ scope: 'local' });
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-  if (error) return showToast(error.message || 'Erro ao fazer login.', true);
-  if (!data?.user) return showToast('Erro inesperado. Tente novamente.', true);
-  _applyAuthenticatedUser(data.user, data.user.email.split('@')[0]);
-  // Carregar dados ANTES de entrar no app — evita estado parcial no dashboard
-  // (sem isto, state.readiness fica null e o modal de check-in abre indevidamente)
-  await loadUserData(data.user.id);
-  // ── FIX BUG 1: Sync onboarding flag from DB profile ──
-  if (state.profile && (state.profile.age || state.profile.level || state.profile.goal)) {
-    localStorage.setItem('axisai_onboarding_done', '1');
+
+  // ── Bloquear onAuthStateChange de agir durante o login manual ──
+  // Sem isso, o SIGNED_IN disparado por signInWithPassword corre em paralelo
+  // com doLogin(), causando race condition no loadUserData() e enterApp().
+  _authResolving = true;
+
+  try {
+    // Limpar sessão local antes de logar com nova/mesma conta
+    await supabase.auth.signOut({ scope: 'local' });
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    if (error) { _authResolving = false; return showToast(error.message || 'Erro ao fazer login.', true); }
+    if (!data?.user) { _authResolving = false; return showToast('Erro inesperado. Tente novamente.', true); }
+
+    _applyAuthenticatedUser(data.user, data.user.email.split('@')[0]);
+
+    // Carregar dados ANTES de entrar no app (evita estado parcial no dashboard)
+    await loadUserData(data.user.id);
+
+    // Sincronizar flag de onboarding — condição ampliada para cobrir perfis com apenas name/created_at
+    if (state.profile && (state.profile.onboarding_done === true ||
+                          state.profile.age != null || state.profile.objective != null)) {
+      localStorage.setItem('axisai_onboarding_done', '1');
+    }
+
+    loadWorkouts();
+    loadProfile();
+    await enterApp();
+  } finally {
+    // Liberar o guard sempre — mesmo em caso de erro inesperado
+    _authResolving = false;
   }
-  loadWorkouts();
-  loadProfile();
-  enterApp();
 }
 
 async function doRegister() {
@@ -4325,7 +4336,7 @@ async function doRegister() {
   localStorage.setItem('axisai_user', JSON.stringify({ name, email, id: data.user.id }));
   // Salvar nome no perfil
   if (data.user?.id) {
-    await supabase.from('profiles').upsert({ id: data.user.id, name });
+    await supabase.from('profiles').upsert({ user_id: data.user.id, display_name: name });
   }
   // onAuthStateChange (SIGNED_IN) will handle entering the app once session is confirmed
   showToast('Conta criada! Verifique seu e-mail para continuar.');
@@ -4364,26 +4375,51 @@ async function doLogout() {
   document.getElementById('screen-app').classList.remove('visible');
 }
 
-function enterApp() {
-  // ── FIX BUG 1: Guard against double execution ──
+async function enterApp() {
+  // ── Guard against double execution ──
   if (_appEntered) return;
 
   document.getElementById('screen-auth').style.display = 'none';
 
-  // ── FIX BUG 1: Check onboarding status from BOTH DB profile and localStorage ──
-  // The DB profile is the source of truth. If the profile has essential onboarding
-  // fields (age, level, or goal), onboarding was completed — go to dashboard.
-  // localStorage is a secondary cache that may be stale on new devices/browsers.
-  const profileHasData = state.profile && (state.profile.age || state.profile.level || state.profile.goal);
+  // ── Check onboarding status: DB profile é source of truth ──
+  // Campos reais da tabela: onboarding_done (boolean), age, objective (não goal/level/name)
+  const _profileDone = (p) => p && (
+    p.onboarding_done === true || p.age != null || p.objective != null
+  );
+  let profileHasData = _profileDone(state.profile);
+
+  // ── Fallback: se state.profile é null, consultar Supabase diretamente ──
+  // Cobre caso onde loadUserData() falhou (ex.: RLS, timing, tipo errado na query anterior)
+  if (!profileHasData && state.user?.id) {
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('user_id, age, objective, onboarding_done, created_at')
+        .eq('user_id', state.user.id)
+        .maybeSingle();
+      if (data) {
+        state.profile = { ...(state.profile || {}), ...data };
+        profileHasData = _profileDone(data);
+        if (profileHasData) {
+          localStorage.setItem('axisai_onboarding_done', '1');
+          localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
+        }
+      }
+    } catch (e) {
+      console.warn('[enterApp fallback]', e);
+    }
+  }
+
   const localOnboardingDone = localStorage.getItem('axisai_onboarding_done');
 
   if (!profileHasData && !localOnboardingDone) {
-    // Truly a new user — show onboarding (do NOT set _appEntered so we can re-enter after)
+    // Usuário genuinamente novo — mostrar onboarding
+    // (não setar _appEntered para poder re-entrar após wizard)
     showOnboarding();
     return;
   }
 
-  // Sync localStorage if DB says onboarding is done but localStorage was cleared
+  // Sincronizar localStorage se DB diz que onboarding foi feito mas cache foi limpo
   if (profileHasData && !localOnboardingDone) {
     localStorage.setItem('axisai_onboarding_done', '1');
   }
@@ -4995,33 +5031,33 @@ async function _finishWizard() {
   const medicationsOther = document.getElementById('w-medications-other')?.value?.trim();
   if (medicationsOther) medicationsChecked.push(...medicationsOther.split(',').map(s => s.trim()).filter(Boolean));
   const newData = {
-    age:         document.getElementById('w-age').value,
-    weight:      document.getElementById('w-weight').value,
-    height:      document.getElementById('w-height').value,
-    sex:         document.getElementById('w-sex').value,
-    frequency:   document.getElementById('w-frequency').value,
-    sessionTime: document.getElementById('w-session-time').value,
-    level:       document.getElementById('w-level').value,
-    gym:         document.getElementById('w-gym').value,
-    equipment:   equipment,
-    goal:        document.getElementById('w-goal').value,
-    injuries:    document.getElementById('w-injuries').value,
-    parq:         document.getElementById('w-parq').value,
-    profissao:    document.getElementById('w-profissao')?.value || '',
-    horasTrabalho: document.getElementById('w-horas-trabalho')?.value || '',
-    perfilPostural: document.getElementById('w-perfil-postural')?.value || '',
-    horasSentado: document.getElementById('w-horas-sentado')?.value || '',
-    estresseOcup: document.getElementById('w-estresse-ocup')?.value || '',
-    turnoTrabalho: document.getElementById('w-turno')?.value || '',
+    age:           document.getElementById('w-age').value,
+    weight:        document.getElementById('w-weight').value,
+    height:        document.getElementById('w-height').value,
+    sex:           document.getElementById('w-sex').value,
+    frequency:     document.getElementById('w-frequency').value,
+    session_time:  document.getElementById('w-session-time').value,
+    level:         document.getElementById('w-level').value,
+    gym:           document.getElementById('w-gym').value,
+    equipment:     equipment,
+    objective:     document.getElementById('w-goal').value,
+    injuries:      document.getElementById('w-injuries').value,
+    parq:          document.getElementById('w-parq').value,
+    profissao:     document.getElementById('w-profissao')?.value || '',
+    horas_trabalho: document.getElementById('w-horas-trabalho')?.value || '',
+    perfil_postural: document.getElementById('w-perfil-postural')?.value || '',
+    horas_sentado: document.getElementById('w-horas-sentado')?.value || '',
+    estresse_ocup: document.getElementById('w-estresse-ocup')?.value || '',
+    turno_trabalho: document.getElementById('w-turno')?.value || '',
     comorbidities: comorbiditiesChecked,
     medications:   medicationsChecked,
   };
   // Merge FMS data if collected in step 5
   if (_wizardFmsData) {
-    newData.fms       = _wizardFmsData.fms;
-    newData.fmsPhotos = _wizardFmsData.photos;
-    newData.toeTouch  = _wizardFmsData.toeTouch;
-    newData.riskFlags = _wizardFmsData.riskFlags;
+    newData.fms        = _wizardFmsData.fms;
+    newData.fmsPhotos  = _wizardFmsData.photos;   // deletado antes do upsert
+    newData.toe_touch  = _wizardFmsData.toeTouch;
+    newData.risk_flags = _wizardFmsData.riskFlags;
     setFmsLatest(_wizardFmsData.fms, undefined, _wizardFmsData.photos);
     _wizardFmsData = null;
   }
@@ -5035,7 +5071,8 @@ async function _finishWizard() {
   });
   state.profile = merged;
   localStorage.setItem('axisai_onboarding_done', '1');
-  const profilePayload = { ...merged, id: state.user?.id };
+  const profilePayload = { ...merged, user_id: state.user?.id };
+  delete profilePayload.id; // nunca enviar o id integer ao banco
   delete profilePayload.fmsPhotos; // keep photos local to avoid oversized profile payloads
   await saveData('profiles', profilePayload, 'axisai_profile');
   localStorage.setItem('axisai_profile', JSON.stringify(merged));
@@ -7340,7 +7377,7 @@ async function updateReadinessCard() {
 async function refreshDashboard() {
   const treinosIA = loadTreinosIA();
   const active = state.workouts.filter(w => !w.completed);
-  const riskCount = (state.profile?.riskFlags || []).filter(f => f !== 'none').length;
+  const riskCount = (state.profile?.risk_flags || []).filter(f => f !== 'none').length;
   const statRisks = document.getElementById('stat-risks');
   document.getElementById('stat-workouts').textContent = active.length + treinosIA.length;
   if (statRisks) statRisks.textContent = String(riskCount);
@@ -10053,14 +10090,14 @@ async function sendMessage() {
 
   try {
     const p = state.profile;
-    const profileCtx = p ? `\n\n## PERFIL DO USUÁRIO\nIdade: ${p.age||'?'} | Peso: ${p.weight||'?'}kg | Altura: ${p.height||'?'}cm | Sexo: ${p.sex||'?'} | Nível: ${p.level||'?'} | Objetivo: ${p.goal||'?'} | Local: ${p.gym||'?'} | Frequência: ${p.frequency||'?'}/semana | Tempo/sessão: ${p.sessionTime||'?'} | Equipamentos: ${(Array.isArray(p.equipment) ? p.equipment : []).join(', ')||'?'} | Lesões: ${p.injuries||'Nenhuma'} | PAR-Q cardíaco: ${p.parq==='yes'?'Sim — recomendado acompanhamento médico':'Não'}.\nProfissão: ${p.profissao||'?'} | Jornada: ${p.horasTrabalho||'?'}h/dia | Perfil postural: ${p.perfilPostural||'?'}${p.perfilPostural==='Misto'?' ('+( p.horasSentado||'?')+'h sentado)':''} | Estresse ocupacional: ${p.estresseOcup||'?'} | Turno: ${p.turnoTrabalho||'?'}.` : '\n\n## PERFIL\nNão preenchido — pergunte dados essenciais.';
+    const profileCtx = p ? `\n\n## PERFIL DO USUÁRIO\nIdade: ${p.age||'?'} | Peso: ${p.weight||'?'}kg | Altura: ${p.height||'?'}cm | Sexo: ${p.sex||'?'} | Nível: ${p.level||'?'} | Objetivo: ${p.objective||'?'} | Local: ${p.gym||'?'} | Frequência: ${p.frequency||'?'}/semana | Tempo/sessão: ${p.session_time||'?'} | Equipamentos: ${(Array.isArray(p.equipment) ? p.equipment : []).join(', ')||'?'} | Lesões: ${p.injuries||'Nenhuma'} | PAR-Q cardíaco: ${p.parq==='yes'?'Sim — recomendado acompanhamento médico':'Não'}.\nProfissão: ${p.profissao||'?'} | Jornada: ${p.horas_trabalho||'?'}h/dia | Perfil postural: ${p.perfil_postural||'?'}${p.perfil_postural==='Misto'?' ('+(p.horas_sentado||'?')+'h sentado)':''} | Estresse ocupacional: ${p.estresse_ocup||'?'} | Turno: ${p.turno_trabalho||'?'}.` : '\n\n## PERFIL\nNão preenchido — pergunte dados essenciais.';
     const fmsTotal = p?.fms ? (p.fms.dos??0)+(p.fms.il??0)+(p.fms.hs??0)+(p.fms.sm??0)+(p.fms.aslr??0) : null;
-    const fmsFlags = (Array.isArray(p?.riskFlags) ? p.riskFlags : []).filter(f=>f!=='none');
+    const fmsFlags = (Array.isArray(p?.risk_flags) ? p.risk_flags : []).filter(f=>f!=='none');
     const fmsFlagMap = { squat_dysfunction:'Deep Squat ≤1', lunge_dysfunction:'Inline Lunge ≤1', hip_instability:'Hurdle Step ≤1', shoulder_restriction:'Shoulder Mobility ≤1', hamstring_restriction:'ASLR ≤1', toe_touch_negative:'Toe Touch negativo' };
     const _ttLabel = p?.fms?.tt === 'positive' ? 'Sim' : p?.fms?.tt === 'negative' ? 'Não' : '?';
     const fmsCtx = p?.fms ? `\n\n## SCORES FMS\nFMS Total: ${fmsTotal}/15 | DOS: ${p.fms.dos??'?'} | IL: ${p.fms.il??'?'} | HS: ${p.fms.hs??'?'} | SM: ${p.fms.sm??'?'} | ASLR: ${p.fms.aslr??'?'} | Toe Touch: ${_ttLabel}\nFlags: ${fmsFlags.length>0?fmsFlags.map(f=>fmsFlagMap[f]||f).join(', '):'Nenhuma'}` : '';
     const flagMap = { shoulder_restriction:'Restrição de Ombro', hamstring_restriction:'Restrição de Isquiotibiais', hip_instability:'Instabilidade de Quadril', squat_dysfunction:'Disfunção de Agachamento', lunge_dysfunction:'Disfunção de Avanço', apt:'APT/Hiperlordose', rib_flare:'Costelas Abertas', knee_valgus:'Valgo de Joelho', toe_touch_negative:'Toe Touch Negativo' };
-    const activeFlags = (Array.isArray(p?.riskFlags) ? p.riskFlags : []).filter(f => f !== 'none');
+    const activeFlags = (Array.isArray(p?.risk_flags) ? p.risk_flags : []).filter(f => f !== 'none');
     const flagCtx = activeFlags.length > 0 ? `\n\n## FLAGS ATIVAS\n${activeFlags.map(f => '⚠️ ' + (flagMap[f]||f)).join('\n')}` : '\n\n## FLAGS\nNenhuma disfunção.';
 
     // ── DETECT if user is requesting a workout/prescription ──
@@ -10297,9 +10334,9 @@ function refreshChatSidebar() {
   const phaseLabel = state.phase?.name || 'Fase 1';
   document.getElementById('ps-phase').textContent = phaseLabel;
   document.getElementById('ps-level').textContent = p.level || '—';
-  document.getElementById('ps-goal').textContent = p.goal || '—';
+  document.getElementById('ps-goal').textContent = p.objective || '—';
   document.getElementById('ps-gym').textContent = p.gym || '—';
-  const activeFlags = (p.riskFlags || []).filter(f => f !== 'none');
+  const activeFlags = (p.risk_flags || []).filter(f => f !== 'none');
   const rfSummary = document.getElementById('risk-flags-summary');
   const labels = { squat_dysfunction:'⚠️ Disfunção de Agachamento', lunge_dysfunction:'⚠️ Disfunção de Avanço', hip_instability:'⚠️ Instabilidade de Quadril', shoulder_restriction:'⚠️ Restrição de Ombro', hamstring_restriction:'⚠️ Restrição de Isquiotibiais', apt:'⚠️ Hiperlordose (APT)', rib_flare:'⚠️ Costelas Abertas', knee_valgus:'⚠️ Valgo de Joelho', toe_touch_negative:'⚠️ Toe Touch Negativo' };
   rfSummary.innerHTML = activeFlags.length > 0 ? activeFlags.map(f => `<span style="display:block;font-size:13px;color:#fca5a5;margin-bottom:4px;">${labels[f]||f}</span>`).join('') : `Nenhum diagnóstico ainda. <button onclick="navigate('diagnosis')" style="color:var(--green);background:none;border:none;cursor:pointer;font-size:13px;">Fazer avaliação →</button>`;
@@ -10386,7 +10423,7 @@ function runDiagnosis() {
   if (Object.keys(diagnosisPhotos).length > 0) {
     state.profile.fmsPhotos = mergeFmsPhotos(state.profile.fmsPhotos, diagnosisPhotos);
   }
-  state.profile.riskFlags = issues;
+  state.profile.risk_flags = issues;
   saveProfile(true);
   setFmsLatest(scores, undefined, state.profile.fmsPhotos || null);
 
@@ -10418,7 +10455,7 @@ function loadProfileHealth() {
   const displayNameEl = document.getElementById('profile-display-name');
   const fullNameEl = document.getElementById('profile-full-name-edit');
   if (displayNameEl) displayNameEl.value = profile.display_name || '';
-  if (fullNameEl) fullNameEl.value = profile.full_name || profile.name || '';
+  if (fullNameEl) fullNameEl.value = profile.full_name || profile.display_name || '';
 
   const comorbidities = profile.comorbidities || [];
   document.querySelectorAll('#profile-comorbidities-grid input[type="checkbox"]').forEach(cb => {
@@ -10471,7 +10508,8 @@ async function saveProfileHealth() {
     injuries:      injuries !== undefined ? injuries : profile.injuries,
   };
   state.profile = updatedProfile;
-  const profilePayload = { ...updatedProfile, id: state.user?.id };
+  const profilePayload = { ...updatedProfile, user_id: state.user?.id };
+  delete profilePayload.id;
   delete profilePayload.fmsPhotos; // keep photos local to avoid oversized profile payloads
   delete profilePayload.role;
   await saveData('profiles', profilePayload, 'axisai_profile');
@@ -10518,15 +10556,15 @@ function loadProfile() {
     if (p.weight) document.getElementById('p-weight').value = p.weight;
     if (p.height) document.getElementById('p-height').value = p.height;
     if (p.level) document.getElementById('p-level').value = p.level;
-    if (p.goal) document.getElementById('p-goal').value = p.goal;
+    if (p.objective) document.getElementById('p-goal').value = p.objective;
     if (p.gym) document.getElementById('p-gym').value = p.gym;
     if (p.frequency) {
       const el = document.getElementById('p-frequency');
       if (el) el.value = p.frequency;
     }
-    if (p.sessionTime) {
+    if (p.session_time) {
       const el = document.getElementById('p-session-time');
-      if (el) el.value = p.sessionTime;
+      if (el) el.value = p.session_time;
     }
     document.querySelectorAll('.p-equipment').forEach(el => {
       el.checked = Array.isArray(p.equipment) && p.equipment.includes(el.value);
@@ -10537,12 +10575,12 @@ function loadProfile() {
       if (p.fms.tt) { const el = document.getElementById('p-fms-tt'); if (el) el.value = p.fms.tt; }
     }
     // Rotina profissional
-    if (p.profissao)    { const el = document.getElementById('p-profissao');     if (el) el.value = p.profissao; }
-    if (p.horasTrabalho){ const el = document.getElementById('p-horas-trabalho'); if (el) el.value = p.horasTrabalho; }
-    if (p.perfilPostural){ const el = document.getElementById('p-perfil-postural'); if (el) { el.value = p.perfilPostural; toggleHorasSentado(el,'p-horas-sentado-group'); } }
-    if (p.horasSentado) { const el = document.getElementById('p-horas-sentado');  if (el) el.value = p.horasSentado; }
-    if (p.estresseOcup) { const el = document.getElementById('p-estresse-ocup');  if (el) el.value = p.estresseOcup; }
-    if (p.turnoTrabalho){ const el = document.getElementById('p-turno');           if (el) el.value = p.turnoTrabalho; }
+    if (p.profissao)     { const el = document.getElementById('p-profissao');     if (el) el.value = p.profissao; }
+    if (p.horas_trabalho){ const el = document.getElementById('p-horas-trabalho'); if (el) el.value = p.horas_trabalho; }
+    if (p.perfil_postural){ const el = document.getElementById('p-perfil-postural'); if (el) { el.value = p.perfil_postural; toggleHorasSentado(el,'p-horas-sentado-group'); } }
+    if (p.horas_sentado) { const el = document.getElementById('p-horas-sentado');  if (el) el.value = p.horas_sentado; }
+    if (p.estresse_ocup) { const el = document.getElementById('p-estresse-ocup');  if (el) el.value = p.estresse_ocup; }
+    if (p.turno_trabalho){ const el = document.getElementById('p-turno');           if (el) el.value = p.turno_trabalho; }
   }
   updateCoachNavIndicator();
 }
@@ -10558,23 +10596,24 @@ async function saveProfile(silent = false) {
     weight: document.getElementById('p-weight')?.value || state.profile?.weight,
     height: document.getElementById('p-height')?.value || state.profile?.height,
     level: document.getElementById('p-level')?.value || state.profile?.level,
-    goal: document.getElementById('p-goal')?.value || state.profile?.goal,
+    objective: document.getElementById('p-goal')?.value || state.profile?.objective,
     gym: document.getElementById('p-gym')?.value || state.profile?.gym,
     frequency: document.getElementById('p-frequency')?.value || state.profile?.frequency,
-    sessionTime: document.getElementById('p-session-time')?.value || state.profile?.sessionTime,
+    session_time: document.getElementById('p-session-time')?.value || state.profile?.session_time,
     equipment,
     injuries: document.getElementById('p-injuries')?.value || state.profile?.injuries,
-    riskFlags: state.profile?.riskFlags || [],
+    risk_flags: state.profile?.risk_flags || [],
     fms: state.profile?.fms || {},
-    profissao:    document.getElementById('p-profissao')?.value    || state.profile?.profissao    || '',
-    horasTrabalho: document.getElementById('p-horas-trabalho')?.value || state.profile?.horasTrabalho || '',
-    perfilPostural: document.getElementById('p-perfil-postural')?.value || state.profile?.perfilPostural || '',
-    horasSentado: document.getElementById('p-horas-sentado')?.value  || state.profile?.horasSentado  || '',
-    estresseOcup: document.getElementById('p-estresse-ocup')?.value  || state.profile?.estresseOcup  || '',
-    turnoTrabalho: document.getElementById('p-turno')?.value          || state.profile?.turnoTrabalho || '',
+    profissao:     document.getElementById('p-profissao')?.value     || state.profile?.profissao    || '',
+    horas_trabalho: document.getElementById('p-horas-trabalho')?.value || state.profile?.horas_trabalho || '',
+    perfil_postural: document.getElementById('p-perfil-postural')?.value || state.profile?.perfil_postural || '',
+    horas_sentado:  document.getElementById('p-horas-sentado')?.value  || state.profile?.horas_sentado  || '',
+    estresse_ocup:  document.getElementById('p-estresse-ocup')?.value  || state.profile?.estresse_ocup  || '',
+    turno_trabalho: document.getElementById('p-turno')?.value          || state.profile?.turno_trabalho || '',
   };
   state.profile = { ...state.profile, ...p };
-  const profilePayload = { ...state.profile, id: state.user?.id };
+  const profilePayload = { ...state.profile, user_id: state.user?.id };
+  delete profilePayload.id;
   delete profilePayload.fmsPhotos; // keep photos local to avoid oversized profile payloads
   delete profilePayload.role; // never overwrite role from client-side profile save
   await saveData('profiles', profilePayload, 'axisai_profile');
@@ -10600,7 +10639,7 @@ function saveFMS() {
   if (fms.sm !== undefined && fms.sm <= 1) flags.push('shoulder_restriction');
   if (fms.aslr !== undefined && fms.aslr <= 1) flags.push('hamstring_restriction');
   if (fms.tt === 'negative') flags.push('toe_touch_negative');
-  state.profile.riskFlags = flags.length > 0 ? flags : ['none'];
+  state.profile.risk_flags = flags.length > 0 ? flags : ['none'];
 
   setFmsLatest(state.profile.fms);
   saveProfile(true);
@@ -10720,7 +10759,7 @@ function showFmsPreview() {
   }
 
   const fms = state.fmsLatest?.fms || state.profile?.fms || {};
-  const riskFlags = (state.profile?.riskFlags || []).filter(f => f !== 'none');
+  const riskFlags = (state.profile?.risk_flags || []).filter(f => f !== 'none');
   const scoredIds = ['dos','hs','il','sm','aslr','tspu'];
   const total = scoredIds.reduce((sum, id) => sum + (fms[id] ?? 0), 0);
   const max = scoredIds.length * 3; // 18
@@ -10966,6 +11005,12 @@ function getCheckinData() {
 async function saveCheckinData(data) {
   const payload = { ...data, user_id: state.user?.id, date: today() };
   await saveData('checkins', payload, 'axisai_checkin');
+  // Também persiste em readiness_logs (tabela canônica para dados diários de prontidão)
+  try {
+    const rlPayload = { ...payload };
+    delete rlPayload.id;
+    await supabase.from('readiness_logs').upsert(rlPayload, { onConflict: 'user_id,date' });
+  } catch (e) { console.warn('[saveCheckinData readiness_logs]', e); }
 }
 
 // ── Readiness Score (nova fórmula, escala 1-5) ──
