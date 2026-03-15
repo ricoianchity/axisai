@@ -7664,9 +7664,9 @@ async function loadPerformanceTab() {
   try {
     const { data: logs, error } = await window.supabase
       .from('exercise_logs')
-      .select('exercise_name, logged_at')
+      .select('exercise_name, load_kg, logged_at')
       .eq('user_id', state.user.id)
-      .not('actual_weight_kg', 'is', null)
+      .not('load_kg', 'is', null)
       .order('logged_at', { ascending: true });
 
     if (error || !Array.isArray(logs) || logs.length === 0) {
@@ -7719,10 +7719,10 @@ async function renderPerformanceChart(exerciseName) {
 
   let query = window.supabase
     .from('exercise_logs')
-    .select('actual_weight_kg, actual_rpe, logged_at, session_id')
+    .select('load_kg, actual_rpe, logged_at, session_id')
     .eq('user_id', state.user.id)
     .eq('exercise_name', exerciseName)
-    .not('actual_weight_kg', 'is', null)
+    .not('load_kg', 'is', null)
     .order('logged_at', { ascending: true });
 
   if (periodDays > 0) {
@@ -7748,7 +7748,7 @@ async function renderPerformanceChart(exerciseName) {
 
   const byDate = {};
   logs.forEach(log => {
-    const weight = Number(log.actual_weight_kg);
+    const weight = Number(log.load_kg);
     if (!Number.isFinite(weight)) return;
     const dateObj = new Date(log.logged_at);
     const dateKey = dateObj.toISOString().slice(0, 10);
