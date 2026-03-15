@@ -8,9 +8,9 @@ async function fetchJson(res) {
 
 async function fetchWorkoutsByUserId(userId, headers) {
   const url = new URL(`${process.env.SUPABASE_URL}/rest/v1/workouts`);
-  url.searchParams.set('select', 'id,title,plan,phase_name,cycle_month,status,created_at');
+  url.searchParams.set('select', 'id,supabase_id,titulo,data,conteudo,categoria,tipo,fase_num,fase_nome,plano_titulo,fonte,synced,status,created_at');
   url.searchParams.set('user_id', `eq.${userId}`);
-  url.searchParams.set('status', 'eq.active');
+  url.searchParams.set('status', 'neq.completed');
   url.searchParams.set('order', 'created_at.desc');
   url.searchParams.set('limit', '10');
 

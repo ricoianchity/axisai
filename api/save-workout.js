@@ -1,44 +1,54 @@
-function buildBasePayload({ user_id, title, plan }) {
+async function fetchJson(res) {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+function buildSbHeaders() {
   return {
-    user_id,
-    title: title || `Treino ${new Date().toLocaleDateString('pt-BR')}`,
-    plan,
-    status: 'active',
-    created_at: new Date().toISOString()
-  };
-}
-
-function buildExtendedPayload({ user_id, title, plan, phase_name, cycle_month, template, coach_notes }) {
-  return {
-    ...buildBasePayload({ user_id, title, plan }),
-    template: template || plan.template || 'beginner',
-    phase_name: phase_name || null,
-    cycle_month: cycle_month || null,
-    coach_notes: coach_notes || null
-  };
-}
-
-function isMissingColumnError(err) {
-  const msg = String(err?.message || '');
-  return err?.code === 'PGRST204' || msg.includes("schema cache") || msg.includes('column');
-}
-
-async function insertWorkout(payload) {
-  const sbHeaders = {
     'Content-Type': 'application/json',
     'apikey': process.env.SUPABASE_SERVICE_KEY,
     'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
     'Prefer': 'return=representation'
   };
+}
 
-  const res = await fetch(`${process.env.SUPABASE_URL}/rest/v1/workouts`, {
+async function findExisting(baseUrl, local_id, user_id, headers) {
+  const url = new URL(baseUrl);
+  url.searchParams.set('select', 'id,supabase_id');
+  url.searchParams.set('id', `eq.${local_id}`);
+  url.searchParams.set('user_id', `eq.${user_id}`);
+  url.searchParams.set('limit', '1');
+
+  const res = await fetch(url.toString(), { headers });
+  const data = await fetchJson(res);
+  if (!res.ok || !Array.isArray(data) || data.length === 0) return null;
+  return data[0];
+}
+
+async function markSynced(baseUrl, local_id, user_id, headers) {
+  const url = new URL(baseUrl);
+  url.searchParams.set('id', `eq.${local_id}`);
+  url.searchParams.set('user_id', `eq.${user_id}`);
+
+  const res = await fetch(url.toString(), {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ synced: true })
+  });
+  return res.ok;
+}
+
+async function insertWorkout(baseUrl, payload, headers) {
+  const res = await fetch(baseUrl, {
     method: 'POST',
-    headers: sbHeaders,
+    headers,
     body: JSON.stringify(payload)
   });
-
-  const data = await res.json().catch(() => null);
-  return { ok: res.ok, data, status: res.status };
+  const data = await fetchJson(res);
+  return { ok: res.ok, status: res.status, data };
 }
 
 export default async function handler(req, res) {
@@ -46,42 +56,68 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { user_id, title, plan, phase_name, cycle_month, template, coach_notes } = req.body || {};
+  const {
+    user_id,
+    local_id,
+    titulo,
+    data: dataField,
+    conteudo,
+    categoria,
+    tipo,
+    fase_num,
+    fase_nome,
+    plano_titulo,
+    fonte
+  } = req.body || {};
 
-  if (!user_id || !plan || !Array.isArray(plan.blocks)) {
-    return res.status(400).json({ error: 'Payload inválido. Necessário: user_id, plan.blocks[]' });
+  if (!user_id || !titulo) {
+    return res.status(400).json({ error: 'user_id e titulo são obrigatórios' });
   }
 
-  for (const block of plan.blocks) {
-    if (!block?.section || !Array.isArray(block.exercises)) {
-      return res.status(400).json({
-        error: "Bloco inválido: cada bloco precisa de 'section' e 'exercises[]'"
+  const baseUrl = `${process.env.SUPABASE_URL}/rest/v1/workouts`;
+  const headers = buildSbHeaders();
+
+  // Se local_id fornecido, verificar se row já existe
+  if (local_id) {
+    const existing = await findExisting(baseUrl, local_id, user_id, headers);
+    if (existing) {
+      await markSynced(baseUrl, local_id, user_id, headers);
+      return res.status(200).json({
+        success: true,
+        supabase_id: existing.supabase_id,
+        local_id
       });
     }
   }
 
-  const extendedPayload = buildExtendedPayload({
+  // INSERT novo row
+  const insertPayload = {
     user_id,
-    title,
-    plan,
-    phase_name,
-    cycle_month,
-    template,
-    coach_notes
-  });
+    titulo,
+    synced: true,
+    status: 'planned',
+    ...(local_id !== undefined && local_id !== null ? { id: String(local_id) } : {}),
+    ...(dataField !== undefined ? { data: dataField } : {}),
+    ...(conteudo !== undefined ? { conteudo } : {}),
+    ...(categoria !== undefined ? { categoria } : {}),
+    ...(tipo !== undefined ? { tipo } : {}),
+    ...(fase_num !== undefined ? { fase_num } : {}),
+    ...(fase_nome !== undefined ? { fase_nome } : {}),
+    ...(plano_titulo !== undefined ? { plano_titulo } : {}),
+    ...(fonte !== undefined ? { fonte } : {})
+  };
 
-  let insert = await insertWorkout(extendedPayload);
-
-  // Fallback while migration is not applied: try minimal payload without optional columns.
-  if (!insert.ok && isMissingColumnError(insert.data)) {
-    insert = await insertWorkout(buildBasePayload({ user_id, title, plan }));
-  }
+  const insert = await insertWorkout(baseUrl, insertPayload, headers);
 
   if (!insert.ok) {
-    console.error('Erro ao salvar workout:', insert.data);
+    console.error('[save-workout] INSERT error:', insert.data);
     return res.status(500).json({ error: insert.data?.message || 'Erro ao salvar workout' });
   }
 
-  const workout = Array.isArray(insert.data) ? insert.data[0] : insert.data;
-  return res.status(200).json({ success: true, workout });
+  const row = Array.isArray(insert.data) ? insert.data[0] : insert.data;
+  return res.status(200).json({
+    success: true,
+    supabase_id: row?.supabase_id,
+    local_id
+  });
 }

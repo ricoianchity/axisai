@@ -4187,6 +4187,7 @@ async function initApp() {
                             state.profile.age != null || state.profile.objective != null)) {
         localStorage.setItem('axisai_onboarding_done', '1');
       }
+      syncPendingWorkouts();
       loadWorkouts();
       loadProfile();
       enterApp();
@@ -7526,34 +7527,76 @@ async function refreshDashboard() {
 function loadTreinosIA() {
   return JSON.parse(localStorage.getItem('axisai_treinos') || '[]');
 }
+function _buildApiPayload(t, userId) {
+  return {
+    user_id:      userId,
+    local_id:     t.id,
+    titulo:       t.titulo      || null,
+    data:         t.data        || null,
+    conteudo:     t.conteudo    || null,
+    categoria:    t.categoria   || 'fullbody',
+    tipo:         t.tipo        || 'sessao',
+    fase_num:     t.faseNum     ?? null,
+    fase_nome:    t.faseNome    ?? null,
+    plano_titulo: t.planoTitulo ?? null,
+    fonte:        t.fonte       || 'coach_ia'
+  };
+}
+
+function _markSyncedInStorage(localId, supabaseId) {
+  const all = JSON.parse(localStorage.getItem('axisai_treinos') || '[]');
+  const idx = all.findIndex(x => String(x.id) === String(localId));
+  if (idx !== -1) {
+    all[idx].synced = true;
+    if (supabaseId) all[idx].supabase_id = supabaseId;
+    localStorage.setItem('axisai_treinos', JSON.stringify(all));
+  }
+}
+
 function saveTreinosIA(treinos) {
   localStorage.setItem('axisai_treinos', JSON.stringify(treinos));
   if (!state.user?.id || treinos.length === 0) return;
   const newest = treinos[0];
   if (newest.synced) return;
-  const payload = {
-    id:          newest.id,
-    user_id:     state.user.id,
-    titulo:      newest.titulo      || null,
-    data:        newest.data        || null,
-    conteudo:    newest.conteudo    || null,
-    categoria:   newest.categoria   || 'fullbody',
-    tipo:        newest.tipo        || 'sessao',
-    fase_num:    newest.faseNum     ?? null,
-    fase_nome:   newest.faseNome    ?? null,
-    plano_titulo:newest.planoTitulo ?? null,
-    fonte:       newest.fonte       || 'coach_ia'
-  };
-  supabase.from('workouts').upsert(payload, { onConflict: 'id' })
-    .then(({ error }) => {
-      if (error) {
-        console.warn('saveTreinosIA: Supabase error, mantendo local:', error.message);
-      } else {
-        // Marcar como sincronizado no localStorage
-        const all = JSON.parse(localStorage.getItem('axisai_treinos') || '[]');
-        const idx = all.findIndex(t => t.id === newest.id);
-        if (idx !== -1) { all[idx].synced = true; localStorage.setItem('axisai_treinos', JSON.stringify(all)); }
+
+  const apiPayload = _buildApiPayload(newest, state.user.id);
+
+  // Tentar via API (source of truth)
+  fetch('/api/save-workout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(apiPayload)
+  })
+    .then(r => r.ok ? r.json() : Promise.reject(r))
+    .then(json => {
+      if (json?.success) {
+        _markSyncedInStorage(newest.id, json.supabase_id);
       }
+    })
+    .catch(() => {
+      // Fallback: upsert direto no Supabase
+      const fallbackPayload = {
+        id:          newest.id,
+        user_id:     state.user.id,
+        titulo:      newest.titulo      || null,
+        data:        newest.data        || null,
+        conteudo:    newest.conteudo    || null,
+        categoria:   newest.categoria   || 'fullbody',
+        tipo:        newest.tipo        || 'sessao',
+        fase_num:    newest.faseNum     ?? null,
+        fase_nome:   newest.faseNome    ?? null,
+        plano_titulo:newest.planoTitulo ?? null,
+        fonte:       newest.fonte       || 'coach_ia'
+      };
+      supabase.from('workouts').upsert(fallbackPayload, { onConflict: 'id' })
+        .then(({ data: rows, error }) => {
+          if (!error) {
+            const sbId = Array.isArray(rows) ? rows[0]?.supabase_id : rows?.supabase_id;
+            _markSyncedInStorage(newest.id, sbId || null);
+          } else {
+            console.warn('[saveTreinosIA] fallback Supabase error:', error.message);
+          }
+        });
     });
 }
 
@@ -7563,30 +7606,52 @@ async function syncPendingWorkouts() {
   const pending = treinos.filter(t => !t.synced);
   if (pending.length === 0) return;
 
-  for (const t of pending) {
-    const payload = {
-      id:          t.id,
-      user_id:     state.user.id,
-      titulo:      t.titulo      || null,
-      data:        t.data        || null,
-      conteudo:    t.conteudo    || null,
-      categoria:   t.categoria   || 'fullbody',
-      tipo:        t.tipo        || 'sessao',
-      fase_num:    t.faseNum     ?? null,
-      fase_nome:   t.faseNome    ?? null,
-      plano_titulo:t.planoTitulo ?? null,
-      fonte:       t.fonte       || 'coach_ia'
-    };
-    const { error } = await supabase.from('workouts')
-      .upsert(payload, { onConflict: 'id' });
-    if (!error) {
-      const all = JSON.parse(localStorage.getItem('axisai_treinos') || '[]');
-      const idx = all.findIndex(x => x.id === t.id);
-      if (idx !== -1) {
-        all[idx].synced = true;
-        localStorage.setItem('axisai_treinos', JSON.stringify(all));
+  const BATCH = 5;
+  for (let i = 0; i < pending.length; i += BATCH) {
+    const batch = pending.slice(i, i + BATCH);
+    await Promise.all(batch.map(async t => {
+      const apiPayload = _buildApiPayload(t, state.user.id);
+      let apiOk = false;
+      try {
+        const r = await fetch('/api/save-workout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(apiPayload)
+        });
+        if (r.ok) {
+          const json = await r.json().catch(() => null);
+          if (json?.success) {
+            _markSyncedInStorage(t.id, json.supabase_id);
+            apiOk = true;
+          }
+        }
+      } catch (_) { /* fallthrough */ }
+
+      if (!apiOk) {
+        // Fallback: upsert direto
+        const fallbackPayload = {
+          id:          t.id,
+          user_id:     state.user.id,
+          titulo:      t.titulo      || null,
+          data:        t.data        || null,
+          conteudo:    t.conteudo    || null,
+          categoria:   t.categoria   || 'fullbody',
+          tipo:        t.tipo        || 'sessao',
+          fase_num:    t.faseNum     ?? null,
+          fase_nome:   t.faseNome    ?? null,
+          plano_titulo:t.planoTitulo ?? null,
+          fonte:       t.fonte       || 'coach_ia'
+        };
+        const { data: rows, error } = await supabase.from('workouts')
+          .upsert(fallbackPayload, { onConflict: 'id' });
+        if (!error) {
+          const sbId = Array.isArray(rows) ? rows[0]?.supabase_id : rows?.supabase_id;
+          _markSyncedInStorage(t.id, sbId || null);
+        } else {
+          console.warn('[syncPendingWorkouts] fallback error for', t.id, ':', error.message);
+        }
       }
-    }
+    }));
   }
 }
 function deleteTreinoIA(id) {
