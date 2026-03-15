@@ -2258,6 +2258,7 @@
 .empty-sub { font-size: 13px; margin: 0; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body data-role="client"><div style="display: contents;"></div>
 
@@ -5068,6 +5069,7 @@ let _completedBlocks = new Set();
 let _perfLoadingToken = 0;
 let _perfChartInstance = null;
 let _perfListenersBound = false;
+let _perfLoaded = false;
 let _isFinalizingTreino = false;
 
 // ── Auth guard flags ──────────────────────────
@@ -7662,9 +7664,10 @@ async function loadPerformanceTab() {
   try {
     const { data: logs, error } = await window.supabase
       .from('exercise_logs')
-      .select('exercise_name')
+      .select('exercise_name, logged_at')
       .eq('user_id', state.user.id)
-      .not('actual_weight_kg', 'is', null);
+      .not('actual_weight_kg', 'is', null)
+      .order('logged_at', { ascending: true });
 
     if (error || !Array.isArray(logs) || logs.length === 0) {
       emptyEl.innerHTML = '<p>Complete alguns treinos para ver a progressão de carga.</p>';
@@ -7716,16 +7719,16 @@ async function renderPerformanceChart(exerciseName) {
 
   let query = window.supabase
     .from('exercise_logs')
-    .select('actual_weight_kg, actual_rpe, created_at, session_id')
+    .select('actual_weight_kg, actual_rpe, logged_at, session_id')
     .eq('user_id', state.user.id)
     .eq('exercise_name', exerciseName)
     .not('actual_weight_kg', 'is', null)
-    .order('created_at', { ascending: true });
+    .order('logged_at', { ascending: true });
 
   if (periodDays > 0) {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - periodDays);
-    query = query.gte('created_at', cutoff.toISOString());
+    query = query.gte('logged_at', cutoff.toISOString());
   }
 
   const { data: logs, error } = await query;
@@ -7747,11 +7750,11 @@ async function renderPerformanceChart(exerciseName) {
   logs.forEach(log => {
     const weight = Number(log.actual_weight_kg);
     if (!Number.isFinite(weight)) return;
-    const dateObj = new Date(log.created_at);
+    const dateObj = new Date(log.logged_at);
     const dateKey = dateObj.toISOString().slice(0, 10);
     const label = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
     if (!byDate[dateKey] || weight > byDate[dateKey].weight) {
-      byDate[dateKey] = { label, weight, rpe: log.actual_rpe, date: log.created_at };
+      byDate[dateKey] = { label, weight, rpe: log.actual_rpe, date: log.logged_at };
     }
   });
 
@@ -10254,6 +10257,7 @@ function markBlockDone(workoutId, blockIdx, event) {
   if (block.done) {
     _saveBlockExerciseLogs(workoutId, blockIdx, block, blockEl)
       .catch(e => console.warn('[markBlockDone] exercise_logs:', e?.message || e));
+    invalidatePerformanceCache();
   }
 }
 
@@ -10307,7 +10311,7 @@ async function _saveBlockExerciseLogs(workoutId, blockIdx, block, blockEl) {
     // Inserir em lotes de 20 para evitar payloads muito grandes
     for (let i = 0; i < rows.length; i += 20) {
       const chunk = rows.slice(i, i + 20);
-      const { error } = await supabase.from('exercise_logs').insert(chunk);
+      const { error } = await supabase.from('exercise_logs').upsert(chunk, { onConflict: 'workout_id,exercise_name,set_number' });
       if (error) console.warn(`[exercise_logs] chunk ${i / 20}:`, error.message || error);
     }
     console.log(`[exercise_logs] ${rows.length} linhas salvas — bloco "${block.name}"`);
@@ -10315,6 +10319,8 @@ async function _saveBlockExerciseLogs(workoutId, blockIdx, block, blockEl) {
     console.warn('[_saveBlockExerciseLogs]', err?.message || err);
   }
 }
+
+function invalidatePerformanceCache() { _perfLoaded = false; }
 
 const _inlineRpeDescMap = {
   1: 'Muito leve — quase sem esforço',
