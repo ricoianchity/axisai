@@ -7548,7 +7548,7 @@ function _markSyncedInStorage(localId, supabaseId) {
   const idx = all.findIndex(x => String(x.id) === String(localId));
   if (idx !== -1) {
     all[idx].synced = true;
-    if (supabaseId) all[idx].supabase_id = supabaseId;
+    all[idx].supabase_id = supabaseId || all[idx].supabase_id || null;
     localStorage.setItem('axisai_treinos', JSON.stringify(all));
   }
 }
@@ -7603,7 +7603,7 @@ function saveTreinosIA(treinos) {
 async function syncPendingWorkouts() {
   if (!state.user?.id) return;
   const treinos = JSON.parse(localStorage.getItem('axisai_treinos') || '[]');
-  const pending = treinos.filter(t => !t.synced);
+  const pending = treinos.filter(t => !t.supabase_id);
   if (pending.length === 0) return;
 
   const BATCH = 5;
