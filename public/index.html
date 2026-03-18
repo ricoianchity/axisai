@@ -5900,6 +5900,16 @@ function getDisplayName() {
 async function completeEnterApp() {
   // ── FIX BUG 1: Ensure guard is set even when called directly from _finishWizard ──
   _appEntered = true;
+  // ── Admin route intercept on boot ──
+  if (window.location.pathname === '/admin') {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id === '385d1288-b060-45c1-bfaf-4e90ba615c3e') {
+      showAdminPage();
+      return;
+    } else {
+      window.history.replaceState({}, '', '/');
+    }
+  }
   const loadingOverlay = document.getElementById('loading-overlay');
   document.getElementById('screen-onboarding').style.display = 'none';
   document.getElementById('screen-app').classList.add('visible');
@@ -5912,16 +5922,6 @@ async function completeEnterApp() {
   document.getElementById('profile-full-name').textContent = name;
   document.getElementById('profile-email-display').textContent = state.user?.email || '';
   loadAvatar();
-  // ── Admin route intercept on boot ──
-  if (window.location.pathname === '/admin') {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user?.id === '385d1288-b060-45c1-bfaf-4e90ba615c3e') {
-      showAdminPage();
-      return;
-    } else {
-      window.history.replaceState({}, '', '/');
-    }
-  }
   await refreshDashboard();
   if (loadingOverlay) loadingOverlay.style.display = 'none';
   refreshChatSidebar();
