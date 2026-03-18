@@ -5871,6 +5871,19 @@ async function enterApp() {
   // ── Guard against double execution ──
   if (_appEntered) return;
 
+  // ── Admin route — verificar ANTES do onboarding check ──
+  if (window.location.pathname === '/admin') {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id === '385d1288-b060-45c1-bfaf-4e90ba615c3e') {
+      _appEntered = true;
+      document.getElementById('screen-auth').style.display = 'none';
+      showAdminPage();
+      return;
+    } else {
+      window.history.replaceState({}, '', '/');
+    }
+  }
+
   document.getElementById('screen-auth').style.display = 'none';
 
   // Source of truth: sempre consultar o perfil no Supabase após login.
@@ -5900,16 +5913,6 @@ function getDisplayName() {
 async function completeEnterApp() {
   // ── FIX BUG 1: Ensure guard is set even when called directly from _finishWizard ──
   _appEntered = true;
-  // ── Admin route intercept on boot ──
-  if (window.location.pathname === '/admin') {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user?.id === '385d1288-b060-45c1-bfaf-4e90ba615c3e') {
-      showAdminPage();
-      return;
-    } else {
-      window.history.replaceState({}, '', '/');
-    }
-  }
   const loadingOverlay = document.getElementById('loading-overlay');
   document.getElementById('screen-onboarding').style.display = 'none';
   document.getElementById('screen-app').classList.add('visible');
