@@ -816,6 +816,74 @@
   .btn-save { padding: 12px 32px; background: var(--green); color: #000; font-family: var(--font-display); font-size: 16px; letter-spacing: 2px; border: none; border-radius: 10px; cursor: pointer; transition: all 0.2s; margin-top: 8px; }
   .btn-save:hover { background: var(--green2); }
 
+  /* ── EXERCISE MINI CARDS (inline session, ETAPA 2) ── */
+  .block-exercises .exercise-card {
+    background: rgba(255,255,255,0.025); border: 0.5px solid #1e1e1e; border-radius: 6px;
+    padding: 7px 10px; margin-bottom: 3px; display: flex; align-items: center;
+    justify-content: space-between; gap: 8px;
+  }
+  .block-exercises .exercise-card:hover { background: rgba(255,255,255,0.04); }
+  .block-exercises .exercise-info { flex: 1; min-width: 0; }
+  .block-exercises .exercise-name { font-size: 12px; color: #e0e0e0; line-height: 1.3; }
+  .block-exercises .exercise-detail { font-size: 10px; color: #555; margin-top: 1px; }
+  .ver-btn { font-size: 9px; color: #4ade80; background: #0d1f0d; border: 0.5px solid #1a3a1a; border-radius: 4px; padding: 2px 7px; flex-shrink: 0; cursor: pointer; transition: background 0.15s; }
+  .ver-btn:hover { background: #1a3a1a; }
+
+  /* ── ADMIN PAGE (ETAPA 3) ── */
+  #page-admin { padding: 0 !important; }
+  .admin-layout { display: flex; flex-direction: column; height: calc(100vh - 0px); background: #0a0a0a; }
+  .admin-topbar { display: flex; align-items: center; gap: 10px; padding: 14px 20px; background: #0a0a0a; border-bottom: 0.5px solid #1e1e1e; flex-shrink: 0; }
+  .admin-title { font-family: var(--font-display); font-size: 18px; letter-spacing: 1px; color: #e0e0e0; }
+  .admin-badge { background: #1a1030; color: #a78bfa; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 1px; font-family: var(--font-mono); }
+  .admin-body { display: flex; flex: 1; overflow: hidden; }
+  .admin-sidebar { width: 220px; border-right: 0.5px solid #1e1e1e; background: #0a0a0a; display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+  .admin-new-btn { margin: 10px; padding: 8px 12px; background: rgba(74,222,128,0.1); border: 0.5px solid #1a3a1a; border-radius: 6px; color: #4ade80; font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+  .admin-new-btn:hover { background: rgba(74,222,128,0.2); }
+  .admin-exercise-list { flex: 1; overflow-y: auto; padding: 0 8px 8px; }
+  .admin-ex-item { padding: 8px 10px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; transition: background 0.1s; }
+  .admin-ex-item:hover { background: rgba(255,255,255,0.04); }
+  .admin-ex-item.selected { background: #1a2e1a; }
+  .admin-ex-name { font-size: 12px; color: #e0e0e0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .admin-ex-cat { font-size: 10px; color: #555; margin-top: 1px; }
+  .admin-form-area { flex: 1; overflow-y: auto; padding: 20px; background: #0a0a0a; }
+  .admin-form-card { background: #151515; border: 0.5px solid #1e1e1e; border-radius: 8px; padding: 20px; max-width: 640px; }
+  .admin-form-title { font-size: 13px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; font-family: var(--font-mono); }
+  .admin-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .admin-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+  .admin-label { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--font-mono); }
+  .admin-input { background: #151515; border: 0.5px solid #2a2a2a; border-radius: 6px; padding: 6px 9px; font-size: 12px; color: #ccc; outline: none; width: 100%; box-sizing: border-box; font-family: var(--font-body); }
+  .admin-input:focus { border-color: #4ade80; }
+  .admin-textarea { background: #151515; border: 0.5px solid #2a2a2a; border-radius: 6px; padding: 6px 9px; font-size: 12px; color: #ccc; outline: none; width: 100%; box-sizing: border-box; font-family: var(--font-body); resize: vertical; min-height: 70px; }
+  .admin-textarea:focus { border-color: #4ade80; }
+  .admin-btns { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .admin-btn-save { padding: 8px 20px; background: #4ade80; color: #000; font-size: 12px; font-weight: 700; border: none; border-radius: 6px; cursor: pointer; transition: opacity 0.15s; }
+  .admin-btn-save:hover { opacity: 0.85; }
+  .admin-btn-delete { padding: 8px 16px; background: none; color: #ef4444; font-size: 12px; font-weight: 700; border: 0.5px solid rgba(239,68,68,0.3); border-radius: 6px; cursor: pointer; transition: background 0.15s; }
+  .admin-btn-delete:hover { background: rgba(239,68,68,0.08); }
+  .admin-yt-preview { margin-top: 10px; border-radius: 6px; overflow: hidden; }
+  .admin-yt-preview iframe { width: 100%; aspect-ratio: 16/9; border: none; border-radius: 6px; }
+
+  /* ── EXERCISE MODAL bottom-sheet (ETAPA 4) ── */
+  .exercise-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 1000; display: flex; align-items: flex-end; }
+  .exercise-modal-sheet { background: #141414; border: 0.5px solid #2a2a2a; border-top-left-radius: 20px; border-top-right-radius: 20px; width: 100%; max-height: 90vh; overflow-y: auto; }
+  .modal-drag-handle { width: 36px; height: 3px; background: #333; border-radius: 2px; margin: 10px auto; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 16px 12px; }
+  .modal-title { font-size: 15px; font-weight: 600; color: #e0e0e0; }
+  .modal-close { background: none; border: none; color: #555; font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1; }
+  .modal-close:hover { color: #e0e0e0; }
+  .modal-body { padding: 8px 16px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .modal-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .modal-tag { padding: 3px 10px; border-radius: 999px; font-size: 10px; font-weight: 600; }
+  .modal-tag-cat { background: #1a1a2e; color: #818cf8; }
+  .modal-tag-diff { background: #0d1f0d; color: #4ade80; }
+  .modal-tag-pattern { background: #2a1a10; color: #fb923c; }
+  .modal-section-label { font-size: 9px; color: #444; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+  .modal-section-text { font-size: 13px; color: #ccc; line-height: 1.6; white-space: pre-line; }
+  .modal-cues-list { display: flex; flex-direction: column; gap: 4px; }
+  .modal-cue-item { font-size: 12px; color: #ccc; display: flex; gap: 6px; }
+  .modal-cue-item::before { content: '—'; color: #4ade80; flex-shrink: 0; }
+  .modal-empty { text-align: center; padding: 40px 20px; color: #555; font-size: 13px; }
+
   /* ── TOAST ── */
   .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--green); border-radius: 12px; padding: 14px 20px; font-size: 14px; z-index: 9999; transform: translateY(100px); opacity: 0; transition: all 0.3s ease; max-width: 320px; }
   .toast.show { transform: translateY(0); opacity: 1; }
@@ -2830,9 +2898,9 @@
     </div>
     <nav class="sidebar-nav">
       <div class="nav-section-label">Principal</div>
-      <button class="nav-item" onclick="navigate('dashboard')"><span class="icon">⚡</span><span class="label">Dashboard</span></button>
+      <button class="nav-item active" onclick="navigate('dashboard')"><span class="icon">⚡</span><span class="label">Dashboard</span></button>
       <button class="nav-item" onclick="navigate('workouts')"><span class="icon">🏋️</span><span class="label">Treinos</span></button>
-      <button class="nav-item active" onclick="navigate('performance')"><span class="icon">📊</span><span class="label">Performance</span></button>
+      <button class="nav-item" onclick="navigate('performance')"><span class="icon">📊</span><span class="label">Performance</span></button>
       <button class="nav-item" id="nav-chat-btn" onclick="navigate('chat')" title="Coach IA liberado"><span class="icon" id="nav-chat-icon">🤖</span><span class="label">Coach IA</span></button>
       <div class="nav-section-label">Nutrição</div>
       <button class="nav-item" id="nav-nutrition-btn" onclick="navigate('nutrition')"><span class="icon">🥗</span><span class="label">Nutrição</span></button>
@@ -2856,7 +2924,7 @@
   <main class="main">
 
     <!-- ── DASHBOARD ── -->
-    <div class="page" id="page-dashboard">
+    <div class="page active" id="page-dashboard">
       <div class="page-header">
         <h1>OLÁ, <span id="greeting-name">RICO</span> 👊</h1>
         <p>Vamos otimizar sua performance hoje.</p>
@@ -4225,7 +4293,7 @@
     </div>
 
     <!-- ── PERFORMANCE ── -->
-    <div class="page active" id="page-performance">
+    <div class="page" id="page-performance">
       <div class="page-header">
         <h1>PERFORMANCE</h1>
         <p>Progressão de carga por exercício.</p>
@@ -4886,6 +4954,27 @@
       </div>
     </div>
 
+    <!-- ═══ ADMIN PAGE (ETAPA 3) ═══ -->
+    <div class="page" id="page-admin">
+      <div class="admin-layout">
+        <div class="admin-topbar">
+          <span class="admin-title">Biblioteca de exercícios</span>
+          <span class="admin-badge">admin</span>
+        </div>
+        <div class="admin-body">
+          <div class="admin-sidebar">
+            <button class="admin-new-btn" onclick="adminNewExercise()">＋ Novo</button>
+            <div class="admin-exercise-list" id="admin-exercise-list"></div>
+          </div>
+          <div class="admin-form-area">
+            <div class="admin-form-card" id="admin-form-container">
+              <div style="color:#444;font-size:13px;text-align:center;padding:40px 0;">Selecione um exercício ou clique em ＋ Novo</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -5451,7 +5540,7 @@ function initScrollFade() {
 async function initApp() {
   renderFMSGrid();
   updateCoachNavIndicator();
-  // Loading overlay is visible by default (HTML starts with it shown)
+  document.getElementById('loading-overlay').style.display = 'flex';
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
     if (error) {
@@ -5467,17 +5556,10 @@ async function initApp() {
       const savedName = cachedUser.id === u.id ? cachedUser.name : null;
       _applyAuthenticatedUser(u, savedName);
       await loadUserData(u.id);
-      // ── FIX BUG 1: Sync onboarding flag from DB profile data ──
-      // If the profile has essential fields from onboarding, mark localStorage
-      // so returning users are never incorrectly sent to onboarding again
-      if (state.profile && (state.profile.onboarding_done === true ||
-                            state.profile.age != null || state.profile.objective != null)) {
-        localStorage.setItem('axisai_onboarding_done', '1');
-      }
       syncPendingWorkouts();
       loadWorkouts();
       loadProfile();
-      enterApp();
+      await enterApp();
     } else {
       // No valid session — show auth screen
       showLandingPage();
@@ -5510,14 +5592,10 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     const savedName = cachedUser.id === u.id ? cachedUser.name : null;
     _applyAuthenticatedUser(u, savedName);
     await loadUserData(u.id);
-    if (state.profile && (state.profile.onboarding_done === true ||
-                          state.profile.age != null || state.profile.objective != null)) {
-      localStorage.setItem('axisai_onboarding_done', '1');
-    }
     syncPendingWorkouts();
     loadWorkouts();
     loadProfile();
-    enterApp();
+    await enterApp();
   } else if (event === 'SIGNED_OUT') {
     _appEntered = false;
     _clearLocalUserCache();
@@ -5663,12 +5741,6 @@ async function doLogin() {
     // Carregar dados ANTES de entrar no app (evita estado parcial no dashboard)
     await loadUserData(data.user.id);
 
-    // Sincronizar flag de onboarding — condição ampliada para cobrir perfis com apenas name/created_at
-    if (state.profile && (state.profile.onboarding_done === true ||
-                          state.profile.age != null || state.profile.objective != null)) {
-      localStorage.setItem('axisai_onboarding_done', '1');
-    }
-
     loadWorkouts();
     loadProfile();
     await enterApp();
@@ -5731,57 +5803,89 @@ async function doLogout() {
   document.getElementById('screen-app').classList.remove('visible');
 }
 
+function _hasRequiredProfileValue(value) {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  return true;
+}
+
+// Confirmed from Supabase `profiles` schema and onboarding payload in `_finishWizard`.
+const ONBOARDING_REQUIRED_PROFILE_FIELDS = ['age', 'weight', 'height', 'objective'];
+
+function profileHasData(profile) {
+  if (!profile) return false;
+  // onboarding_done é suficiente — é a fonte de verdade
+  if (profile.onboarding_done === true) return true;
+  // fallback: campos obrigatórios preenchidos
+  return !!(profile.age && profile.weight && profile.height && profile.objective);
+}
+
+function _syncProfileCache(profile) {
+  if (!profile || typeof profile !== 'object') return;
+  localStorage.setItem('axisai_profile', JSON.stringify(profile));
+  if (profileHasData(profile)) {
+    localStorage.setItem('axisai_onboarding_done', '1');
+  } else {
+    localStorage.removeItem('axisai_onboarding_done');
+  }
+}
+
+function _isSkippableProfileQueryError(error, column) {
+  const msg = String(error?.message || '').toLowerCase();
+  if (error?.code === '42703' && msg.includes(`profiles.${column}`)) return true;
+  if (error?.code === '22P02' && msg.includes('invalid input syntax for type integer')) return true;
+  return false;
+}
+
+async function _getProfileFromSupabase(userId) {
+  if (!userId) return null;
+  const attempts = [
+    { column: 'user_id', value: userId },
+    { column: 'email', value: state.user?.email || null },
+  ];
+
+  for (const attempt of attempts) {
+    if (!attempt.value) continue;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq(attempt.column, attempt.value)
+      .maybeSingle();
+
+    if (error) {
+      if (_isSkippableProfileQueryError(error, attempt.column)) continue;
+      console.warn(`[onboarding status] profile fetch error (${attempt.column}):`, error);
+      continue;
+    }
+
+    if (!data) continue;
+    state.profile = { ...(state.profile || {}), ...data };
+    _syncProfileCache(state.profile);
+    return state.profile;
+  }
+
+  return null;
+}
+
 async function enterApp() {
   // ── Guard against double execution ──
   if (_appEntered) return;
 
   document.getElementById('screen-auth').style.display = 'none';
 
-  // ── Check onboarding status: DB profile é source of truth ──
-  // Campos reais da tabela: onboarding_done (boolean), age, objective (não goal/level/name)
-  const _profileDone = (p) => p && (
-    p.onboarding_done === true || p.age != null || p.objective != null
-  );
-  let profileHasData = _profileDone(state.profile);
+  // Source of truth: sempre consultar o perfil no Supabase após login.
+  const profile = await _getProfileFromSupabase(state.user?.id);
+  const hasCompletedOnboarding = profileHasData(profile || state.profile);
 
-  // ── Fallback: se state.profile é null, consultar Supabase diretamente ──
-  // Cobre caso onde loadUserData() falhou (ex.: RLS, timing, tipo errado na query anterior)
-  if (!profileHasData && state.user?.id) {
-    try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('user_id, age, objective, onboarding_done, created_at')
-        .eq('user_id', state.user.id)
-        .maybeSingle();
-      if (data) {
-        state.profile = { ...(state.profile || {}), ...data };
-        profileHasData = _profileDone(data);
-        if (profileHasData) {
-          localStorage.setItem('axisai_onboarding_done', '1');
-          localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
-        }
-      }
-    } catch (e) {
-      console.warn('[enterApp fallback]', e);
-    }
-  }
-
-  const localOnboardingDone = localStorage.getItem('axisai_onboarding_done');
-
-  if (!profileHasData && !localOnboardingDone) {
+  if (!hasCompletedOnboarding) {
     // Usuário genuinamente novo — mostrar onboarding
     // (não setar _appEntered para poder re-entrar após wizard)
     showOnboarding();
     return;
   }
 
-  // Sincronizar localStorage se DB diz que onboarding foi feito mas cache foi limpo
-  if (profileHasData && !localOnboardingDone) {
-    localStorage.setItem('axisai_onboarding_done', '1');
-  }
-
   _appEntered = true;
-  completeEnterApp();
+  await completeEnterApp();
 }
 
 function getDisplayName() {
@@ -5797,7 +5901,6 @@ async function completeEnterApp() {
   // ── FIX BUG 1: Ensure guard is set even when called directly from _finishWizard ──
   _appEntered = true;
   const loadingOverlay = document.getElementById('loading-overlay');
-  if (loadingOverlay) loadingOverlay.style.display = 'none';
   document.getElementById('screen-onboarding').style.display = 'none';
   document.getElementById('screen-app').classList.add('visible');
   const name = state.user?.name || 'Atleta';
@@ -5810,6 +5913,7 @@ async function completeEnterApp() {
   document.getElementById('profile-email-display').textContent = state.user?.email || '';
   loadAvatar();
   await refreshDashboard();
+  if (loadingOverlay) loadingOverlay.style.display = 'none';
   refreshChatSidebar();
   await checkLGPDConsent();
   loadPrivacyToggles();
@@ -6798,6 +6902,7 @@ async function navigate(page) {
   if (page === 'diagnosis') renderFmsResults();
   if (page === 'profile') { loadProfile(); loadProfileHealth(); }
   if (page === 'nutrition') renderNutrition();
+  if (page === 'admin') await loadAdminPage();
 }
 
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('mobile-open'); document.getElementById('overlay').classList.toggle('mobile-open'); }
@@ -8649,10 +8754,8 @@ async function updateStreakAndConsistency() {
   };
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setEmptyState(); return; }
-    const userId = user.id;
-    console.log('userId em updateStreakAndConsistency:', userId);
+    const userId = state.user?.id;
+    if (!userId) { setEmptyState(); return; }
 
     const twentyEightDaysAgo = new Date();
     twentyEightDaysAgo.setDate(twentyEightDaysAgo.getDate() - 28);
@@ -9931,6 +10034,26 @@ function _extractSetsCount(text) {
   return Math.min(8, Math.max(1, sets));
 }
 
+// Separa nome e detalhe de uma linha de exercício (ETAPA 2)
+function _parseLineNameDetail(line) {
+  var clean = String(line || '').trim().replace(/^[-•]\s*/, '');
+  if (!clean) return { nome: '', detalhe: '' };
+  // Separador: padrão de séries/tempo/lado
+  var m = clean.search(/\d{1,2}\s*[x×]\s*\d|\d+\s*s\b|\d+\s*min\b|cada\s*lado|\/lado/i);
+  if (m > 0) {
+    return {
+      nome: clean.slice(0, m).replace(/[\s\-–:@]+$/, '').trim(),
+      detalhe: clean.slice(m).trim()
+    };
+  }
+  // Fallback: separação por ' - ' ou ':'
+  var dash = clean.split(/\s[-–]\s/);
+  if (dash.length > 1) return { nome: dash[0].trim(), detalhe: dash.slice(1).join(' - ').trim() };
+  var colon = clean.indexOf(':');
+  if (colon > 0 && colon < clean.length - 1) return { nome: clean.slice(0, colon).trim(), detalhe: clean.slice(colon + 1).trim() };
+  return { nome: clean, detalhe: '' };
+}
+
 function _parseExerciseFromLine(line, idx) {
   const clean = String(line || '').trim().replace(/^[-•]\s*/, '');
   if (!clean) {
@@ -9977,6 +10100,7 @@ function _buildInlineBlocksFromContent(conteudo) {
       color: 'rgba(255,255,255,0.3)',
       hasLoads: true,
       done: false,
+      conteudo: conteudo || '',
       exercises: [{ name: 'Exercício', spec: '3 x 8', sets: 3 }]
     }];
   }
@@ -9985,11 +10109,16 @@ function _buildInlineBlocksFromContent(conteudo) {
     const exercises = block.exercicios.length
       ? block.exercicios.map((line, exIdx) => _parseExerciseFromLine(line, exIdx))
       : [{ name: block.nome, spec: 'prescrição livre', sets: 3 }];
+    // conteudo: exercicios separados por \n para rendering de mini cards
+    const blockConteudo = block.exercicios.length
+      ? block.exercicios.join('\n')
+      : block.nome;
     return {
       name: block.nome || `Bloco ${idx + 1}`,
       color: _detectBlockColor(block.nome),
       hasLoads: _blockNeedsLoads(block.nome),
       done: false,
+      conteudo: blockConteudo,
       exercises
     };
   });
@@ -10164,37 +10293,42 @@ function _renderInlineSessionBody() {
 
   const blocksHtml = _inlineSession.blocks.map((block, blockIdx) => {
     const doneClass = block.done ? 'done collapsed' : '';
-    const exercisesHtml = block.exercises.map((exercise, exIdx) => {
-      const spec = exercise.spec && exercise.spec !== 'prescrição livre' ? exercise.spec : '';
-      const sets = Math.max(1, Number(exercise.sets) || 3);
-      const loadInputs = block.hasLoads ? `
-        <div class="sets-row">
-          ${Array.from({ length: sets }, (_, setIdx) => `
-            <div class="set-input-group">
-              <div class="set-label">S${setIdx + 1}</div>
-              <input
-                type="number"
-                class="set-input"
-                placeholder="–"
-                inputmode="decimal"
-                data-workout="${wId}"
-                data-block="${blockIdx}"
-                data-exercise="${exIdx}"
-                data-set="${setIdx}">
-              <div class="kg-label">kg</div>
-            </div>
-          `).join('')}
-        </div>
-      ` : '';
 
-      return `
-        <div class="exercise-card">
-          <div class="exercise-name">${_escapeWorkoutHTML(exercise.name)}</div>
-          <div class="exercise-spec">${_escapeWorkoutHTML(spec || 'prescrição livre')}</div>
-          ${loadInputs}
-        </div>
-      `;
-    }).join('');
+    // ETAPA 2 — mini cards com botão "ver"
+    const exercisesHtml = (() => {
+      const bConteudo = block.conteudo || '';
+      const lines = bConteudo.split('\n').filter(function(l) { return l.trim() !== ''; });
+      if (lines.length > 0) {
+        return lines.map(function(line) {
+          var pd = _parseLineNameDetail(line);
+          var nomeEsc = _escapeWorkoutHTML(pd.nome);
+          var detalheEsc = _escapeWorkoutHTML(pd.detalhe);
+          var nomeJs = (pd.nome || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+          return '<div class="exercise-card">'
+            + '<div class="exercise-info">'
+            + '<div class="exercise-name">' + nomeEsc + '</div>'
+            + (pd.detalhe ? '<div class="exercise-detail">' + detalheEsc + '</div>' : '')
+            + '</div>'
+            + '<button class="ver-btn" onclick="openExerciseModal(\'' + nomeJs + '\')">ver</button>'
+            + '</div>';
+        }).join('');
+      }
+      if (bConteudo) {
+        return '<div style="white-space:pre-line;font-size:12px;color:#e0e0e0;padding:4px 0;">' + _escapeWorkoutHTML(bConteudo) + '</div>';
+      }
+      // fallback: exercises array
+      return block.exercises.map(function(exercise) {
+        var spec = exercise.spec && exercise.spec !== 'prescrição livre' ? exercise.spec : '';
+        var nomeJs = (exercise.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+        return '<div class="exercise-card">'
+          + '<div class="exercise-info">'
+          + '<div class="exercise-name">' + _escapeWorkoutHTML(exercise.name) + '</div>'
+          + (spec ? '<div class="exercise-detail">' + _escapeWorkoutHTML(spec) + '</div>' : '')
+          + '</div>'
+          + '<button class="ver-btn" onclick="openExerciseModal(\'' + nomeJs + '\')">ver</button>'
+          + '</div>';
+      }).join('');
+    })();
 
     return `
       <div class="block-card ${doneClass}" id="block-${_inlineSession.cardDomId}-${blockIdx}">
@@ -13644,6 +13778,215 @@ async function fetchExerciseVideo(exerciseName, movementPattern) {
   return r1.data || null;
 }
 
+// ═══════════════════════════════════════════════
+//  ADMIN — EXERCISE LIBRARY (ETAPA 3)
+// ═══════════════════════════════════════════════
+const ADMIN_USER_ID = '385d1288-b060-45c1-bfaf-4e90ba615c3e';
+var _adminSelectedId = null;
+var _adminExercises  = [];
+
+async function loadAdminPage() {
+  var res = await supabase.auth.getUser();
+  var user = res?.data?.user;
+  if (!user || user.id !== ADMIN_USER_ID) { navigate('dashboard'); return; }
+  await _adminLoadList();
+}
+
+async function _adminLoadList() {
+  var listEl = document.getElementById('admin-exercise-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="padding:12px;color:#444;font-size:11px;font-family:var(--font-mono);">Carregando...</div>';
+  var res = await supabase.from('exercise_library').select('id, name, category').order('name', { ascending: true });
+  if (res.error) { listEl.innerHTML = '<div style="padding:12px;color:#ef4444;font-size:11px;">Erro ao carregar</div>'; return; }
+  _adminExercises = res.data || [];
+  listEl.innerHTML = _adminExercises.map(function(ex) {
+    var sel = _adminSelectedId === ex.id ? ' selected' : '';
+    return '<div class="admin-ex-item' + sel + '" id="admin-item-' + ex.id + '" onclick="adminSelectExercise(\'' + ex.id + '\')">'
+      + '<div class="admin-ex-name">' + _escapeWorkoutHTML(ex.name) + '</div>'
+      + '<div class="admin-ex-cat">' + _escapeWorkoutHTML(ex.category || '—') + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+async function adminSelectExercise(id) {
+  _adminSelectedId = id;
+  document.querySelectorAll('.admin-ex-item').forEach(function(el) { el.classList.remove('selected'); });
+  var item = document.getElementById('admin-item-' + id);
+  if (item) item.classList.add('selected');
+  var res = await supabase.from('exercise_library').select('*').eq('id', id).maybeSingle();
+  if (res.error || !res.data) return;
+  _adminRenderForm(res.data);
+}
+
+function adminNewExercise() {
+  _adminSelectedId = null;
+  document.querySelectorAll('.admin-ex-item').forEach(function(el) { el.classList.remove('selected'); });
+  _adminRenderForm(null);
+}
+
+function _adminRenderForm(ex) {
+  var container = document.getElementById('admin-form-container');
+  if (!container) return;
+  var v = function(val) { return _escapeWorkoutHTML(String(val || '')); };
+  var arr2csv = function(arr) { return Array.isArray(arr) ? arr.join(', ') : (arr || ''); };
+  var ytId = ex && ex.youtube_id ? ex.youtube_id : '';
+  container.innerHTML =
+    '<div class="admin-form-title">' + (ex ? 'Editar exercício' : 'Novo exercício') + '</div>'
+    + '<div class="admin-field-row">'
+      + '<div class="admin-field"><div class="admin-label">Nome *</div><input class="admin-input" id="af-name" value="' + v(ex && ex.name) + '" placeholder="Ex: Back Squat"></div>'
+      + '<div class="admin-field"><div class="admin-label">Categoria</div><input class="admin-input" id="af-category" value="' + v(ex && ex.category) + '" placeholder="Ex: Força"></div>'
+    + '</div>'
+    + '<div class="admin-field-row">'
+      + '<div class="admin-field"><div class="admin-label">Padrão de Movimento</div><input class="admin-input" id="af-movement_pattern" value="' + v(ex && ex.movement_pattern) + '" placeholder="Ex: knee_dominant_bilateral"></div>'
+      + '<div class="admin-field"><div class="admin-label">Dificuldade</div><input class="admin-input" id="af-difficulty" value="' + v(ex && ex.difficulty) + '" placeholder="Ex: Intermediário"></div>'
+    + '</div>'
+    + '<div class="admin-field-row">'
+      + '<div class="admin-field"><div class="admin-label">Grupos Musculares (vírgula)</div><input class="admin-input" id="af-muscle_groups" value="' + v(arr2csv(ex && ex.muscle_groups)) + '" placeholder="Ex: Quadríceps, Glúteos"></div>'
+      + '<div class="admin-field"><div class="admin-label">Equipamento (vírgula)</div><input class="admin-input" id="af-equipment" value="' + v(arr2csv(ex && ex.equipment)) + '" placeholder="Ex: Barra, Rack"></div>'
+    + '</div>'
+    + '<div class="admin-field"><div class="admin-label">Cues (vírgula)</div><input class="admin-input" id="af-cues" value="' + v(arr2csv(ex && ex.cues)) + '" placeholder="Ex: Peito aberto, Core ativado"></div>'
+    + '<div class="admin-field"><div class="admin-label">Instruções</div><textarea class="admin-textarea" id="af-instructions" rows="4" placeholder="Descrição detalhada do exercício...">' + v(ex && ex.instructions) + '</textarea></div>'
+    + '<div class="admin-field"><div class="admin-label">YouTube ID</div><input class="admin-input" id="af-youtube_id" value="' + v(ytId) + '" placeholder="Ex: dQw4w9WgXcQ" oninput="adminPreviewYT(this.value)"></div>'
+    + '<div class="admin-yt-preview" id="admin-yt-preview" style="' + (ytId ? 'display:block;' : 'display:none;') + '">'
+      + '<iframe id="admin-yt-iframe" src="' + (ytId ? 'https://www.youtube.com/embed/' + v(ytId) : '') + '" style="width:100%;aspect-ratio:16/9;border:none;border-radius:6px;" allowfullscreen></iframe>'
+    + '</div>'
+    + '<div class="admin-btns">'
+      + '<button class="admin-btn-save" onclick="adminSave()">Salvar</button>'
+      + (ex ? '<button class="admin-btn-delete" onclick="adminDelete(\'' + ex.id + '\')">Excluir</button>' : '')
+      + '<button style="padding:8px 14px;background:none;border:0.5px solid #2a2a2a;color:#555;font-size:12px;border-radius:6px;cursor:pointer;" onclick="adminNewExercise()">Novo</button>'
+    + '</div>';
+}
+
+function adminPreviewYT(ytId) {
+  var preview = document.getElementById('admin-yt-preview');
+  var iframe  = document.getElementById('admin-yt-iframe');
+  if (!preview || !iframe) return;
+  var clean = String(ytId || '').trim();
+  if (clean) { iframe.src = 'https://www.youtube.com/embed/' + encodeURIComponent(clean); preview.style.display = 'block'; }
+  else { preview.style.display = 'none'; iframe.src = ''; }
+}
+
+function _adminCsvToArr(val) {
+  return String(val || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+}
+
+async function adminSave() {
+  var name = (document.getElementById('af-name')?.value || '').trim();
+  if (!name) { showToast('Nome é obrigatório.', true); return; }
+  var payload = {
+    name:             name,
+    category:         (document.getElementById('af-category')?.value || '').trim() || null,
+    movement_pattern: (document.getElementById('af-movement_pattern')?.value || '').trim() || null,
+    difficulty:       (document.getElementById('af-difficulty')?.value || '').trim() || null,
+    muscle_groups:    _adminCsvToArr(document.getElementById('af-muscle_groups')?.value),
+    equipment:        _adminCsvToArr(document.getElementById('af-equipment')?.value),
+    cues:             _adminCsvToArr(document.getElementById('af-cues')?.value),
+    instructions:     (document.getElementById('af-instructions')?.value || '').trim() || null,
+    youtube_id:       (document.getElementById('af-youtube_id')?.value || '').trim() || null,
+  };
+  var error;
+  if (_adminSelectedId) {
+    var upd = await supabase.from('exercise_library').update(payload).eq('id', _adminSelectedId);
+    error = upd.error;
+  } else {
+    var ins = await supabase.from('exercise_library').insert(payload).select('id').single();
+    error = ins.error;
+    if (!error && ins.data) _adminSelectedId = ins.data.id;
+  }
+  if (error) { showToast('Erro ao salvar: ' + error.message, true); return; }
+  showToast('Exercício salvo!');
+  await _adminLoadList();
+}
+
+async function adminDelete(id) {
+  if (!confirm('Excluir este exercício?')) return;
+  var del = await supabase.from('exercise_library').delete().eq('id', id);
+  if (del.error) { showToast('Erro ao excluir: ' + del.error.message, true); return; }
+  _adminSelectedId = null;
+  showToast('Exercício excluído.');
+  var container = document.getElementById('admin-form-container');
+  if (container) container.innerHTML = '<div style="color:#444;font-size:13px;text-align:center;padding:40px 0;">Selecione um exercício ou clique em ＋ Novo</div>';
+  await _adminLoadList();
+}
+
+// ═══════════════════════════════════════════════
+//  EXERCISE MODAL — bottom-sheet (ETAPA 4)
+// ═══════════════════════════════════════════════
+async function openExerciseModal(nomeBuscado) {
+  if (!nomeBuscado) return;
+  document.querySelector('.exercise-modal-overlay')?.remove();
+
+  var overlay = document.createElement('div');
+  overlay.className = 'exercise-modal-overlay';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
+  overlay.innerHTML =
+    '<div class="exercise-modal-sheet">'
+    + '<div class="modal-drag-handle"></div>'
+    + '<div class="modal-header">'
+      + '<span class="modal-title">' + _escapeWorkoutHTML(nomeBuscado) + '</span>'
+      + '<button class="modal-close" onclick="this.closest(\'.exercise-modal-overlay\').remove()">×</button>'
+    + '</div>'
+    + '<div class="modal-body"><div style="color:#444;font-size:12px;text-align:center;padding:20px;">Carregando...</div></div>'
+    + '</div>';
+  document.body.appendChild(overlay);
+
+  var res = await supabase
+    .from('exercise_library')
+    .select('*')
+    .or('name.ilike.' + nomeBuscado + ',name_aliases.cs.{"' + nomeBuscado + '"}')
+    .maybeSingle();
+
+  var sheet = overlay.querySelector('.exercise-modal-sheet');
+  if (!sheet) return;
+
+  var headerHtml =
+    '<div class="modal-drag-handle"></div>'
+    + '<div class="modal-header">'
+      + '<span class="modal-title">' + _escapeWorkoutHTML(nomeBuscado) + '</span>'
+      + '<button class="modal-close" onclick="this.closest(\'.exercise-modal-overlay\').remove()">×</button>'
+    + '</div>';
+
+  if (res.error || !res.data) {
+    sheet.innerHTML = headerHtml + '<div class="modal-body"><div class="modal-empty">Exercício ainda não cadastrado na biblioteca</div></div>';
+    return;
+  }
+
+  var d = res.data;
+  var ytEmbed = d.youtube_id
+    ? '<iframe src="https://www.youtube.com/embed/' + _escapeWorkoutHTML(d.youtube_id) + '?rel=0&modestbranding=1" style="width:100%;aspect-ratio:16/9;border:none;border-radius:6px;display:block;" allowfullscreen></iframe>'
+    : '';
+
+  var tags = [
+    d.category        ? '<span class="modal-tag modal-tag-cat">'     + _escapeWorkoutHTML(d.category) + '</span>' : '',
+    d.difficulty      ? '<span class="modal-tag modal-tag-diff">'    + _escapeWorkoutHTML(d.difficulty) + '</span>' : '',
+    d.movement_pattern? '<span class="modal-tag modal-tag-pattern">' + _escapeWorkoutHTML(d.movement_pattern.replace(/_/g,' ')) + '</span>' : '',
+  ].filter(Boolean).join('');
+
+  var instructionsHtml = d.instructions
+    ? '<div><div class="modal-section-label">Instruções</div><div class="modal-section-text">' + _escapeWorkoutHTML(d.instructions) + '</div></div>'
+    : '';
+
+  var cuesHtml = Array.isArray(d.cues) && d.cues.length
+    ? '<div><div class="modal-section-label">Cues</div><div class="modal-cues-list">'
+        + d.cues.map(function(c) { return '<div class="modal-cue-item">' + _escapeWorkoutHTML(c) + '</div>'; }).join('')
+      + '</div></div>'
+    : '';
+
+  sheet.innerHTML =
+    '<div class="modal-drag-handle"></div>'
+    + '<div class="modal-header">'
+      + '<span class="modal-title">' + _escapeWorkoutHTML(d.name) + '</span>'
+      + '<button class="modal-close" onclick="this.closest(\'.exercise-modal-overlay\').remove()">×</button>'
+    + '</div>'
+    + ytEmbed
+    + '<div class="modal-body">'
+      + (tags ? '<div class="modal-tags">' + tags + '</div>' : '')
+      + instructionsHtml
+      + cuesHtml
+    + '</div>';
+}
+
 async function abrirVideoModal(exerciseName) {
   if (!exerciseName) return;
   var blocos = _normalizePlanBlocks(window.__currentTreino?.conteudo || '');
@@ -13685,22 +14028,4 @@ async function abrirVideoModal(exerciseName) {
 
 
 
-<div></div><div id="claude-static-indicator-container" style="position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); align-items: center; justify-content: center; padding: 6px 6px 6px 16px; background: rgb(250, 249, 245); border: 0.5px solid rgba(31, 30, 29, 0.3); border-radius: 14px; box-shadow: rgba(0, 0, 0, 0.15) 0px 40px 80px 0px; z-index: 2147483647; pointer-events: none; white-space: nowrap; user-select: none; font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif;">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; flex-shrink: 0; margin-right: 8px;">
-        <path d="M3.13946 10.6399L6.28757 8.87462L6.37405 8.73821L6.28757 8.6339H6.13189L5.60432 8.6018L3.80541 8.55366L2.24865 8.48947L0.735135 8.40923H0.492973L0.354595 8.32899L0.181622 8.1685L0.0345946 8.01605L0 7.85557L0.0345946 7.62287L0.138378 7.44634L0.224865 7.40622H0.354595L0.812973 7.44634L1.82486 7.51856L3.34703 7.62287L4.44541 7.68706L6.08 7.85557H6.33946L6.37405 7.75125L6.28757 7.68706L6.21838 7.62287L4.64432 6.55567L2.94054 5.4323L2.04973 4.78235L1.57405 4.45336L1.33189 4.14845L1.22811 3.92377L1.17622 3.69107L1.22811 3.47442L1.33189 3.28185L1.46162 3.13741L1.66054 2.99298H1.87676L2.24865 3.0331L2.39568 3.07322L2.99243 3.53059L4.26378 4.51755L5.92432 5.73721L6.16649 5.93781H6.27892V5.82548L6.16649 5.64092L5.26703 4.01204L4.30703 2.35105L3.87459 1.66098L3.76216 1.25176C3.7391 1.16082 3.69297 0.977332 3.69297 0.970913V0.762287L3.77946 0.505517L3.93513 0.240722L4.18595 0.0882648L4.4627 0H4.67892L4.83459 0.0240722L5.12865 0.0882648L5.4054 0.328987L5.82054 1.27583L6.48649 2.76028L7.52432 4.78235L7.82703 5.38415L7.99135 5.93781L8.05189 6.10632H8.15567V6.01003L8.24216 4.87061L8.39784 3.47442L8.55351 1.67703L8.6054 1.17151L8.85622 0.561685L8.9773 0.417252L9.21946 0.232698H9.35784L9.74703 0.417252L9.97189 0.665998L10.067 0.874624L10.0238 1.17151L9.83351 2.40722L9.46162 4.34102L9.21946 5.64092H9.35784L9.52216 5.47242L10.1795 4.60582L11.2778 3.22568L11.7622 2.68004L12.333 2.07823L12.6962 1.78937L13.0162 1.67703L13.3881 1.78937L13.7168 2.06219L13.8897 2.54363V2.76028L13.6649 3.32197L12.9557 4.22066L12.3676 4.98295L12.0043 5.56871L11.0011 7.02106V7.08526H11.1741L13.0768 6.67603L14.1059 6.49147L15.3341 6.28285L15.5762 6.34704L15.8876 6.53962L15.9481 6.80441L15.8876 7.12538L15.7319 7.34203L14.4173 7.66299L12.8778 7.97593L10.5854 8.51559C10.5705 8.51909 10.56 8.53236 10.56 8.54764C10.56 8.56468 10.573 8.57891 10.59 8.58044L11.6238 8.67402L12.0649 8.69809H13.1459L15.1611 8.85055L15.6886 9.19559L15.9481 9.39619L16 9.62086L15.9481 9.94985L15.8443 10.1023L15.4119 10.3029L15.1351 10.3591L14.0454 10.1023L11.4941 9.49248L10.6205 9.27583H10.4995V9.34804L11.2259 10.0622L12.5665 11.2658L14.2357 12.8225L14.3222 13.0953V13.2076L14.1059 13.5125L13.9243 13.5206L13.8811 13.4804L12.4108 12.3731L12.2984 12.325L11.84 11.8756L10.56 10.7924H10.4735V10.9047L10.7676 11.338L12.333 13.6891L12.4108 14.4112L12.2984 14.6439L11.8919 14.7884L11.667 14.7563L11.4508 14.7081L11.2605 14.5396L10.5254 13.4162L9.5827 11.9719L8.82162 10.672H8.79342C8.76039 10.672 8.73278 10.6972 8.7297 10.73L8.27676 15.5667L8.06919 15.8154L7.6454 16H7.58486L7.17838 15.6951L6.96216 15.1976L7.17838 14.2106L7.43784 12.9268L7.6454 11.9077L7.83567 10.6399L7.95187 10.2164C7.9548 10.2057 7.95069 10.1944 7.94161 10.1881C7.91157 10.1672 7.87034 10.1741 7.84878 10.2037L6.89297 11.5145L5.44 13.4804L4.28973 14.7081L4.01297 14.8205H3.80541L3.5373 14.5717V14.4514L3.58054 14.1304L3.84865 13.7372L5.44 11.7151L6.4 10.4554L7.01872 9.73222C7.04511 9.70139 7.04245 9.65523 7.0127 9.62763C7.00333 9.61894 6.98925 9.61773 6.97854 9.62471L2.75027 12.3811L1.99784 12.4774L1.66919 12.1725L1.71243 11.675L1.86811 11.5145L3.13946 10.6399Z" fill="#D97757"></path>
-      </svg>
-      <span style="vertical-align: middle; color: #141413; font-size: 14px; display: inline-block;">Claude is active in this tab group</span>
-      <div style="display: inline-block; width: 0.5px; height: 32px; background: rgba(31, 30, 29, 0.15); margin: 0 8px; vertical-align: middle;"></div>
-      <button id="claude-static-chat-button" style="position: relative; display: inline-flex; align-items: center; justify-content: center; padding: 6px; background: transparent; border: none; cursor: pointer; pointer-events: auto; vertical-align: middle; width: 32px; height: 32px; border-radius: 8px; transition: background 0.2s;">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="#141413" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px; display: block;">
-          <path d="M10 2.5C14.1421 2.5 17.5 5.85786 17.5 10C17.5 14.1421 14.1421 17.5 10 17.5H3C2.79779 17.5 2.61549 17.3782 2.53809 17.1914C2.4607 17.0046 2.50349 16.7895 2.64648 16.6465L4.35547 14.9365C3.20124 13.6175 2.5 11.8906 2.5 10C2.5 5.85786 5.85786 2.5 10 2.5ZM10 3.5C6.41015 3.5 3.5 6.41015 3.5 10C3.5 11.7952 4.22659 13.4199 5.40332 14.5967L5.46582 14.6729C5.52017 14.7544 5.5498 14.8508 5.5498 14.9502C5.5498 15.0828 5.49709 15.2099 5.40332 15.3037L4.20703 16.5H10C13.5899 16.5 16.5 13.5899 16.5 10C16.5 6.41015 13.5899 3.5 10 3.5ZM13.29 9.30371C13.3986 9.05001 13.6925 8.93174 13.9463 9.04004C14.2 9.14863 14.3183 9.44253 14.21 9.69629C13.8506 10.536 13.1645 11.25 12.25 11.25C11.6372 11.25 11.128 10.9289 10.75 10.4648C10.372 10.9289 9.86276 11.25 9.25 11.25C8.63724 11.25 8.12801 10.9289 7.75 10.4648C7.37198 10.9289 6.86276 11.25 6.25 11.25C5.97386 11.25 5.75 11.0261 5.75 10.75C5.75 10.4739 5.97386 10.25 6.25 10.25C6.58764 10.25 7.00448 9.97056 7.29004 9.30371L7.32422 9.2373C7.41431 9.09121 7.5749 9 7.75 9C7.9501 9 8.13123 9.11975 8.20996 9.30371L8.32227 9.53516C8.59804 10.0359 8.95442 10.25 9.25 10.25C9.58764 10.25 10.0045 9.97056 10.29 9.30371L10.3242 9.2373C10.4143 9.09121 10.5749 9 10.75 9C10.9501 9 11.1312 9.11975 11.21 9.30371L11.3223 9.53516C11.598 10.0359 11.9544 10.25 12.25 10.25C12.5876 10.25 13.0045 9.97056 13.29 9.30371Z"></path>
-        </svg>
-        <span id="claude-static-chat-tooltip" style="position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%); padding: 6px 12px; background: #30302E; color: #FAF9F5; border-radius: 6px; font-size: 12px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">Open chat</span>
-      </button>
-      <button id="claude-static-close-button" style="position: relative; display: inline-flex; align-items: center; justify-content: center; padding: 6px; background: transparent; border: none; cursor: pointer; pointer-events: auto; vertical-align: middle; width: 32px; height: 32px; margin-left: 4px; border-radius: 8px; transition: background 0.2s;">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px; display: block;">
-          <path d="M15.1464 4.14642C15.3417 3.95121 15.6582 3.95118 15.8534 4.14642C16.0486 4.34168 16.0486 4.65822 15.8534 4.85346L10.7069 9.99997L15.8534 15.1465C16.0486 15.3417 16.0486 15.6583 15.8534 15.8535C15.6826 16.0244 15.4186 16.0461 15.2245 15.918L15.1464 15.8535L9.99989 10.707L4.85338 15.8535C4.65813 16.0486 4.34155 16.0486 4.14634 15.8535C3.95115 15.6583 3.95129 15.3418 4.14634 15.1465L9.29286 9.99997L4.14634 4.85346C3.95129 4.65818 3.95115 4.34162 4.14634 4.14642C4.34154 3.95128 4.65812 3.95138 4.85338 4.14642L9.99989 9.29294L15.1464 4.14642Z" fill="#141413"></path>
-        </svg>
-        <span id="claude-static-close-tooltip" style="position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%); padding: 6px 12px; background: #30302E; color: #FAF9F5; border-radius: 6px; font-size: 12px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">Dismiss</span>
-      </button>
-    </div></body></html>
+</body></html>
