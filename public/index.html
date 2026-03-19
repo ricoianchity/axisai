@@ -5703,7 +5703,10 @@ document.addEventListener('click', function(e) {
 async function saveData(table, data, localKey) {
   localStorage.setItem(localKey, JSON.stringify(data)); // fallback imediato
   try {
-    await supabase.from(table).upsert(data);
+    const { error } = await supabase.from(table).upsert(data);
+    if (error) {
+      console.warn(`[saveData] Supabase error on "${table}" [${error.code}]:`, error.message);
+    }
   } catch (e) {
     console.warn('Supabase offline, dado salvo localmente:', e);
   }
@@ -5888,13 +5891,20 @@ async function enterApp() {
 
   // Source of truth: sempre consultar o perfil no Supabase após login.
   const profile = await _getProfileFromSupabase(state.user?.id);
-  const hasCompletedOnboarding = profileHasData(profile || state.profile);
+
+  // ── Fallback defensivo: quando o DB falha, usa cache local ──
+  const cachedProfile  = JSON.parse(localStorage.getItem('axisai_profile') || '{}');
+  const onboardingFlag = localStorage.getItem('axisai_onboarding_done') === '1';
+  const resolvedProfile = profile || state.profile || cachedProfile;
+  const hasCompletedOnboarding = onboardingFlag || profileHasData(resolvedProfile);
 
   if (!hasCompletedOnboarding) {
-    // Usuário genuinamente novo — mostrar onboarding
-    // (não setar _appEntered para poder re-entrar após wizard)
     showOnboarding();
     return;
+  }
+
+  if (!profile && profileHasData(cachedProfile)) {
+    state.profile = { ...(state.profile || {}), ...cachedProfile };
   }
 
   _appEntered = true;
@@ -6542,9 +6552,10 @@ async function _finishWizard() {
       merged[k] = v;
     }
   });
+  merged.onboarding_done = true;
   state.profile = merged;
   localStorage.setItem('axisai_onboarding_done', '1');
-  const profilePayload = { ...merged, user_id: state.user?.id };
+  const profilePayload = { ...merged, user_id: state.user?.id, onboarding_done: true };
   delete profilePayload.id; // nunca enviar o id integer ao banco
   delete profilePayload.fmsPhotos; // keep photos local to avoid oversized profile payloads
   await saveData('profiles', profilePayload, 'axisai_profile');
@@ -6941,18 +6952,113 @@ function _safeParseJson(value, fallback) {
 
 function _normalizePlanBlocks(conteudo) {
   if (!conteudo) return [];
-  return conteudo
-    .split('\n')
-    .map(function(l) { return l.trim(); })
-    .filter(function(l) { return l.length > 0; })
-    .map(function(linha) {
+
+  // BUG-1 FIX: normalize | separators to newlines (consistent with parseTreino)
+  var text = conteudo
+    .replace(/\r\n?/g, '\n')
+    .replace(/\s+\|\s+/g, '\n')
+    .replace(/\n{2,}/g, '\n');
+
+  var lines = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+
+  // Block header patterns (same as parseTreino detectHeader)
+  var headerRe = /^(?:PILLAR\s*PREP|FOAM\s*ROLL|WARM[\s-]*UP|HEAVY\s*POWER|POWER|STRENGTH\s*POD\s*\d|POD\s*\d|ESD|CONDITIONING)\b/i;
+  // Known prep subcategory labels that should NOT become separate blocks
+  var prepSubRe = /^(?:Foam\s*Roll(?:ing)?|Mobilidade|Ativa[çc]\w*|Aquecimento|Din[âa]mico|Alongamento|Cool\s*Down)\b/i;
+
+  var blocks = [];
+  var current = null;
+
+  for (var i = 0; i < lines.length; i++) {
+    var linha = lines[i].replace(/^[-•\u2022]\s*/, '').trim();
+    if (!linha) continue;
+
+    // Check if this line is a main block header
+    if (headerRe.test(linha)) {
+      // If current block is a prep block and this is a sub-header (e.g. "Foam Roll:"),
+      // treat as subcategory instead of new block
+      var isPrepCurrent = current && /^(?:PILLAR\s*PREP|WARM[\s-]*UP|FOAM\s*ROLL)/i.test(current.nome);
+      if (isPrepCurrent && prepSubRe.test(linha)) {
+        // Subcategory of current prep block
+        var sep = linha.indexOf(':');
+        if (sep > 0) {
+          current.exercicios.push(linha); // keep full line "Foam Roll: glúteo/..."
+        } else {
+          current.exercicios.push(linha);
+        }
+        continue;
+      }
+
+      // Flush current block
+      if (current) blocks.push(current);
+
+      // Extract block name (before first ":" or entire line)
       var sep = linha.indexOf(':');
-      if (sep === -1) return { nome: linha, exercicios: [] };
-      var nome = linha.substring(0, sep).trim();
-      var exPart = linha.substring(sep + 1).trim();
-      var exercicios = exPart.split('+').map(function(e) { return e.trim(); }).filter(Boolean);
-      return { nome: nome, exercicios: exercicios };
-    });
+      var nome = sep >= 0 ? linha.substring(0, sep).trim() : linha;
+      var afterColon = sep >= 0 ? linha.substring(sep + 1).trim() : '';
+
+      // Check if header line has inline subcategory content
+      // e.g. "PILLAR PREP (10min) Foam Roll: glúteo/..."
+      var inlineSubMatch = afterColon ? null : null; // will handle below
+      var exercicios = [];
+
+      // For prep headers with inline content: "PILLAR PREP (10min) Foam Roll: glúteo/..."
+      // The ":" belongs to the subcategory, not the block header
+      if (/^(?:PILLAR\s*PREP|WARM[\s-]*UP)\b/i.test(linha) && sep > 0) {
+        var beforeColon = linha.substring(0, sep).trim();
+        var subMatch = beforeColon.match(/(PILLAR\s*PREP|WARM[\s-]*UP)\s*(?:\([^)]*\))?\s*(.*)/i);
+        if (subMatch && subMatch[2].trim()) {
+          // There's a subcategory name between header and ":"
+          var subName = subMatch[2].trim();
+          nome = subMatch[1].trim();
+          exercicios.push(subName + ': ' + afterColon); // "Foam Roll: glúteo/..."
+        } else if (afterColon) {
+          exercicios = afterColon.split(/\s*\+\s*/).filter(Boolean);
+        }
+      } else if (afterColon) {
+        exercicios = afterColon.split(/\s*\+\s*/).filter(Boolean);
+      }
+
+      current = { nome: nome, exercicios: exercicios };
+      continue;
+    }
+
+    // Non-header line
+    if (!current) {
+      // Orphan line — create a generic block
+      current = { nome: linha, exercicios: [] };
+      continue;
+    }
+
+    // Check if this is a prep subcategory (non-bullet, within prep block)
+    var isPrepBlock = /^(?:PILLAR\s*PREP|WARM[\s-]*UP|FOAM\s*ROLL)/i.test(current.nome);
+    if (isPrepBlock && prepSubRe.test(linha)) {
+      current.exercicios.push(linha); // keep full line "Mobilidade: quadril + tornozelo + T-spine"
+      continue;
+    }
+
+    // Regular exercise line
+    var sep = linha.indexOf(':');
+    if (sep === -1) {
+      current.exercicios.push(linha);
+    } else {
+      // Keep full line for prep blocks (preserves "Label: content")
+      if (isPrepBlock) {
+        current.exercicios.push(linha);
+      } else {
+        var exPart = linha.substring(sep + 1).trim();
+        var exItems = exPart.split(/\s*\+\s*/).filter(Boolean);
+        if (exItems.length > 0) {
+          current.exercicios.push.apply(current.exercicios, exItems);
+        } else {
+          current.exercicios.push(linha);
+        }
+      }
+    }
+  }
+
+  if (current) blocks.push(current);
+  return blocks;
 }
 
 function _getPlanStructure(plan) {
@@ -9755,6 +9861,7 @@ function _parseExerciseEntries(rawLine, bloco, currentCount = 0) {
 
 function parseTreino(conteudo) {
   const original = String(conteudo || '').trim();
+  console.log('[parseTreino] RAW conteudo:', JSON.stringify(original).slice(0, 600));
   if (!original) {
     return [{ bloco: 'TREINO', tipo: 'warmup', navegavel: false, descricao: '', exercicios: [] }];
   }
@@ -9866,16 +9973,33 @@ function parseTreino(conteudo) {
     const descricao = extractAfterColon(line);
 
     if (/^FOAM\s*ROLL\b/i.test(line)) {
-      return { bloco: 'FOAM ROLL', tipo: 'foam_roll', navegavel: false, duracao, descricao };
+      // BUG-1 FIX: capture inline content after header+duration
+      const frInline = line
+        .replace(/^FOAM\s*ROLL\b/i, '')
+        .replace(/\([^)]*\)/, '')
+        .replace(/^[:\s]*/, '')
+        .trim();
+      return { bloco: 'FOAM ROLL', tipo: 'foam_roll', navegavel: false, duracao, descricao: '', inlineContent: frInline || '' };
     }
 
     if (/^PILLAR\s*PREP\b/i.test(line)) {
       const legacyExpand = /FOAM\s*ROLL\s*\+\s*MOBILIDADE\s*\+\s*ATIVA(?:Ç|C)[AÃ]O\s*\+\s*DIN[ÂA]MICO/i.test(upper);
-      return { bloco: 'PILLAR PREP', tipo: 'pillar_prep', navegavel: false, duracao, descricao, legacyExpand };
+      // BUG-1 FIX: capture inline subcategory content (e.g. "PILLAR PREP (10min) Foam Roll: glúteo/...")
+      const inlineRemainder = line
+        .replace(/^PILLAR\s*PREP\b/i, '')
+        .replace(/\([^)]*\)/, '')      // strip duration "(10min)"
+        .replace(/^[:\s]*/, '')
+        .trim();
+      return { bloco: 'PILLAR PREP', tipo: 'pillar_prep', navegavel: false, duracao, descricao: '', legacyExpand, inlineContent: inlineRemainder || '' };
     }
 
     if (/^WARM[\s-]*UP\b/i.test(line)) {
-      return { bloco: 'WARM-UP', tipo: 'warm_up', navegavel: false, duracao, descricao };
+      const wuInline = line
+        .replace(/^WARM[\s-]*UP\b/i, '')
+        .replace(/\([^)]*\)/, '')
+        .replace(/^[:\s]*/, '')
+        .trim();
+      return { bloco: 'WARM-UP', tipo: 'warm_up', navegavel: false, duracao, descricao: '', inlineContent: wuInline || '' };
     }
 
     if (/^HEAVY\s*POWER\b/i.test(line)) {
@@ -9950,8 +10074,41 @@ function parseTreino(conteudo) {
         }
       }
 
+      // BUG-1 FIX: if current block is pillar_prep/warm_up and we detect a foam_roll sub-header,
+      // treat it as a subcategory exercise instead of creating a separate block
+      const isPrepBlock = current && (current.tipo === 'pillar_prep' || current.tipo === 'warm_up');
+      if (isPrepBlock && header.tipo === 'foam_roll') {
+        // "Foam Roll: glúteo/..." → subcategory of current prep block
+        const subContent = header.inlineContent || '';
+        current.exercicios.push({ nome: header.bloco, prescricao: subContent });
+        console.log('[parseTreino] BUG-1 FIX: foam_roll absorbed into prep block:', header.bloco, subContent);
+        continue;
+      }
+
       flushCurrent();
       current = createBlock(header.bloco, header.tipo, header.navegavel, header.duracao, header.descricao || '');
+
+      // BUG-1 FIX: parse inline subcategory content from prep block header line
+      // e.g. "PILLAR PREP (10min) Foam Roll: glúteo/..." → inlineContent = "Foam Roll: glúteo/..."
+      if (header.inlineContent && (current.tipo === 'pillar_prep' || current.tipo === 'warm_up' || current.tipo === 'foam_roll')) {
+        const ic = header.inlineContent;
+        const icColonIdx = ic.indexOf(':');
+        if (icColonIdx > 0) {
+          const subName = ic.slice(0, icColonIdx).trim();
+          const subVal  = ic.slice(icColonIdx + 1).trim();
+          if (current.tipo === 'foam_roll') {
+            current.areas.push({ nome: subName || ic, tempo: subVal });
+          } else {
+            current.exercicios.push({ nome: subName, prescricao: subVal });
+          }
+        } else if (ic) {
+          if (current.tipo === 'foam_roll') {
+            current.areas.push({ nome: ic, tempo: '' });
+          } else {
+            current.exercicios.push({ nome: ic, prescricao: '' });
+          }
+        }
+      }
 
       if (header.descricao && current.navegavel) {
         const exInline = _parseExerciseEntries(header.descricao, current.bloco, current.exercicios.length);
@@ -9980,6 +10137,25 @@ function parseTreino(conteudo) {
     } else if ((current.tipo === 'pillar_prep' || current.tipo === 'warm_up') && isBulletLine(lineRaw)) {
       const { nome, valor } = parseBulletItem(lineRaw);
       if (nome) current.exercicios.push({ nome, prescricao: valor });
+    } else if ((current.tipo === 'pillar_prep' || current.tipo === 'warm_up') && !isBulletLine(lineRaw)) {
+      // BUG-1 FIX: handle non-bullet subcategory lines like "Mobilidade: quadril + tornozelo + T-spine"
+      const colonIdx = line.indexOf(':');
+      if (colonIdx > 0 && colonIdx < line.length - 1) {
+        const subName = line.slice(0, colonIdx).trim();
+        const subVal  = line.slice(colonIdx + 1).trim();
+        current.exercicios.push({ nome: subName, prescricao: subVal });
+        console.log('[parseTreino] BUG-1 FIX: non-bullet subcategory parsed:', subName, '→', subVal);
+      } else {
+        current.descricao = [current.descricao, line].filter(Boolean).join(' ');
+      }
+    } else if (current.tipo === 'foam_roll' && !isBulletLine(lineRaw)) {
+      // BUG-1 FIX: handle non-bullet area lines within foam_roll blocks
+      const colonIdx = line.indexOf(':');
+      if (colonIdx > 0 && colonIdx < line.length - 1) {
+        current.areas.push({ nome: line.slice(0, colonIdx).trim(), tempo: line.slice(colonIdx + 1).trim() });
+      } else {
+        current.descricao = [current.descricao, line].filter(Boolean).join(' ');
+      }
     } else if (current.tipo === 'conditioning' && isBulletLine(lineRaw)) {
       const { nome, valor } = parseBulletItem(lineRaw);
       if (nome) current.itens.push({ nome, prescricao: valor });
