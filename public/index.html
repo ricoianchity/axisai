@@ -8827,13 +8827,30 @@ function updateFirstWorkoutCTA() {
   cta.style.display = treinos.length > 0 ? 'none' : '';
 }
 
-function renderFmsPreviewCard() {
+async function renderFmsPreviewCard() {
   const container = document.getElementById('fms-preview-card');
   if (!container) return;
 
   const profile = JSON.parse(localStorage.getItem('axisai_profile') || '{}');
-  const fmsLatest = JSON.parse(localStorage.getItem('axisai_fms_latest') || '{}');
-  const fms = profile.fms || fmsLatest.fms || fmsLatest.scores || null;
+  let fmsLatest = JSON.parse(localStorage.getItem('axisai_fms_latest') || '{}');
+  if (state.user?.id) {
+    try {
+      const { data: fmsRow } = await supabase
+        .from('fms_assessments')
+        .select('fms, date, photos')
+        .eq('user_id', state.user.id)
+        .order('date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (fmsRow?.fms) {
+        fmsLatest = fmsRow;
+        localStorage.setItem('axisai_fms_latest', JSON.stringify(fmsRow));
+      }
+    } catch(e) {
+      console.warn('[dashboard] FMS fallback para localStorage:', e);
+    }
+  }
+  const fms = fmsLatest.fms || profile.fms || null;
 
   if (!fms || Object.keys(fms).length === 0) {
     container.innerHTML = `
@@ -12804,7 +12821,7 @@ async function saveProfile(silent = false) {
   if (!silent) showToast('Perfil salvo com sucesso! ✅');
 }
 
-function saveFMS() {
+async function saveFMS() {
   const vals = {};
   ['dos','il','hs','sm','aslr','tspu'].forEach(k => { const v = document.getElementById('p-fms-' + k).value; if (v !== '') vals[k] = parseInt(v); });
   const tt = document.getElementById('p-fms-tt').value;
@@ -12823,8 +12840,8 @@ function saveFMS() {
   if (fms.tt === 'negative') flags.push('toe_touch_negative');
   state.profile.risk_flags = flags.length > 0 ? flags : ['none'];
 
-  setFmsLatest(state.profile.fms);
-  saveProfile(true);
+  await setFmsLatest(state.profile.fms);
+  await saveProfile(true);
   refreshDashboard();
   showToast('FMS salvo! ' + (flags.length > 0 ? flags.length + ' flag(s) ⚠️' : 'Sem disfunções ✅'));
 }
