@@ -8211,6 +8211,118 @@ let _workoutsActiveTab = 'active';
 let _inlineSession = null;
 let _inlineSessionTimer = null;
 
+// ── BUG-2 FIX: Persist active session state across tab navigation ─────────
+const _INLINE_SESSION_KEY = 'axisai_inline_session';
+
+function _saveInlineSessionState() {
+  if (!_inlineSession || _inlineSession.finished) {
+    localStorage.removeItem(_INLINE_SESSION_KEY);
+    return;
+  }
+  try {
+    const snap = {
+      workoutId:    _inlineSession.workoutId,
+      title:        _inlineSession.title,
+      conteudo:     _inlineSession.conteudo,
+      source:       _inlineSession.source,
+      sourceIndex:  _inlineSession.sourceIndex,
+      cardDomId:    _inlineSession.cardDomId,
+      startedAtMs:  _inlineSession.startedAtMs,
+      startedAtIso: _inlineSession.startedAtIso,
+      timerSecs:    _inlineSession.timerSecs,
+      blocks:       _inlineSession.blocks.map(b => ({
+        name: b.name, color: b.color, hasLoads: b.hasLoads,
+        done: b.done, conteudo: b.conteudo,
+        exercises: b.exercises
+      })),
+      finished:       _inlineSession.finished,
+      sessionLogId:   _inlineSession.sessionLogId || null,
+      realWorkoutId:  _inlineSession.realWorkoutId || null
+    };
+    localStorage.setItem(_INLINE_SESSION_KEY, JSON.stringify(snap));
+  } catch (e) { console.warn('[BUG-2] save session state error:', e); }
+}
+
+function _clearInlineSessionState() {
+  localStorage.removeItem(_INLINE_SESSION_KEY);
+}
+
+function _getPersistedSession() {
+  try {
+    const raw = localStorage.getItem(_INLINE_SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) { return null; }
+}
+
+function _restoreInlineSession() {
+  const snap = _getPersistedSession();
+  if (!snap || snap.finished) { _clearInlineSessionState(); return false; }
+
+  // Find the card in the re-rendered DOM
+  const card = document.getElementById(snap.cardDomId);
+  if (!card) {
+    console.warn('[BUG-2] restore: card not found in DOM:', snap.cardDomId);
+    return false;
+  }
+  const body = card.querySelector('.session-card-body');
+  if (!body) { console.warn('[BUG-2] restore: body not found'); return false; }
+
+  // Rebuild the _inlineSession from snapshot
+  _stopInlineSessionTimer();
+  _inlineSession = {
+    workoutId:    snap.workoutId,
+    title:        snap.title,
+    conteudo:     snap.conteudo,
+    source:       snap.source,
+    sourceIndex:  snap.sourceIndex,
+    cardDomId:    snap.cardDomId,
+    cardEl:       card,
+    bodyEl:       body,
+    startedAtMs:  snap.startedAtMs,
+    startedAtIso: snap.startedAtIso,
+    timerSecs:    snap.timerSecs || Math.floor((Date.now() - snap.startedAtMs) / 1000),
+    blocks:       snap.blocks,
+    finished:     false,
+    sessionLogId:   snap.sessionLogId || null,
+    realWorkoutId:  snap.realWorkoutId || null
+  };
+
+  // Re-render the session UI
+  card.classList.add('session-active');
+  body.classList.add('open');
+  _renderInlineSessionBody();
+  _injectInlineTimer();
+
+  // Update timer display with elapsed time
+  const formatted = _formatClock(_inlineSession.timerSecs);
+  const timer = document.getElementById(`timer-${_inlineSession.cardDomId}`);
+  if (timer) timer.textContent = formatted;
+  const stickyTimer = document.getElementById(`sticky-timer-${_inlineSession.cardDomId}`);
+  if (stickyTimer) stickyTimer.textContent = formatted;
+
+  // Update start button to show "Em andamento"
+  const startBtn = card.querySelector('.btn-start-session');
+  if (startBtn) {
+    startBtn.disabled = true;
+    startBtn.style.opacity = '0.6';
+    startBtn.textContent = 'Em andamento';
+  }
+
+  // Restart timer interval
+  _inlineSessionTimer = setInterval(() => {
+    if (!_inlineSession || _inlineSession.finished) return;
+    _inlineSession.timerSecs += 1;
+    const fmt = _formatClock(_inlineSession.timerSecs);
+    const t = document.getElementById(`timer-${_inlineSession.cardDomId}`);
+    if (t) t.textContent = fmt;
+    const st = document.getElementById(`sticky-timer-${_inlineSession.cardDomId}`);
+    if (st) st.textContent = fmt;
+  }, 1000);
+
+  console.log('[BUG-2] Session restored for workoutId:', snap.workoutId, 'elapsed:', _inlineSession.timerSecs + 's');
+  return true;
+}
+
 function _getWorkoutCardDomId(source, workoutId) {
   const cleanSource = String(source || 'wk').replace(/[^a-zA-Z0-9_-]/g, '');
   const cleanId = String(workoutId || Date.now()).replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -8324,6 +8436,35 @@ function renderWorkouts() {
   c.innerHTML = html;
   updateTabBadges();
   renderCompletedWorkouts();
+
+  // BUG-2 FIX: restore active session after re-render
+  if (_inlineSession && !_inlineSession.finished) {
+    // Session exists in memory but DOM was destroyed → re-bind
+    const existingCard = document.getElementById(_inlineSession.cardDomId);
+    if (existingCard) {
+      const existingBody = existingCard.querySelector('.session-card-body');
+      if (existingBody) {
+        _inlineSession.cardEl = existingCard;
+        _inlineSession.bodyEl = existingBody;
+        existingCard.classList.add('session-active');
+        existingBody.classList.add('open');
+        _renderInlineSessionBody();
+        _injectInlineTimer();
+        const fmt = _formatClock(_inlineSession.timerSecs);
+        const st = document.getElementById(`sticky-timer-${_inlineSession.cardDomId}`);
+        if (st) st.textContent = fmt;
+        const startBtn = existingCard.querySelector('.btn-start-session');
+        if (startBtn) {
+          startBtn.disabled = true;
+          startBtn.style.opacity = '0.6';
+          startBtn.textContent = 'Em andamento';
+        }
+        return;
+      }
+    }
+  }
+  // Try restoring from localStorage
+  _restoreInlineSession();
 }
 
 function switchWorkoutsTab(tab) {
@@ -10171,6 +10312,15 @@ function parseTreino(conteudo) {
 }
 
 function startSessionById(id, btn) {
+  // BUG-2 FIX: detect persisted session and resume
+  const persisted = _getPersistedSession();
+  if (persisted && !persisted.finished && persisted.workoutId === String(id)) {
+    if (_restoreInlineSession()) {
+      showToast('Sessão retomada!', false);
+      return;
+    }
+  }
+
   const treino = loadTreinosIA().find(t => t.id == id);
   if (!treino) { showToast('Treino não encontrado.', true); return; }
   const card = btn?.closest('.session-card') || null;
@@ -10187,9 +10337,20 @@ function startSessionById(id, btn) {
 function startSessionByWorkout(idx, btn) {
   const w = state.workouts[idx];
   if (!w) { showToast('Treino não encontrado.', true); return; }
+
+  // BUG-2 FIX: detect persisted session and resume
+  const wId = String(w.id ?? idx);
+  const persisted = _getPersistedSession();
+  if (persisted && !persisted.finished && persisted.workoutId === wId) {
+    if (_restoreInlineSession()) {
+      showToast('Sessão retomada!', false);
+      return;
+    }
+  }
+
   const card = btn?.closest('.session-card') || null;
   _startInlineSession({
-    workoutId: String(w.id ?? idx),
+    workoutId: wId,
     title: w.title || 'Treino',
     conteudo: w.conteudo || w.content || w.details || '',
     card,
@@ -10319,13 +10480,17 @@ function _startInlineSession({ workoutId, title, conteudo, card, source, sourceI
     return;
   }
 
-  if (_inlineSession && _inlineSession.workoutId !== String(workoutId)) {
+  if (_inlineSession && _inlineSession.workoutId !== String(workoutId) && !_inlineSession.finished) {
     showToast('Finalize a sessão atual antes de iniciar outro treino.', true);
     return;
   }
   if (_inlineSession && _inlineSession.workoutId === String(workoutId) && !_inlineSession.finished) {
-    showToast('Sessão já em andamento neste treino.', false);
-    return;
+    // BUG-2 FIX: re-bind DOM if session exists but DOM is stale
+    if (_inlineSession.cardEl && _inlineSession.cardEl.isConnected) {
+      showToast('Sessão já em andamento neste treino.', false);
+      return;
+    }
+    // DOM was destroyed (tab switch) — allow re-creation
   }
 
   const cardDomId = card.id || _getWorkoutCardDomId(source, workoutId);
@@ -10358,6 +10523,9 @@ function _startInlineSession({ workoutId, title, conteudo, card, source, sourceI
   body.classList.add('open');
   _renderInlineSessionBody();  // body.innerHTML setado ANTES da injeção do sticky bar
   _injectInlineTimer();        // prepend sticky bar DEPOIS — não será sobrescrito
+
+  // BUG-2 FIX: persist session state
+  _saveInlineSessionState();
 
   const startBtn = card.querySelector('.btn-start-session');
   if (startBtn) {
@@ -10596,6 +10764,8 @@ function markBlockDone(workoutId, blockIdx, event) {
       if (btn) btn.textContent = block.done ? 'Desmarcar' : 'Marcar como concluído';
     }
     _updateInlineProgress();
+    // BUG-2 FIX: persist block done state
+    _saveInlineSessionState();
 
     // FE-002 / TASK 3: persistir exercise_logs ao marcar bloco como concluído
     if (block.done) {
@@ -10720,6 +10890,8 @@ function finishSession(workoutId) {
 
   _stopInlineSessionTimer();
   _inlineSession.finished = true;
+  // BUG-2 FIX: clear persisted session on finish
+  _clearInlineSessionState();
   const durationSeconds = Math.max(1, _inlineSession.timerSecs || 0);
   const volumeKg = _computeInlineVolumeKg(_inlineSession.cardEl);
   const key = _inlineSession.cardDomId;
@@ -10888,6 +11060,7 @@ async function saveSession(workoutId, durationSeconds, volumeKg) {
 
     _stopInlineSessionTimer();
     _inlineSession = null;
+    _clearInlineSessionState(); // BUG-2 FIX
     renderWorkouts();
     await renderCompletedWorkouts();
     updateStreakAndConsistency();
