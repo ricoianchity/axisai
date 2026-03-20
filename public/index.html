@@ -12937,7 +12937,6 @@ async function saveProfile(silent = false) {
     estresse_ocup:  document.getElementById('p-estresse-ocup')?.value  || state.profile?.estresse_ocup  || '',
     turno_trabalho: document.getElementById('p-turno')?.value          || state.profile?.turno_trabalho || '',
   };
-  state.profile = { ...state.profile, ...p };
   // Normalizar equipment para array antes do upsert
   if (equipmentArray.length === 0 && state.profile?.equipment) {
     if (typeof state.profile.equipment === 'string') {
@@ -12946,8 +12945,14 @@ async function saveProfile(silent = false) {
       equipmentArray = state.profile.equipment;
     }
   }
-  state.profile = { ...state.profile, equipment: equipmentArray };
+  state.profile = { ...state.profile, ...p, equipment: equipmentArray };
   const profilePayload = { ...state.profile, user_id: state.user?.id };
+  // Garantias de tipo antes do upsert
+  if (typeof profilePayload.equipment === 'string') {
+    try { profilePayload.equipment = JSON.parse(profilePayload.equipment); } catch(e) { profilePayload.equipment = []; }
+  }
+  if (!Array.isArray(profilePayload.equipment)) profilePayload.equipment = equipmentArray;
+  if (!profilePayload.session_time && p.session_time) profilePayload.session_time = p.session_time;
   delete profilePayload.id;
   delete profilePayload.fmsPhotos; // keep photos local to avoid oversized profile payloads
   delete profilePayload.role; // never overwrite role from client-side profile save
