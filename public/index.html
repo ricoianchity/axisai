@@ -12380,7 +12380,25 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
         if (_healthMedications.includes('insulina') || _healthMedications.includes('metformina')) healthCtx += '\n⚠️ DIABETES/INSULINA: nunca prescrever treino em jejum. Monitorar sintomas.';
       }
     }
-    const systemPrompt = CORE_PROMPT + profileCtx + fmsCtx + flagCtx + healthCtx + readinessCtx + (needsReference ? REF_TABLES : '');
+    let loadCtx = '';
+    try {
+      const { data: recentLogs } = await supabase
+        .from('exercise_logs')
+        .select('exercise_name, set_number, load_kg, reps, completed_at')
+        .eq('user_id', state.user.id)
+        .order('completed_at', { ascending: false })
+        .limit(40);
+      if (recentLogs && recentLogs.length > 0) {
+        const lines = recentLogs.map(l =>
+          `${l.exercise_name} | série ${l.set_number} | ${l.load_kg ?? '—'}kg x ${l.reps ?? '—'} reps`
+        ).join('\n');
+        loadCtx = `\n\n## HISTÓRICO RECENTE DE CARGAS (últimas sessões)\n${lines}`;
+      }
+    } catch(e) {
+      console.warn('[chat] Falha ao carregar exercise_logs:', e);
+    }
+
+    const systemPrompt = CORE_PROMPT + profileCtx + fmsCtx + flagCtx + healthCtx + readinessCtx + loadCtx + (needsReference ? REF_TABLES : '');
 
     const historico = Array.isArray(state.chatHistory) ? state.chatHistory : [];
     let mensagensParaEnviar = historico.slice(-10);
