@@ -12850,8 +12850,16 @@ async function saveProfile(silent = false) {
   delete profilePayload.id;
   delete profilePayload.fmsPhotos; // keep photos local to avoid oversized profile payloads
   delete profilePayload.role; // never overwrite role from client-side profile save
-  await saveData('profiles', profilePayload, 'axisai_profile');
-  localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .upsert(profilePayload, { onConflict: 'user_id' });
+    if (error) console.warn('[saveProfile] Supabase error:', error.message);
+    else localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
+  } catch(e) {
+    console.warn('[saveProfile] fallback localStorage:', e);
+    localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
+  }
   refreshChatSidebar();
   if (!silent) showToast('Perfil salvo com sucesso! ✅');
 }
