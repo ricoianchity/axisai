@@ -1356,6 +1356,8 @@
     .fms-rx-cols { grid-template-columns: 1fr; }
     .fms-rx-photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .hero-banner { flex-direction: column; }
+    #mobile-header-bar { display: flex !important; }
+    .btn-logout { display: none; }
   }
   @media (max-width: 480px) {
     .stats-grid { grid-template-columns: 1fr; }
@@ -2357,6 +2359,9 @@
       <a id="lp-cta-secondary" href="#" onclick="showAuthFromLanding('login'); return false;">
         Já tenho uma conta →
       </a>
+      <button id="lp-cta-continue" onclick="continueAsUser()" style="display:none;margin-top:12px;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer;">
+        CONTINUAR COMO <span id="lp-continue-name"></span> →
+      </button>
     </div>
   </div>
 
@@ -2922,6 +2927,9 @@
   </aside>
 
   <main class="main">
+    <div id="mobile-header-bar" style="display:none;align-items:center;justify-content:flex-end;padding:12px 16px 0;position:sticky;top:0;z-index:100;background:var(--bg);">
+      <button onclick="doLogout()" style="background:none;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:13px;padding:6px 14px;border-radius:6px;font-weight:700;letter-spacing:1px;">SAIR ↩</button>
+    </div>
 
     <!-- ── DASHBOARD ── -->
     <div class="page active" id="page-dashboard">
@@ -5339,6 +5347,12 @@ function showAuthFromLanding(tab) {
   if (typeof switchTab === 'function') switchTab(tab);
 }
 
+async function continueAsUser() {
+  const lp = document.getElementById('landing-page');
+  if (lp) lp.style.display = 'none';
+  await enterApp();
+}
+
 let _lpHeroRevealBound = false;
 
 function showLandingPage() {
@@ -5355,6 +5369,10 @@ function showLandingPage() {
     lp.style.display = 'block';
     lp.classList.remove('lp-text-revealed');
   }
+  const continueBtn = document.getElementById('lp-cta-continue');
+  const continueName = document.getElementById('lp-continue-name');
+  if (continueBtn) continueBtn.style.display = 'none';
+  if (continueName) continueName.textContent = '';
 
   window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
 
@@ -5544,6 +5562,16 @@ async function initApp() {
   document.getElementById('loading-overlay').style.display = 'flex';
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
+    const btn = document.getElementById('lp-cta-continue');
+    const nameEl = document.getElementById('lp-continue-name');
+    if (btn && nameEl && session?.user) {
+      const savedProfile = JSON.parse(localStorage.getItem('axisai_profile') || '{}');
+      const name = savedProfile.display_name || session.user.email?.split('@')[0] || '';
+      if (name) {
+        nameEl.textContent = name.toUpperCase();
+        btn.style.display = 'block';
+      }
+    }
     if (error) {
       console.error('Session error:', error);
       document.getElementById('loading-overlay').style.display = 'none';
@@ -12362,6 +12390,9 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
 - Prontidão Alta (70-100): treino normal conforme fase planejada
 - Prontidão Moderada (40-69): reduza volume em 20%, mantenha intensidade ou reduza levemente, priorize movimentos de menor impacto articular
 - Prontidão Baixa (0-39): sessão de recuperação ativa ou técnica — sem trabalho de alta intensidade, foque em mobilidade, ativação e movimentos do padrão de baixo risco do FMS do atleta`;
+      if (rdToday?.menstrual_phase === true || rdToday?.menstrual_phase === 'true') {
+        readinessCtx += '\n⚠️ CICLO MENSTRUAL: atleta em período menstrual hoje. Reduzir intensidade 10-15%, priorizar técnica e mobilidade, evitar esforços máximos. Ajustar score de prontidão -10 pontos.';
+      }
     } else {
       readinessCtx = '\n\nSem dados de prontidão hoje — prescreva com base no histórico recente e no planejamento de fase.';
     }
@@ -13351,7 +13382,7 @@ function getCheckinData() {
   return JSON.parse(localStorage.getItem('axisai_checkin') || 'null');
 }
 async function saveCheckinData(data) {
-  const payload = { ...data, user_id: state.user?.id, date: today() };
+  const payload = { ...data, menstrual_phase: data?.menstrual_phase ?? null, user_id: state.user?.id, date: today() };
   await saveData('checkins', payload, 'axisai_checkin');
   // Também persiste em readiness_logs (tabela canônica para dados diários de prontidão)
   try {
@@ -13492,6 +13523,14 @@ function _updateCheckinPreview() {
   if (lbl) { lbl.textContent = band.label; lbl.style.color = band.color; }
 }
 
+const READINESS_FIELDS = [
+  { key: 'sleep', field: 'sleep_quality', icon: '😴', label: 'Qualidade do sono', hint: '1 = péssimo · 5 = ótimo' },
+  { key: 'energy', field: 'energy_level', icon: '⚡', label: 'Nível de energia', hint: '1 = sem energia · 5 = energizado' },
+  { key: 'soreness', field: 'muscle_soreness', icon: '💪', label: 'Dor muscular', hint: '1 = sem dor · 5 = muito dolorido' },
+  { key: 'stress', field: 'stress_level', icon: '🧠', label: 'Nível de estresse', hint: '1 = calmo · 5 = muito estressado' },
+  { key: 'menstrual', field: 'menstrual_phase', icon: '🔴', label: 'Período menstrual', hint: 'Você está no período menstrual hoje?' }
+];
+
 function openCheckinFlow() {
   const existing = document.getElementById('checkin-modal');
   if (existing) existing.remove();
@@ -13503,15 +13542,15 @@ function openCheckinFlow() {
     energy_level:    r ? r.energy_level    : 3,
     muscle_soreness: r ? r.muscle_soreness : 2,
     stress_level:    r ? r.stress_level    : 2,
+    menstrual_phase: r ? (r.menstrual_phase === true || r.menstrual_phase === 'true') : false,
     notes:           r ? (r.notes || '')   : ''
   };
 
-  const sliders = [
-    { key: 'sleep',   field: 'sleep_quality',   icon: '😴', label: 'Qualidade do sono', hint: '1 = péssimo · 5 = ótimo' },
-    { key: 'energy',  field: 'energy_level',    icon: '⚡',  label: 'Nível de energia',  hint: '1 = sem energia · 5 = energizado' },
-    { key: 'soreness',field: 'muscle_soreness', icon: '💪', label: 'Dor muscular',       hint: '1 = sem dor · 5 = muito dolorido' },
-    { key: 'stress',  field: 'stress_level',    icon: '🧠', label: 'Nível de estresse',  hint: '1 = calmo · 5 = muito estressado' }
-  ];
+  const readinessFields = READINESS_FIELDS.filter(s => {
+    if (s.key !== 'menstrual') return true;
+    const sex = String(state.profile?.sex || '').toLowerCase();
+    return sex === 'female' || sex === 'feminino';
+  });
 
   const modal = document.createElement('div');
   modal.id = 'checkin-modal';
@@ -13526,7 +13565,21 @@ function openCheckinFlow() {
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:18px;">
-        ${sliders.map(s => `
+        ${readinessFields.map(s => {
+          if (s.key === 'menstrual') {
+            return `
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+              <span style="font-size:13px;color:var(--muted);">${s.icon} ${s.label}</span>
+            </div>
+            <select id="ci-${s.key}" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-size:13px;">
+              <option value="false" ${defaults[s.field] ? '' : 'selected'}>Não</option>
+              <option value="true" ${defaults[s.field] ? 'selected' : ''}>Sim</option>
+            </select>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">${s.hint}</div>
+          </div>`;
+          }
+          return `
           <div>
             <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
               <span style="font-size:13px;color:var(--muted);">${s.icon} ${s.label}</span>
@@ -13538,7 +13591,8 @@ function openCheckinFlow() {
               <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
             </div>
             <div style="font-size:10px;color:var(--muted);margin-top:2px;">${s.hint}</div>
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
         <div>
           <div style="font-size:13px;color:var(--muted);margin-bottom:4px;">📝 Observações (opcional)</div>
           <textarea id="ci-notes" rows="2" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-size:13px;resize:none;" placeholder="Ex: pernas doloridas do treino anterior...">${defaults.notes}</textarea>
@@ -13552,14 +13606,17 @@ function openCheckinFlow() {
   document.body.appendChild(modal);
 
   // Live labels + score preview
-  ['sleep','energy','soreness','stress'].forEach(key => {
-    const input = document.getElementById('ci-' + key);
-    const label = document.getElementById('ci-' + key + '-val');
-    input.addEventListener('input', () => {
-      label.textContent = input.value;
-      _updateCheckinPreview();
+  readinessFields
+    .filter(s => s.key !== 'menstrual')
+    .forEach(s => {
+      const input = document.getElementById('ci-' + s.key);
+      const label = document.getElementById('ci-' + s.key + '-val');
+      if (!input || !label) return;
+      input.addEventListener('input', () => {
+        label.textContent = input.value;
+        _updateCheckinPreview();
+      });
     });
-  });
   _updateCheckinPreview();
 }
 
@@ -13583,6 +13640,8 @@ async function submitCheckin() {
     muscle_soreness: parseInt(document.getElementById('ci-soreness').value),
     stress_level:    parseInt(document.getElementById('ci-stress').value)
   };
+  const menstrualEl = document.getElementById('ci-menstrual');
+  const menstrual_phase = menstrualEl ? menstrualEl.value === 'true' : null;
   const notes           = (document.getElementById('ci-notes')?.value || '').trim();
   const readiness_score = calculateReadinessScore(vals);
 
@@ -13590,6 +13649,7 @@ async function submitCheckin() {
     user_id: session.user.id,   // usa ID da sessão ativa, não do state (mais seguro)
     date:    today(),
     ...vals,
+    menstrual_phase,
     readiness_score,
     notes: notes || null
   };
