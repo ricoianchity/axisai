@@ -6912,6 +6912,7 @@ async function navigate(page) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const target = document.getElementById('page-' + page);
   if (target) target.classList.add('active');
+  if (page === 'profile') loadProfile();
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick')?.includes("'" + page + "'")) n.classList.add('active');
   });
@@ -6924,7 +6925,7 @@ async function navigate(page) {
   }
   if (page === 'performance') await loadPerformanceTab();
   if (page === 'diagnosis') renderFmsResults();
-  if (page === 'profile') { loadProfile(); loadProfileHealth(); }
+  if (page === 'profile') loadProfileHealth();
   if (page === 'nutrition') renderNutrition();
   if (page === 'admin') await loadAdminPage();
 }
