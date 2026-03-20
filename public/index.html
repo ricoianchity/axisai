@@ -12782,6 +12782,37 @@ async function loadProfile() {
     }
   }
 
+  if (state.user?.id) {
+    try {
+      const { data: fmsRow } = await supabase
+        .from('fms_assessments')
+        .select('fms, date, photos')
+        .eq('user_id', state.user.id)
+        .order('date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (fmsRow?.fms) {
+        // Calcular risk_flags a partir do fms
+        const f = fmsRow.fms;
+        const flags = [];
+        if (!state.profile) state.profile = {};
+        if (f.dos !== undefined && f.dos <= 1) flags.push('squat_dysfunction');
+        if (f.il  !== undefined && f.il  <= 1) flags.push('lunge_dysfunction');
+        if (f.hs  !== undefined && f.hs  <= 1) flags.push('hip_instability');
+        if (f.sm  !== undefined && f.sm  <= 1) flags.push('shoulder_restriction');
+        if (f.aslr !== undefined && f.aslr <= 1) flags.push('hamstring_restriction');
+        if (f.tt === 'negative') flags.push('toe_touch_negative');
+        state.profile.fms = f;
+        state.profile.risk_flags = flags.length > 0 ? flags : ['none'];
+        state.fmsLatest = { fms: f, date: fmsRow.date, photos: fmsRow.photos };
+        localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
+        localStorage.setItem('axisai_fms_latest', JSON.stringify(state.fmsLatest));
+      }
+    } catch(e) {
+      console.warn('[loadProfile] fms_assessments fallback:', e);
+    }
+  }
+
   const saved = localStorage.getItem('axisai_profile');
   if (saved) {
     state.profile = JSON.parse(saved);
@@ -12816,6 +12847,8 @@ async function loadProfile() {
     if (p.estresse_ocup) { const el = document.getElementById('p-estresse-ocup');  if (el) el.value = p.estresse_ocup; }
     if (p.turno_trabalho){ const el = document.getElementById('p-turno');           if (el) el.value = p.turno_trabalho; }
   }
+  // Chamar refreshChatSidebar após tudo carregado
+  if (typeof refreshChatSidebar === 'function') refreshChatSidebar();
   updateCoachNavIndicator();
 }
 
