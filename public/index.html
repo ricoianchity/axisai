@@ -4804,6 +4804,7 @@
                     <label class="comorbidity-item"><input type="checkbox" class="p-equipment" value="Sled/Trenó"> Sled/Trenó</label>
                     <label class="comorbidity-item"><input type="checkbox" class="p-equipment" value="Bicicleta/Rower"> Bicicleta/Rower</label>
                     <label class="comorbidity-item"><input type="checkbox" class="p-equipment" value="Apenas peso corporal"> Peso corporal</label>
+                    <label class="comorbidity-item"><input type="checkbox" class="p-equipment" value="Medicine Ball"> Medicine Ball</label>
                   </div>
                 </div>
               </div>
@@ -12381,6 +12382,17 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
         if (_healthMedications.includes('insulina') || _healthMedications.includes('metformina')) healthCtx += '\n⚠️ DIABETES/INSULINA: nunca prescrever treino em jejum. Monitorar sintomas.';
       }
     }
+    let profCtx = '';
+    const prof = state.profile;
+    if (prof?.profissao || prof?.perfil_postural || prof?.estresse_ocup) {
+      profCtx = '\n\nROTINA PROFISSIONAL DO ATLETA:';
+      if (prof.profissao)      profCtx += `\nProfissão: ${prof.profissao}`;
+      if (prof.horas_trabalho) profCtx += `\nHoras de trabalho/dia: ${prof.horas_trabalho}h`;
+      if (prof.perfil_postural) profCtx += `\nPerfil postural: ${prof.perfil_postural}`;
+      if (prof.horas_sentado)  profCtx += `\nHoras sentado/dia: ${prof.horas_sentado}h`;
+      if (prof.estresse_ocup)  profCtx += `\nEstresse ocupacional: ${prof.estresse_ocup}`;
+      if (prof.turno_trabalho) profCtx += `\nTurno: ${prof.turno_trabalho}`;
+    }
     let loadCtx = '';
     try {
       const { data: recentLogs } = await supabase
@@ -12399,7 +12411,7 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
       console.warn('[chat] Falha ao carregar exercise_logs:', e);
     }
 
-    const systemPrompt = CORE_PROMPT + profileCtx + fmsCtx + flagCtx + healthCtx + readinessCtx + loadCtx + (needsReference ? REF_TABLES : '');
+    const systemPrompt = CORE_PROMPT + profileCtx + fmsCtx + flagCtx + healthCtx + profCtx + readinessCtx + loadCtx + (needsReference ? REF_TABLES : '');
 
     const historico = Array.isArray(state.chatHistory) ? state.chatHistory : [];
     let mensagensParaEnviar = historico.slice(-10);
@@ -12762,8 +12774,16 @@ async function saveProfileHealth() {
   delete profilePayload.id;
   delete profilePayload.fmsPhotos; // keep photos local to avoid oversized profile payloads
   delete profilePayload.role;
-  await saveData('profiles', profilePayload, 'axisai_profile');
-  localStorage.setItem('axisai_profile', JSON.stringify(updatedProfile));
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .upsert(profilePayload, { onConflict: 'user_id' });
+    if (error) console.warn('[saveProfileHealth] Supabase error:', error.message);
+    else localStorage.setItem('axisai_profile', JSON.stringify(updatedProfile));
+  } catch(e) {
+    console.warn('[saveProfileHealth] fallback localStorage:', e);
+    localStorage.setItem('axisai_profile', JSON.stringify(updatedProfile));
+  }
 
   // Update greeting in sidebar/dashboard
   const nameEl = document.getElementById('user-display-name');
