@@ -12931,6 +12931,13 @@ async function saveProfile(silent = false) {
     turno_trabalho: document.getElementById('p-turno')?.value          || state.profile?.turno_trabalho || '',
   };
   state.profile = { ...state.profile, ...p };
+  // Garantir que equipment é array antes do upsert
+  if (typeof state.profile?.equipment === 'string') {
+    try { state.profile.equipment = JSON.parse(state.profile.equipment); } catch(e) {}
+  }
+  if (!Array.isArray(state.profile?.equipment)) {
+    state.profile.equipment = equipment;
+  }
   const profilePayload = { ...state.profile, user_id: state.user?.id };
   delete profilePayload.id;
   delete profilePayload.fmsPhotos; // keep photos local to avoid oversized profile payloads
