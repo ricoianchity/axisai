@@ -12745,7 +12745,7 @@ async function saveProfileHealth() {
 // ═══════════════════════════════════════════════
 //  PROFILE
 // ═══════════════════════════════════════════════
-function loadProfile() {
+async function loadProfile() {
   // Restore fmsLatest from dedicated localStorage key
   if (!state.fmsLatest) {
     const savedFms = localStorage.getItem('axisai_fms_latest');
@@ -12763,6 +12763,22 @@ function loadProfile() {
           state.fmsLatest = { fms: prof.fms, date: null };
         }
       } catch(e) {}
+    }
+  }
+
+  if (state.user?.id) {
+    try {
+      const { data: remoteProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', state.user.id)
+        .maybeSingle();
+      if (remoteProfile) {
+        state.profile = { ...state.profile, ...remoteProfile };
+        localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
+      }
+    } catch(e) {
+      console.warn('[loadProfile] Supabase fallback para localStorage:', e);
     }
   }
 
