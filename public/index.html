@@ -12557,7 +12557,39 @@ function refreshChatSidebar() {
   const activeFlags = (p.risk_flags || []).filter(f => f !== 'none');
   const rfSummary = document.getElementById('risk-flags-summary');
   const labels = { squat_dysfunction:'⚠️ Disfunção de Agachamento', lunge_dysfunction:'⚠️ Disfunção de Avanço', hip_instability:'⚠️ Instabilidade de Quadril', shoulder_restriction:'⚠️ Restrição de Ombro', hamstring_restriction:'⚠️ Restrição de Isquiotibiais', apt:'⚠️ Hiperlordose (APT)', rib_flare:'⚠️ Costelas Abertas', knee_valgus:'⚠️ Valgo de Joelho', toe_touch_negative:'⚠️ Toe Touch Negativo' };
-  rfSummary.innerHTML = activeFlags.length > 0 ? activeFlags.map(f => `<span style="display:block;font-size:13px;color:#fca5a5;margin-bottom:4px;">${labels[f]||f}</span>`).join('') : `Nenhum diagnóstico ainda. <button onclick="navigate('diagnosis')" style="color:var(--green);background:none;border:none;cursor:pointer;font-size:13px;">Fazer avaliação →</button>`;
+  const fms = p.fms || {};
+  const fmsKeys = ['dos','il','hs','sm','aslr','tspu'];
+  const fmsLabels = { dos:'DOS', il:'IL', hs:'HS', sm:'SM', aslr:'ASLR', tspu:'TSPU' };
+  const hasFms = fmsKeys.some(k => fms[k] !== undefined && fms[k] !== null);
+
+  if (!hasFms) {
+    rfSummary.innerHTML = `Nenhum diagnóstico ainda. <button onclick="navigate('diagnosis')" style="color:var(--green);background:none;border:none;cursor:pointer;font-size:13px;">Fazer avaliação →</button>`;
+  } else {
+    const total = fmsKeys.reduce((acc, k) => acc + (Number.isInteger(fms[k]) ? fms[k] : 0), 0);
+    const max = fmsKeys.filter(k => Number.isInteger(fms[k])).length * 3;
+    const pct = max > 0 ? total / max : 0;
+    const riskLabel = pct >= 0.83 ? '✅ Baixo risco' : pct >= 0.67 ? '⚠️ Risco moderado' : '🔴 Alto risco';
+    const riskColor = pct >= 0.83 ? 'var(--green)' : pct >= 0.67 ? '#fbbf24' : '#ef4444';
+
+    const scoresHtml = fmsKeys
+      .filter(k => Number.isInteger(fms[k]))
+      .map(k => {
+        const score = fms[k];
+        const color = score === 3 ? 'var(--green)' : score === 2 ? '#fbbf24' : '#ef4444';
+        return `<span style="font-size:12px;color:var(--muted);">${fmsLabels[k]}: <strong style="color:${color};">${score}</strong></span>`;
+      }).join('<span style="color:var(--muted);margin:0 4px;">·</span>');
+
+    const flagsHtml = activeFlags.length > 0
+      ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">${activeFlags.map(f => `<span style="display:block;font-size:12px;color:#fca5a5;margin-bottom:3px;">${labels[f]||f}</span>`).join('')}</div>`
+      : '';
+
+    rfSummary.innerHTML = `
+      <div style="margin-bottom:6px;font-size:12px;font-weight:700;color:${riskColor};">${riskLabel} — ${total}/${max}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;">${scoresHtml}</div>
+      ${fms.tt ? `<div style="font-size:12px;color:var(--muted);">Toe Touch: <strong style="color:${fms.tt==='positive'?'var(--green)':'#ef4444'}">${fms.tt==='positive'?'Positivo':'Negativo'}</strong></div>` : ''}
+      ${flagsHtml}
+    `;
+  }
 }
 
 // ═══════════════════════════════════════════════
