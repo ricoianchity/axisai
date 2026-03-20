@@ -12827,6 +12827,11 @@ async function loadProfile() {
         .maybeSingle();
       if (remoteProfile) {
         state.profile = { ...state.profile, ...remoteProfile };
+        // Normalizar equipment para array
+        if (typeof state.profile.equipment === 'string') {
+          try { state.profile.equipment = JSON.parse(state.profile.equipment); } catch(e) { state.profile.equipment = []; }
+        }
+        if (!Array.isArray(state.profile.equipment)) state.profile.equipment = [];
         localStorage.setItem('axisai_profile', JSON.stringify(state.profile));
       }
     } catch(e) {
@@ -12868,6 +12873,11 @@ async function loadProfile() {
   const saved = localStorage.getItem('axisai_profile');
   if (saved) {
     state.profile = JSON.parse(saved);
+    // Normalizar equipment para array
+    if (typeof state.profile.equipment === 'string') {
+      try { state.profile.equipment = JSON.parse(state.profile.equipment); } catch(e) { state.profile.equipment = []; }
+    }
+    if (!Array.isArray(state.profile.equipment)) state.profile.equipment = [];
     const p = state.profile;
     if (p.age) document.getElementById('p-age').value = p.age;
     if (p.weight) document.getElementById('p-weight').value = p.weight;
@@ -12905,10 +12915,7 @@ async function loadProfile() {
 }
 
 async function saveProfile(silent = false) {
-  const equipmentEls = document.querySelectorAll('.p-equipment');
-  const equipment = equipmentEls.length
-    ? Array.from(document.querySelectorAll('.p-equipment:checked')).map(e => e.value)
-    : (Array.isArray(state.profile?.equipment) ? state.profile.equipment : []);
+  let equipmentArray = Array.from(document.querySelectorAll('.p-equipment:checked')).map(e => e.value);
 
   const p = {
     age: document.getElementById('p-age')?.value || state.profile?.age,
@@ -12919,7 +12926,7 @@ async function saveProfile(silent = false) {
     gym: document.getElementById('p-gym')?.value || state.profile?.gym,
     frequency: document.getElementById('p-frequency')?.value || state.profile?.frequency,
     session_time: document.getElementById('p-session-time')?.value || state.profile?.session_time,
-    equipment,
+    equipment: equipmentArray,
     injuries: document.getElementById('p-injuries')?.value || state.profile?.injuries,
     risk_flags: state.profile?.risk_flags || [],
     fms: state.profile?.fms || {},
@@ -12931,13 +12938,15 @@ async function saveProfile(silent = false) {
     turno_trabalho: document.getElementById('p-turno')?.value          || state.profile?.turno_trabalho || '',
   };
   state.profile = { ...state.profile, ...p };
-  // Garantir que equipment é array antes do upsert
-  if (typeof state.profile?.equipment === 'string') {
-    try { state.profile.equipment = JSON.parse(state.profile.equipment); } catch(e) {}
+  // Normalizar equipment para array antes do upsert
+  if (equipmentArray.length === 0 && state.profile?.equipment) {
+    if (typeof state.profile.equipment === 'string') {
+      try { equipmentArray = JSON.parse(state.profile.equipment); } catch(e) { equipmentArray = []; }
+    } else if (Array.isArray(state.profile.equipment)) {
+      equipmentArray = state.profile.equipment;
+    }
   }
-  if (!Array.isArray(state.profile?.equipment)) {
-    state.profile.equipment = equipment;
-  }
+  state.profile = { ...state.profile, equipment: equipmentArray };
   const profilePayload = { ...state.profile, user_id: state.user?.id };
   delete profilePayload.id;
   delete profilePayload.fmsPhotos; // keep photos local to avoid oversized profile payloads
