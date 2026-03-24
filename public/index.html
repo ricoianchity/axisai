@@ -1967,23 +1967,30 @@
   }
   @media (max-width: 560px) { .lp-grid { grid-template-columns: 1fr; } }
   .lp-card {
-    background: #111118;
-    border: 1px solid #1E1E2A;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: 16px;
-    padding: 28px;
+    padding: 28px 24px;
     transition: border-color 0.3s, box-shadow 0.3s;
   }
   .lp-card:hover {
     border-color: #00FF88;
     box-shadow: 0 0 20px rgba(0,255,136,0.1);
   }
-  .lp-card span { font-size: 28px; display: block; margin-bottom: 14px; }
-  .lp-card h3 { font-size: 16px; font-weight: 700; color: #F0F0F0; margin-bottom: 10px; }
-  .lp-card p  { font-size: 14px; color: #6A6A7A; line-height: 1.7; margin: 0; }
-  .lp-stats { display: flex; gap: 60px; margin-top: 60px; flex-wrap: wrap; }
-  .lp-stats div { text-align: left; }
-  .lp-stats span { display: block; font-size: 64px; font-weight: 800; color: #00FF88; line-height: 1; }
-  .lp-stats p { font-size: 14px; color: #6A6A7A; margin: 8px 0 0; max-width: 140px; }
+  .lp-card-icon { font-size: 28px; margin-bottom: 14px; }
+  .lp-card-title { font-size: 17px; font-weight: 700; color: #FFFFFF; margin-bottom: 10px; }
+  .lp-card-desc { font-size: 14px; color: #8A8A9A; line-height: 1.7; }
+  .lp-stats { display: flex; gap: 24px; margin-top: 60px; flex-wrap: wrap; }
+  .lp-stats div {
+    text-align: left;
+    flex: 1 1 240px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 18px 20px;
+  }
+  .lp-stats span { display: none; }
+  .lp-stats p { font-size: 15px; color: #8A8A9A; margin: 0; max-width: 100%; }
   #lp-manifesto {
     font-size: 22px !important;
     font-weight: 700 !important;
@@ -2014,6 +2021,10 @@
   }
   #lp-cta-final button:hover { transform: scale(1.04); }
   #lp-cta-final small { display: block; margin-top: 16px; color: #444455; font-size: 13px; }
+  .lp-faq-list { display: flex; flex-direction: column; gap: 2px; max-width: 780px; }
+  .lp-faq-item { border-bottom: 1px solid rgba(255,255,255,0.07); padding: 24px 0; }
+  .lp-faq-q { font-size: 17px; font-weight: 700; color: #FFFFFF; margin-bottom: 12px; }
+  .lp-faq-a { font-size: 15px; color: #8A8A9A; line-height: 1.7; }
   .lp-hidden {
     opacity: 0;
     transform: translateY(32px);
@@ -2406,8 +2417,7 @@
         Bem-vindo à revolução<br>do treinamento inteligente.
       </h1>
       <p id="lp-subtitle">
-        O primeiro sistema de coaching adaptativo que pensa,<br>
-        aprende e evolui junto com o seu corpo.
+        O primeiro sistema de coaching adaptativo que pensa, aprende e evolui junto com o seu corpo — com acompanhamento real de evolução, check-in diário e recomendação nutricional personalizada.
       </p>
       <button id="lp-cta-primary" onclick="showAuthFromLanding('register')">
         Começar agora — é grátis
@@ -2453,43 +2463,59 @@
     </p>
     <div class="lp-grid">
       <div class="lp-card">
-        <span>🔍</span>
-        <h3>Raio-X do Movimento</h3>
-        <p>Avalie 6 padrões fundamentais (FMS) com análise por IA.
-        O sistema identifica compensações e riscos antes de prescrever
-        qualquer exercício.</p>
+        <div class="lp-card-icon">1. 🔍</div>
+        <div class="lp-card-title">Avaliação de Movimento</div>
+        <div class="lp-card-desc">O app parte do seu padrão de movimento para montar um protocolo seguro. O treino é adaptado com base na sua avaliação — sem ignorar suas limitações.</div>
       </div>
       <div class="lp-card">
-        <span>📊</span>
-        <h3>Prontidão Inteligente</h3>
-        <p>Responda 4 perguntas rápidas sobre sono, energia, dor e
-        estresse. O AxisAI calibra automaticamente a intensidade
-        do treino do dia.</p>
+        <div class="lp-card-icon">2. 📋</div>
+        <div class="lp-card-title">Check-in Diário de Prontidão</div>
+        <div class="lp-card-desc">Responda 4 perguntas rápidas sobre sono, energia, dor e estresse. O Coach IA calibra automaticamente a intensidade do treino do dia com base no seu estado real.</div>
       </div>
       <div class="lp-card">
-        <span>🤖</span>
-        <h3>Coach Disponível 24/7</h3>
-        <p>Converse com seu coach de IA a qualquer hora. Respostas
-        baseadas no seu perfil completo, não em respostas genéricas.</p>
+        <div class="lp-card-icon">3. 🤖</div>
+        <div class="lp-card-title">Treino Gerado pelo Coach IA</div>
+        <div class="lp-card-desc">Cada sessão é criada para você — fase de treino, equipamentos disponíveis e prontidão do dia. Disponível 24h, adapta o protocolo em tempo real.</div>
       </div>
       <div class="lp-card">
-        <span>📅</span>
-        <h3>Periodização Automatizada</h3>
-        <p>Fases de Acumulação, Intensificação, Realização e Deload
-        estruturadas automaticamente. Carga progressiva com
-        inteligência.</p>
+        <div class="lp-card-icon">4. ⏱</div>
+        <div class="lp-card-title">Execução com Dados Reais</div>
+        <div class="lp-card-desc">Cronômetro integrado, registro de carga por exercício e RPE ao final de cada sessão. Tudo salvo automaticamente.</div>
       </div>
       <div class="lp-card">
-        <span>▶️</span>
-        <h3>Sessão Guiada em Tempo Real</h3>
-        <p>Execute o treino com cronômetro, registro de carga por série
-        e progresso visual por bloco. Tudo durante o treino.</p>
+        <div class="lp-card-icon">5. 📈</div>
+        <div class="lp-card-title">Progressão Visível</div>
+        <div class="lp-card-desc">Gráficos de carga sessão a sessão por exercício. Você vê onde evoluiu, onde estacionou e o que ajustar — com dados, não com achismo.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="lp-evolution" class="lp-section">
+    <span class="lp-section-tag">ACOMPANHAMENTO</span>
+    <h2>Sua evolução, em números reais.</h2>
+    <p class="lp-section-sub">
+      Chega de treinar no escuro. O AxisAI registra o que importa — sessão a sessão — para que você veja sua progressão com clareza.
+    </p>
+    <div class="lp-grid">
+      <div class="lp-card">
+        <div class="lp-card-icon">📊</div>
+        <div class="lp-card-title">Carga por exercício</div>
+        <div class="lp-card-desc">Gráfico de evolução de peso e volume sessão a sessão. Você sabe exatamente o quanto evoluiu em cada movimento.</div>
       </div>
       <div class="lp-card">
-        <span>🥗</span>
-        <h3>Nutrição para Performance</h3>
-        <p>Orientações nutricionais alinhadas ao seu nível de treino
-        e objetivos. Hábitos alimentares baseados em ciência.</p>
+        <div class="lp-card-icon">🌡</div>
+        <div class="lp-card-title">Check-in de prontidão</div>
+        <div class="lp-card-desc">Sono, energia, estresse e dor registrados diariamente. O Coach IA usa esse dado para calibrar a intensidade do seu treino.</div>
+      </div>
+      <div class="lp-card">
+        <div class="lp-card-icon">🥗</div>
+        <div class="lp-card-title">Recomendação nutricional</div>
+        <div class="lp-card-desc">Metas de proteína, carboidrato e hidratação calculadas pelo seu peso e fase de treino. Recomendação baseada em evidências — não substitui nutricionista.</div>
+      </div>
+      <div class="lp-card">
+        <div class="lp-card-icon">💪</div>
+        <div class="lp-card-title">RPE e carga de treino</div>
+        <div class="lp-card-desc">Esforço percebido e unidades de carga registrados ao fim de cada sessão. Dados reais para decisões reais de periodização.</div>
       </div>
     </div>
   </div>
@@ -2514,24 +2540,43 @@
     </p>
     <p id="lp-manifesto">Porque performance não é privilégio. É método.</p>
     <div class="lp-stats">
-      <div><span>6</span><p>Padrões de movimento avaliados</p></div>
-      <div><span>4</span><p>Fases de periodização estruturadas</p></div>
-      <div><span>∞</span><p>Sessões adaptadas ao seu corpo</p></div>
+      <div><p>Metas de macro calculadas pelo seu peso e fase</p></div>
+      <div><p>Intensidade ajustada pelo check-in do dia</p></div>
+      <div><p>Gráfico de carga sessão a sessão</p></div>
+    </div>
+  </div>
+
+  <div id="lp-faq" class="lp-section">
+    <span class="lp-section-tag">DÚVIDAS FREQUENTES</span>
+    <h2>Perguntas frequentes.</h2>
+    <div class="lp-faq-list">
+      <div class="lp-faq-item">
+        <div class="lp-faq-q">Preciso de equipamento específico?</div>
+        <div class="lp-faq-a">Não. No onboarding você informa os equipamentos que tem disponíveis — academia completa, halteres, elásticos ou apenas o peso do corpo. O treino é montado com o que você tem.</div>
+      </div>
+      <div class="lp-faq-item">
+        <div class="lp-faq-q">É indicado para iniciantes?</div>
+        <div class="lp-faq-a">Sim. O AxisAI parte de uma avaliação de movimento para entender seu nível atual e montar um protocolo adequado. Sem jargão, sem planilha genérica.</div>
+      </div>
+      <div class="lp-faq-item">
+        <div class="lp-faq-q">A recomendação nutricional substitui um nutricionista?</div>
+        <div class="lp-faq-a">Não. As metas de proteína, carboidrato e hidratação são estimativas baseadas em evidências científicas (NSCA/ACSM) e no seu perfil. Para prescrição individualizada, consulte um nutricionista habilitado.</div>
+      </div>
+      <div class="lp-faq-item">
+        <div class="lp-faq-q">Posso cancelar quando quiser?</div>
+        <div class="lp-faq-a">Sim. Sem fidelidade, sem burocracia. Cancele a qualquer momento diretamente pelo app.</div>
+      </div>
     </div>
   </div>
 
   <!-- CTA FINAL -->
-  <div id="lp-cta-final" class="lp-section">
-    <canvas id="axisCanvasFooter"></canvas>
-    <h2>Pronto para treinar de forma inteligente?</h2>
-    <p>
-      Junte-se ao beta fechado do AxisAI e transforme
-      seu treinamento com IA de verdade.
-    </p>
-    <button onclick="showAuthFromLanding('register')">
-      Criar minha conta grátis
+  <div id="lp-cta-final" class="lp-section" style="text-align:center;">
+    <span class="lp-section-tag">COMECE AGORA</span>
+    <h2>Treine com dados reais.<br>Evolua com consistência.</h2>
+    <p style="margin: 0 auto 40px;">O AxisAI combina avaliação de movimento, Coach IA e acompanhamento de evolução — para que cada sessão conte de verdade.</p>
+    <button onclick="showAuthFromLanding('register')" style="display:inline-block;background:#00FF88;color:#0A0A0F;font-weight:700;font-size:16px;padding:16px 40px;border-radius:50px;border:none;cursor:pointer;">
+      Começar agora →
     </button>
-    <small>Sem cartão de crédito. Beta fechado — vagas limitadas.</small>
   </div>
 
 </section>
@@ -5600,7 +5645,7 @@ function initHeroReveal() {
 
 function initScrollFade() {
   const targets = document.querySelectorAll(
-    '#lp-what, #lp-how, #lp-why, #lp-cta-final, .lp-card'
+    '#lp-what, #lp-how, #lp-evolution, #lp-why, #lp-faq, #lp-cta-final, .lp-card'
   );
   targets.forEach(el => el.classList.add('lp-hidden'));
 
