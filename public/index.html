@@ -895,7 +895,7 @@
     display: none;
     position: fixed;
     top: 16px;
-    right: 16px;
+    left: 64px;
     z-index: 200;
     width: 40px;
     height: 40px;
@@ -3024,6 +3024,11 @@
           <div class="user-plan">PRO PLAN</div>
         </div>
         <button class="btn-logout" onclick="doLogout()" title="Sair">↩</button>
+      </div>
+      <div style="padding: 8px 12px 0;">
+        <button onclick="navigate('landing')" style="width:100%;background:none;border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--muted);font-size:12px;cursor:pointer;text-align:left;transition:color 0.2s;" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='var(--muted)'">
+          🌐 Ver landing page
+        </button>
       </div>
     </div>
   </aside>
@@ -5478,8 +5483,20 @@ function showLandingPage() {
   }
   const continueBtn = document.getElementById('lp-cta-continue');
   const continueName = document.getElementById('lp-continue-name');
-  if (continueBtn) continueBtn.style.display = 'none';
-  if (continueName) continueName.textContent = '';
+  if (continueBtn && continueName) {
+    const displayName = state.user
+      ? (state.profile?.name || state.profile?.nome || getDisplayName() || state.user.email?.split('@')[0] || 'você')
+      : null;
+    if (displayName && state.user) {
+      continueName.textContent = String(displayName).toUpperCase();
+      continueBtn.style.display = 'flex';
+      continueBtn.style.alignItems = 'center';
+      continueBtn.style.justifyContent = 'center';
+    } else {
+      continueBtn.style.display = 'none';
+      continueName.textContent = '';
+    }
+  }
 
   window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
 
@@ -7043,6 +7060,26 @@ async function ensureParqBeforeCoach() {
 }
 
 async function navigate(page) {
+  if (page === 'landing') {
+    // Fechar qualquer modal ativo antes de mostrar a landing
+    const authModal = document.getElementById('screen-auth');
+    if (authModal) authModal.style.display = 'none';
+    const onboardingModal = document.querySelector('.wizard-overlay, #onboarding-overlay, #screen-onboarding');
+    if (onboardingModal) onboardingModal.style.display = 'none';
+    // Mostrar a landing diretamente
+    document.querySelectorAll('.page, .screen').forEach(p => p.classList.remove('visible', 'active'));
+    const landingEl = document.getElementById('landing-page');
+    if (typeof showLandingPage === 'function') {
+      showLandingPage();
+    } else if (landingEl) {
+      landingEl.classList.add('visible');
+      window.scrollTo(0, 0);
+      if (typeof initLandingAnimations === 'function') initLandingAnimations();
+    }
+    closeSidebar();
+    return;
+  }
+
   if (page === 'chat') {
     const canOpenChat = await ensureParqBeforeCoach();
     if (!canOpenChat) {
