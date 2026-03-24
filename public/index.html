@@ -12419,6 +12419,36 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
         if (_healthMedications.includes('insulina') || _healthMedications.includes('metformina')) healthCtx += '\n⚠️ DIABETES/INSULINA: nunca prescrever treino em jejum. Monitorar sintomas.';
       }
     }
+    // ── NUTRIÇÃO: contexto de metas injetado no system prompt ──
+    let nutriCtx = '';
+    const _weight = parseFloat(p?.weight) || null;
+    const _sex = p?.sex || '';
+    const _obj = p?.objective || '';
+
+    if (_weight) {
+      let _protMin, _protMax;
+      if (/emagrecimento|déficit|definição/i.test(_obj)) {
+        _protMin = (_weight * 1.8).toFixed(0); _protMax = (_weight * 2.7).toFixed(0);
+      } else if (/endurance|aeróbic|resistência/i.test(_obj)) {
+        _protMin = (_weight * 1.0).toFixed(0); _protMax = (_weight * 1.6).toFixed(0);
+      } else {
+        _protMin = (_weight * 1.4).toFixed(0); _protMax = (_weight * 1.7).toFixed(0);
+      }
+      const _carbTreino_min = (_weight * 5).toFixed(0);
+      const _carbTreino_max = (_weight * 6).toFixed(0);
+      const _carbDescanso_min = (_weight * 3).toFixed(0);
+      const _carbDescanso_max = (_weight * 4).toFixed(0);
+      const _agua = _sex === 'Feminino' ? '2,7L' : '3,7L';
+
+      nutriCtx = `\n\n## METAS NUTRICIONAIS DE REFERÊNCIA DO ATLETA
+Peso corporal: ${_weight}kg
+Proteína diária recomendada: ${_protMin}–${_protMax}g/dia (${(_weight*1.4).toFixed(1)}–${(_weight*1.7).toFixed(1)} g/kg)
+Carboidrato em dia de treino: ${_carbTreino_min}–${_carbTreino_max}g/dia
+Carboidrato em dia de descanso: ${_carbDescanso_min}–${_carbDescanso_max}g/dia
+Hidratação mínima: ${_agua}/dia
+
+INSTRUÇÃO: Quando o atleta perguntar sobre nutrição, alimentação, proteína, carboidrato, hidratação ou suplementação — use esses valores como referência personalizada. Sempre que citar gramas de proteína ou carbo, calcule com base no peso real acima. Lembre o atleta que são estimativas e que um nutricionista é indispensável para prescrição individualizada.`;
+    }
     let profCtx = '';
     const prof = state.profile;
     if (prof?.profissao || prof?.perfil_postural || prof?.estresse_ocup) {
@@ -12448,7 +12478,7 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
       console.warn('[chat] Falha ao carregar exercise_logs:', e);
     }
 
-    const systemPrompt = CORE_PROMPT + profileCtx + fmsCtx + flagCtx + healthCtx + profCtx + readinessCtx + loadCtx + (needsReference ? REF_TABLES : '');
+    const systemPrompt = CORE_PROMPT + profileCtx + fmsCtx + flagCtx + healthCtx + nutriCtx + profCtx + readinessCtx + loadCtx + (needsReference ? REF_TABLES : '');
 
     const historico = Array.isArray(state.chatHistory) ? state.chatHistory : [];
     let mensagensParaEnviar = historico.slice(-10);
