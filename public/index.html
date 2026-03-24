@@ -12434,11 +12434,30 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
       } else {
         _protMin = (_weight * 1.4).toFixed(0); _protMax = (_weight * 1.7).toFixed(0);
       }
-      const _carbTreino_min = (_weight * 5).toFixed(0);
-      const _carbTreino_max = (_weight * 6).toFixed(0);
-      const _carbDescanso_min = (_weight * 3).toFixed(0);
-      const _carbDescanso_max = (_weight * 4).toFixed(0);
+      const _phase = getPhaseData() || inferPhaseFromWorkouts();
+      const _phaseName = _phase?.name || '';
+      let _carbMultiplierMin, _carbMultiplierMax;
+      if (/deload|recupera/i.test(_phaseName)) {
+        _carbMultiplierMin = 3; _carbMultiplierMax = 4;
+      } else if (/realiza/i.test(_phaseName)) {
+        _carbMultiplierMin = 4; _carbMultiplierMax = 5;
+      } else if (/transmuta/i.test(_phaseName)) {
+        _carbMultiplierMin = 4; _carbMultiplierMax = 6;
+      } else {
+        _carbMultiplierMin = 5; _carbMultiplierMax = 7;
+      }
+      const _carbTreino_min = (_weight * _carbMultiplierMin).toFixed(0);
+      const _carbTreino_max = (_weight * _carbMultiplierMax).toFixed(0);
+      const _carbDescanso_min = (_weight * Math.max(_carbMultiplierMin - 1, 1)).toFixed(0);
+      const _carbDescanso_max = (_weight * Math.max(_carbMultiplierMax - 1, 1)).toFixed(0);
       const _agua = _sex === 'Feminino' ? '2,7L' : '3,7L';
+      const _hydration = state.readiness?.hydration_level || null;
+      let _hydrationNote = '';
+      if (_hydration != null && _hydration <= 2) {
+        _hydrationNote = `\n⚠️ CHECK-IN HOJE: hidratação baixa (${_hydration}/5) — priorize atingir ${_agua} e oriente o atleta sobre isso antes de qualquer outra recomendação nutricional.`;
+      } else if (_hydration != null && _hydration >= 4) {
+        _hydrationNote = `\nCheck-in hoje: hidratação boa (${_hydration}/5).`;
+      }
 
       nutriCtx = `\n\n## METAS NUTRICIONAIS DE REFERÊNCIA DO ATLETA
 Peso corporal: ${_weight}kg
@@ -12447,7 +12466,7 @@ Carboidrato em dia de treino: ${_carbTreino_min}–${_carbTreino_max}g/dia
 Carboidrato em dia de descanso: ${_carbDescanso_min}–${_carbDescanso_max}g/dia
 Hidratação mínima: ${_agua}/dia
 
-INSTRUÇÃO: Quando o atleta perguntar sobre nutrição, alimentação, proteína, carboidrato, hidratação ou suplementação — use esses valores como referência personalizada. Sempre que citar gramas de proteína ou carbo, calcule com base no peso real acima. Lembre o atleta que são estimativas e que um nutricionista é indispensável para prescrição individualizada.`;
+INSTRUÇÃO: Quando o atleta perguntar sobre nutrição, alimentação, proteína, carboidrato, hidratação ou suplementação — use esses valores como referência personalizada. Sempre que citar gramas de proteína ou carbo, calcule com base no peso real acima. Lembre o atleta que são estimativas e que um nutricionista é indispensável para prescrição individualizada.${_hydrationNote}`;
     }
     let profCtx = '';
     const prof = state.profile;
@@ -13931,7 +13950,7 @@ function getNutritionData() {
   let proteinMin = null, proteinMax = null;
   let carbMin = null, carbMax = null;
   let waterL = null;
-  const isRestDay = dayType === 'descanso' || dayType === 'leve' || dayType === 'deload';
+  const isRestDay = dayType === 'descanso' || dayType === 'leve';
 
   if (weight) {
     // Proteína por perfil
@@ -13950,9 +13969,22 @@ function getNutritionData() {
       proteinMax = (weight * 1.7).toFixed(0);
     }
 
-    // Carboidrato por tipo de dia (dayType já existe na função)
-    carbMin = isRestDay ? (weight * 3).toFixed(0) : (weight * 5).toFixed(0);
-    carbMax = isRestDay ? (weight * 4).toFixed(0) : (weight * 6).toFixed(0);
+    const phaseNameForCarbs = phase?.name || '';
+    let carbMultiplierMin, carbMultiplierMax;
+    if (/deload|recupera/i.test(phaseNameForCarbs)) {
+      carbMultiplierMin = 3; carbMultiplierMax = 4;
+    } else if (/realiza/i.test(phaseNameForCarbs)) {
+      carbMultiplierMin = 4; carbMultiplierMax = 5;
+    } else if (/transmuta/i.test(phaseNameForCarbs)) {
+      carbMultiplierMin = 4; carbMultiplierMax = 6;
+    } else {
+      // Acumulação ou default
+      carbMultiplierMin = 5; carbMultiplierMax = 7;
+    }
+    // Dia de descanso reduz em 1 g/kg
+    if (isRestDay) { carbMultiplierMin -= 1; carbMultiplierMax -= 1; }
+    carbMin = weight ? (weight * carbMultiplierMin).toFixed(0) : null;
+    carbMax = weight ? (weight * carbMultiplierMax).toFixed(0) : null;
 
     // Hidratação por sexo
     waterL = sex === 'Feminino' ? '2,7' : '3,7';
@@ -14059,6 +14091,7 @@ function buildNutritionBodyHTML() {
       <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Contexto do Treino</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">${contextCardsHTML}</div>
     </div>
+    ${macroTargetsHTML}
     <div style="margin-bottom:28px;">
       <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Sugestões para o Período Atual</div>
       <div style="display:flex;flex-direction:column;gap:10px;">${suggestionsHTML}</div>
@@ -14073,7 +14106,6 @@ function buildNutritionBodyHTML() {
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:flex-start;gap:12px;"><span style="font-size:18px;flex-shrink:0;">🌾</span><p style="font-size:13px;line-height:1.6;margin:0;"><strong style="color:var(--text);">Alimentos integrais &gt; suplementos como base da dieta</strong><br><span style="color:var(--muted);">Suplementos complementam, mas não substituem uma alimentação variada e rica em nutrientes reais.</span></p></div>
       </div>
     </div>
-    ${macroTargetsHTML}
     <p style="font-size:11px;color:var(--muted);font-family:var(--font-mono);text-align:center;padding-top:8px;border-top:1px solid var(--border);">Conteúdo gerado automaticamente com base no protocolo de treino ativo. Última atualização: ${lastDate}</p>`;
 }
 
@@ -14084,7 +14116,19 @@ function renderNutrition() {
 
 function renderDashboardNutritionCard() {
   const el = document.getElementById('nutri-dash-phrase');
-  if (el) el.textContent = getNutritionData().phrase;
+  if (!el) return;
+  const { macroTargets, phrase } = getNutritionData();
+  if (macroTargets?.weight) {
+    el.innerHTML = `
+      <span style="color:var(--green);font-weight:700;">🥩 ${macroTargets.proteinMin}–${macroTargets.proteinMax}g</span>
+      <span style="color:var(--muted);margin:0 6px;">·</span>
+      <span style="color:var(--green);font-weight:700;">🍚 ${macroTargets.carbMin}–${macroTargets.carbMax}g</span>
+      <span style="color:var(--muted);margin:0 6px;">·</span>
+      <span style="color:var(--green);font-weight:700;">💧 ${macroTargets.waterL}L</span>
+    `;
+  } else {
+    el.textContent = phrase;
+  }
 }
 
 function openNutritionModal() {
