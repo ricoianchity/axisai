@@ -13894,6 +13894,42 @@ function getNutritionData() {
       : 'Dia de treino — mantenha proteína e carboidrato equilibrados'
     : 'Consulte a aba Nutrição para orientações';
 
+  const weight = parseFloat(state.profile?.weight) || null;
+  const sex = state.profile?.sex || '';
+  const objetivo = state.profile?.objective || state.profile?.level || phaseObjective || '';
+
+  let proteinMin = null, proteinMax = null;
+  let carbMin = null, carbMax = null;
+  let waterL = null;
+  const isRestDay = dayType === 'descanso' || dayType === 'leve' || dayType === 'deload';
+
+  if (weight) {
+    // Proteína por perfil
+    if (/força|hipertrofia|strength/i.test(objetivo)) {
+      proteinMin = (weight * 1.4).toFixed(0);
+      proteinMax = (weight * 1.7).toFixed(0);
+    } else if (/endurance|aeróbic|resistência/i.test(objetivo)) {
+      proteinMin = (weight * 1.0).toFixed(0);
+      proteinMax = (weight * 1.6).toFixed(0);
+    } else if (/emagrecimento|déficit|definição/i.test(objetivo)) {
+      proteinMin = (weight * 1.8).toFixed(0);
+      proteinMax = (weight * 2.7).toFixed(0);
+    } else {
+      // Default força/condicionamento
+      proteinMin = (weight * 1.4).toFixed(0);
+      proteinMax = (weight * 1.7).toFixed(0);
+    }
+
+    // Carboidrato por tipo de dia (dayType já existe na função)
+    carbMin = isRestDay ? (weight * 3).toFixed(0) : (weight * 5).toFixed(0);
+    carbMax = isRestDay ? (weight * 4).toFixed(0) : (weight * 6).toFixed(0);
+
+    // Hidratação por sexo
+    waterL = sex === 'Feminino' ? '2,7' : '3,7';
+  }
+
+  const macroTargets = { weight, proteinMin, proteinMax, carbMin, carbMax, waterL, isRestDay };
+
   const suggestions = {
     treino_pesado: [
       { icon: '🍚', title: 'Carboidrato pré-treino', desc: 'Priorize carboidratos de fácil digestão antes da sessão para garantir energia disponível durante o esforço de alta intensidade.' },
@@ -13915,13 +13951,14 @@ function getNutritionData() {
   let lastDate = '—';
   if (treinos.length) lastDate = treinos[0].data || treinos[0].date || '—';
 
-  return { dayType, phaseName, phaseObjective, volumeLabel, dayLabel, dayIcon, phrase, suggestions, lastDate };
+  return { dayType, phaseName, phaseObjective, volumeLabel, dayLabel, dayIcon, phrase, suggestions, lastDate, macroTargets };
 }
 
 // ── Única fonte de verdade do HTML de nutrição ────────────────────────────
 function buildNutritionBodyHTML() {
-  const { dayType, phaseName, phaseObjective, volumeLabel, dayLabel, dayIcon, suggestions, lastDate } = getNutritionData();
+  const { dayType, phaseName, phaseObjective, volumeLabel, dayLabel, dayIcon, suggestions, lastDate, macroTargets } = getNutritionData();
   const items = suggestions[dayType] || suggestions.treino_normal;
+  const { weight, proteinMin, proteinMax, carbMin, carbMax, waterL, isRestDay } = macroTargets || {};
 
   const contextCardsHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;">
@@ -13950,6 +13987,39 @@ function buildNutritionBodyHTML() {
       </div>
     </div>`).join('');
 
+  const macroTargetsHTML = weight ? `
+    <!-- Suas Metas de Referência -->
+    <div style="margin-bottom:28px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Suas Metas de Referência</div>
+      <div style="background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.2);border-radius:12px;padding:14px 18px;font-size:12px;color:var(--muted);margin-bottom:10px;">
+        ⚠️ Estimativas baseadas em evidências (NSCA/ACSM) e no seu perfil. Consulte um nutricionista para prescrição individualizada.
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+          <div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;">PROTEÍNA / DIA</div>
+          <div style="font-size:20px;font-weight:700;color:var(--green);">${proteinMin}–${proteinMax}g</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;">baseado em ${weight}kg</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+          <div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;">CARBOIDRATO / DIA</div>
+          <div style="font-size:20px;font-weight:700;color:var(--green);">${carbMin}–${carbMax}g</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;">${isRestDay ? 'dia de descanso' : 'dia de treino'}</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+          <div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;">HIDRATAÇÃO</div>
+          <div style="font-size:20px;font-weight:700;color:var(--green);">${waterL}L</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;">mínimo diário</div>
+        </div>
+      </div>
+    </div>
+  ` : `
+    <div style="margin-bottom:28px;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;font-size:13px;color:var(--muted);">
+        Complete seu perfil para ver suas metas personalizadas.
+      </div>
+    </div>
+  `;
+
   return `
     <div style="background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.35);border-radius:14px;padding:18px 22px;margin-bottom:28px;display:flex;align-items:flex-start;gap:14px;">
       <span style="font-size:22px;flex-shrink:0;margin-top:1px;">⚠️</span>
@@ -13973,6 +14043,7 @@ function buildNutritionBodyHTML() {
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:flex-start;gap:12px;"><span style="font-size:18px;flex-shrink:0;">🌾</span><p style="font-size:13px;line-height:1.6;margin:0;"><strong style="color:var(--text);">Alimentos integrais &gt; suplementos como base da dieta</strong><br><span style="color:var(--muted);">Suplementos complementam, mas não substituem uma alimentação variada e rica em nutrientes reais.</span></p></div>
       </div>
     </div>
+    ${macroTargetsHTML}
     <p style="font-size:11px;color:var(--muted);font-family:var(--font-mono);text-align:center;padding-top:8px;border-top:1px solid var(--border);">Conteúdo gerado automaticamente com base no protocolo de treino ativo. Última atualização: ${lastDate}</p>`;
 }
 
