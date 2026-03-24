@@ -7082,7 +7082,7 @@ function _normalizePlanBlocks(conteudo) {
         current.exercicios.push(linha);
       } else {
         var exPart = linha.substring(sep + 1).trim();
-        var exItems = exPart.split(/\s*\+\s*/).filter(Boolean);
+        var exItems = exPart.split(',').map(function(e) { return e.trim(); }).filter(Boolean);
         if (exItems.length > 0) {
           current.exercicios.push.apply(current.exercicios, exItems);
         } else {
