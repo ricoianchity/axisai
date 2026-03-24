@@ -5851,10 +5851,11 @@ const ONBOARDING_REQUIRED_PROFILE_FIELDS = ['age', 'weight', 'height', 'objectiv
 
 function profileHasData(profile) {
   if (!profile) return false;
-  // onboarding_done é suficiente — é a fonte de verdade
+  // Fonte de verdade primária: campo onboarding_done do Supabase
   if (profile.onboarding_done === true) return true;
-  // fallback: campos obrigatórios preenchidos
-  return !!(profile.age && profile.weight && profile.height && profile.objective);
+  // Fallback: qualquer campo de perfil preenchido indica usuário existente
+  return profile.age != null || profile.objective != null || profile.weight != null ||
+         profile.height != null || profile.level != null || profile.sex != null;
 }
 
 function _syncProfileCache(profile) {
@@ -5926,10 +5927,22 @@ async function enterApp() {
   // Source of truth: sempre consultar o perfil no Supabase após login.
   const profile = await _getProfileFromSupabase(state.user?.id);
 
+  // Fallback defensivo no Supabase com campos mínimos para decisão de onboarding.
+  // Evita falso-negativo quando o objeto de perfil chega parcial por timing/RLS.
+  let fallbackProfile = null;
+  if (!profile && state.user?.id) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('user_id, age, objective, weight, height, level, sex, onboarding_done, created_at')
+      .eq('user_id', state.user.id)
+      .maybeSingle();
+    if (!error && data) fallbackProfile = data;
+  }
+
   // ── Fallback defensivo: quando o DB falha, usa cache local ──
   const cachedProfile  = JSON.parse(localStorage.getItem('axisai_profile') || '{}');
   const onboardingFlag = localStorage.getItem('axisai_onboarding_done') === '1';
-  const resolvedProfile = profile || state.profile || cachedProfile;
+  const resolvedProfile = profile || fallbackProfile || state.profile || cachedProfile;
   const hasCompletedOnboarding = onboardingFlag || profileHasData(resolvedProfile);
 
   if (!hasCompletedOnboarding) {
