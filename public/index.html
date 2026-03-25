@@ -5454,10 +5454,14 @@ function showAuthFromLanding(tab) {
   if (typeof switchTab === 'function') switchTab(tab);
 }
 
-function continueAsUser() {
-  // Usuário já está logado — apenas navegar para o dashboard
+async function continueAsUser() {
   window._showingLanding = false;
-  navigate('dashboard');
+  // Se o app ainda não foi inicializado, rodar enterApp() antes de navegar
+  if (!window._appEntered) {
+    await enterApp();
+  } else {
+    navigate('dashboard');
+  }
 }
 
 let _lpHeroRevealBound = false;
