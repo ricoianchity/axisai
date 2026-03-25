@@ -5456,8 +5456,7 @@ function showAuthFromLanding(tab) {
 
 async function continueAsUser() {
   window._showingLanding = false;
-  // Se o app ainda não foi inicializado, rodar enterApp() antes de navegar
-  if (!window._appEntered) {
+  if (!_appEntered) {
     await enterApp();
   } else {
     navigate('dashboard');
