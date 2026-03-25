@@ -2426,7 +2426,7 @@
         Já tenho uma conta →
       </a>
       <button id="lp-cta-continue" onclick="continueAsUser()" style="display:none;margin-top:12px;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer;">
-        CONTINUAR COMO <span id="lp-continue-name"></span> →
+        CONTINUAR COMO&nbsp;<span id="lp-continue-name"></span>&nbsp;→
       </button>
     </div>
   </div>
@@ -6026,6 +6026,10 @@ async function _getProfileFromSupabase(userId) {
 async function enterApp() {
   // ── Guard against double execution ──
   if (_appEntered) return;
+  if (window._showingLanding) {
+    window._showingLanding = false;
+    return;
+  }
 
   // ── Admin route — verificar ANTES do onboarding check ──
   if (window.location.pathname === '/admin') {
@@ -6143,6 +6147,10 @@ const WIZARD_TOTAL_STEPS = 5;
 const WIZARD_STEP_NAMES = ['SOBRE VOCÊ', 'SEU TREINO', 'SEU ESPAÇO', 'SAÚDE E OBJETIVO', 'RAIO-X DO MOVIMENTO'];
 
 function showOnboarding() {
+  if (window._showingLanding) {
+    window._showingLanding = false;
+    return;
+  }
   document.getElementById('screen-onboarding').style.display = 'flex';
   _goToWizardStep(1);
 }
@@ -7061,6 +7069,7 @@ async function ensureParqBeforeCoach() {
 
 async function navigate(page) {
   if (page === 'landing') {
+    window._showingLanding = true;
     // Fechar qualquer modal ativo antes de mostrar a landing
     const authModal = document.getElementById('screen-auth');
     if (authModal) authModal.style.display = 'none';
