@@ -5454,15 +5454,10 @@ function showAuthFromLanding(tab) {
   if (typeof switchTab === 'function') switchTab(tab);
 }
 
-async function continueAsUser() {
-  const lp = document.getElementById('landing-page');
-  if (lp) lp.style.display = 'none';
-  // Esconder overlay imediatamente — usuário já autenticado
-  const overlay = document.getElementById('loading-overlay');
-  if (overlay) overlay.style.display = 'none';
-  await enterApp();
-  // Garantir que overlay some após enterApp
-  if (overlay) overlay.style.display = 'none';
+function continueAsUser() {
+  // Usuário já está logado — apenas navegar para o dashboard
+  window._showingLanding = false;
+  navigate('dashboard');
 }
 
 let _lpHeroRevealBound = false;
