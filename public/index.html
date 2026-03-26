@@ -5455,27 +5455,9 @@ function showAuthFromLanding(tab) {
 }
 
 function continueAsUser() {
-  // Esconder landing diretamente no DOM
-  const lp = document.getElementById('landing-page');
-  if (lp) lp.style.display = 'none';
-
-  // Mostrar o app
-  const app = document.getElementById('screen-app');
-  if (app) app.style.display = 'flex';
-
-  // Garantir que o dashboard está visível
-  document.querySelectorAll('.page').forEach(p => {
-    p.style.display = 'none';
-    p.classList.remove('active');
-  });
-  const dash = document.getElementById('page-dashboard');
-  if (dash) {
-    dash.style.display = 'block';
-    dash.classList.add('active');
-  }
-
-  // Resetar flags
   window._showingLanding = false;
+  _showOnly('screen-app');
+  navigate('dashboard');
 }
 
 let _lpHeroRevealBound = false;
@@ -5969,6 +5951,7 @@ async function doLogout() {
   updateCoachNavIndicator();
   document.getElementById('screen-auth').style.display = 'flex';
   document.getElementById('screen-app').classList.remove('visible');
+  document.getElementById('screen-app').style.display = '';
 }
 
 function _hasRequiredProfileValue(value) {
