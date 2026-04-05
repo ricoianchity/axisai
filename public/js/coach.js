@@ -5017,6 +5017,46 @@ async function clearChat() {
   }
 }
 
+async function preloadCoachLoadCtx(force = false) {
+  if (!state.user?.id) {
+    state.loadCtx = '';
+    state.loadCtxUserId = null;
+    return state.loadCtx;
+  }
+
+  if (!force && state.loadCtxUserId === state.user.id && typeof state.loadCtx === 'string') {
+    return state.loadCtx;
+  }
+
+  state.loadCtx = '';
+  state.loadCtxUserId = state.user.id;
+
+  try {
+    const { data: recentLogs, error } = await supabase
+      .from('exercise_logs')
+      .select('exercise_name, set_number, load_kg, reps, created_at')
+      .eq('user_id', state.user.id)
+      .order('created_at', { ascending: false })
+      .limit(40);
+
+    if (error) {
+      console.warn('[chat] Falha ao carregar exercise_logs:', error);
+      return state.loadCtx;
+    }
+
+    if (recentLogs && recentLogs.length > 0) {
+      const lines = recentLogs.map(l =>
+        `${l.exercise_name} | série ${l.set_number} | ${l.load_kg ?? '—'}kg x ${l.reps ?? '—'} reps`
+      ).join('\n');
+      state.loadCtx = `\n\n## HISTÓRICO RECENTE DE CARGAS (últimas sessões)\n${lines}`;
+    }
+  } catch (e) {
+    console.warn('[chat] Falha ao carregar exercise_logs:', e);
+  }
+
+  return state.loadCtx;
+}
+
 async function sendMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
@@ -5233,24 +5273,7 @@ INSTRUÇÃO: Quando o atleta perguntar sobre nutrição, alimentação, proteín
       if (prof.estresse_ocup)  profCtx += `\nEstresse ocupacional: ${prof.estresse_ocup}`;
       if (prof.turno_trabalho) profCtx += `\nTurno: ${prof.turno_trabalho}`;
     }
-    let loadCtx = '';
-    try {
-      const { data: recentLogs } = await supabase
-        .from('exercise_logs')
-        .select('exercise_name, set_number, load_kg, reps, completed_at')
-        .eq('user_id', state.user.id)
-        .order('completed_at', { ascending: false })
-        .limit(40);
-      if (recentLogs && recentLogs.length > 0) {
-        const lines = recentLogs.map(l =>
-          `${l.exercise_name} | série ${l.set_number} | ${l.load_kg ?? '—'}kg x ${l.reps ?? '—'} reps`
-        ).join('\n');
-        loadCtx = `\n\n## HISTÓRICO RECENTE DE CARGAS (últimas sessões)\n${lines}`;
-      }
-    } catch(e) {
-      console.warn('[chat] Falha ao carregar exercise_logs:', e);
-    }
-
+    const loadCtx = typeof state.loadCtx === 'string' ? state.loadCtx : '';
     const systemPrompt = CORE_PROMPT + profileCtx + fmsCtx + flagCtx + healthCtx + nutriCtx + profCtx + readinessCtx + loadCtx + (needsReference ? REF_TABLES : '');
 
     const historico = Array.isArray(state.chatHistory) ? state.chatHistory : [];

@@ -1000,6 +1000,13 @@ async function navigate(page) {
       closeSidebar();
       return;
     }
+    if (typeof preloadCoachLoadCtx === 'function') {
+      try {
+        await preloadCoachLoadCtx();
+      } catch (e) {
+        console.warn('[navigate/chat] preloadCoachLoadCtx:', e);
+      }
+    }
   }
 
   if (page !== 'performance' && _perfChartInstance) {
@@ -1039,4 +1046,3 @@ async function navigate(page) {
 
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('mobile-open'); document.getElementById('overlay').classList.toggle('mobile-open'); }
 function closeSidebar() { document.getElementById('sidebar').classList.remove('mobile-open'); document.getElementById('overlay').classList.remove('mobile-open'); }
-

@@ -70,7 +70,7 @@ async function _logError(fnName, error, context = {}) {
 // ═══════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════
-const state = { user: null, workouts: [], profile: null, chatHistory: [], toeTouch: null, fmsLatest: null, readiness: null };
+const state = { user: null, workouts: [], profile: null, chatHistory: [], toeTouch: null, fmsLatest: null, readiness: null, loadCtx: '', loadCtxUserId: null };
 
 // ── MBSC structure (hardcoded) ─────────────────────────────
 const MBSC_STRUCTURE = {
@@ -143,6 +143,8 @@ function _resetRuntimeUserData() {
   state.chatHistory = [];
   state.fmsLatest = null;
   state.toeTouch = null;
+  state.loadCtx = '';
+  state.loadCtxUserId = null;
   _sessionLoadsBuffer = {};
   _activeSessionId = null;
   _activeWorkoutPlan = null;
@@ -229,6 +231,8 @@ async function loadUserData(userId) {
   state.phase = null;
   state.readiness = null;
   state.chatHistory = [];
+  state.loadCtx = '';
+  state.loadCtxUserId = null;
 
   const profileKey = getProfileKey();
   const cachedProfile = profileKey ? JSON.parse(localStorage.getItem(profileKey) || 'null') : null;
@@ -939,4 +943,3 @@ async function checkAndShowReadinessModal() {
     openCheckinFlow(); // abre SOMENTE se: autenticado + tabela OK + sem registro hoje
   }
 }
-
