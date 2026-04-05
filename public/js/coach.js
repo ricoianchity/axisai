@@ -5269,6 +5269,11 @@ INSTRUÇÃO: Quando o atleta perguntar sobre nutrição, alimentação, proteín
       }
     }
 
+    const userMessage = text;
+    if (!mensagensParaEnviar || mensagensParaEnviar.length === 0) {
+      mensagensParaEnviar = [{ role: 'user', content: userMessage }];
+    }
+
     console.log('[chat] Enviando para /api/chat:', { messages: mensagensParaEnviar.length, messagesTotal: state.chatHistory.length, model: 'claude-sonnet-4-5', readinessScore: rdToday?.readiness_score ?? 'n/a' });
     const response = await fetch('/api/chat', {
       method: 'POST',
@@ -5285,9 +5290,7 @@ INSTRUÇÃO: Quando o atleta perguntar sobre nutrição, alimentação, proteín
       })
     });
     console.log('[chat] Resposta HTTP status:', response.status, response.ok);
-    const rawText = await response.text();
-    console.log('[DEBUG] resposta bruta:', rawText);
-    const data = JSON.parse(rawText);
+    const data = await response.json();
     if (!response.ok) {
       console.error('[chat] Erro da API:', response.status, data);
       // ── FIX BUG 2: Show specific error for API failures ──
