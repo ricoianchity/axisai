@@ -4991,7 +4991,7 @@ async function clearChat() {
 
   const _initMsg = { role: 'user', content: 'Olá' };
   const _initPayload = {
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5',
     max_tokens: 2048,
     system: CORE_PROMPT,
     messages: [_initMsg]
@@ -5269,12 +5269,12 @@ INSTRUÇÃO: Quando o atleta perguntar sobre nutrição, alimentação, proteín
       }
     }
 
-    console.log('[chat] Enviando para /api/chat:', { messages: mensagensParaEnviar.length, messagesTotal: state.chatHistory.length, model: 'claude-sonnet-4-20250514', readinessScore: rdToday?.readiness_score ?? 'n/a' });
+    console.log('[chat] Enviando para /api/chat:', { messages: mensagensParaEnviar.length, messagesTotal: state.chatHistory.length, model: 'claude-sonnet-4-5', readinessScore: rdToday?.readiness_score ?? 'n/a' });
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 2048,
         system: systemPrompt,
         messages: mensagensParaEnviar,

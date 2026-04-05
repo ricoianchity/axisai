@@ -52,7 +52,7 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
     }
 
     const anthropicPayload = {
-      model: body.model || 'claude-sonnet-4-20250514',
+      model: body.model || 'claude-sonnet-4-5',
       max_tokens: body.max_tokens || 2048,
       system: body.system || readinessContext,
       messages: body.messages || [],
