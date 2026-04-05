@@ -5255,23 +5255,30 @@ INSTRUÇÃO: Quando o atleta perguntar sobre nutrição, alimentação, proteín
 
     const historico = Array.isArray(state.chatHistory) ? state.chatHistory : [];
     let mensagensParaEnviar = historico.slice(-10);
-    if (mensagensParaEnviar.length > 1 && mensagensParaEnviar[0]?.role === 'assistant') {
+
+    // Garante que começa com 'user'
+    while (mensagensParaEnviar.length > 0 && mensagensParaEnviar[0].role !== 'user') {
       mensagensParaEnviar = mensagensParaEnviar.slice(1);
     }
+
+    // Garante alternância correta user/assistant — remove duplicatas consecutivas do mesmo role
+    const deduped = [];
+    for (const msg of mensagensParaEnviar) {
+      if (deduped.length === 0 || deduped[deduped.length - 1].role !== msg.role) {
+        deduped.push(msg);
+      }
+    }
+    mensagensParaEnviar = deduped;
+
+    // Garante que a última mensagem do usuário está incluída
     const ultimaMensagem = mensagensParaEnviar[mensagensParaEnviar.length - 1];
     if (!ultimaMensagem || ultimaMensagem.role !== 'user' || ultimaMensagem.content !== text) {
       mensagensParaEnviar.push({ role: 'user', content: text });
     }
-    if (mensagensParaEnviar.length > 10) {
-      mensagensParaEnviar = mensagensParaEnviar.slice(-10);
-      if (mensagensParaEnviar.length > 1 && mensagensParaEnviar[0]?.role === 'assistant') {
-        mensagensParaEnviar = mensagensParaEnviar.slice(1);
-      }
-    }
 
-    const userMessage = text;
-    if (!mensagensParaEnviar || mensagensParaEnviar.length === 0) {
-      mensagensParaEnviar = [{ role: 'user', content: userMessage }];
+    // Fallback absoluto
+    if (mensagensParaEnviar.length === 0 || mensagensParaEnviar[0].role !== 'user') {
+      mensagensParaEnviar = [{ role: 'user', content: text }];
     }
 
     console.log('[chat] Enviando para /api/chat:', { messages: mensagensParaEnviar.length, messagesTotal: state.chatHistory.length, model: 'claude-sonnet-4-5', readinessScore: rdToday?.readiness_score ?? 'n/a' });
