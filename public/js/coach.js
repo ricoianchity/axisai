@@ -1907,6 +1907,11 @@ function renderWorkoutBlocks(conteudo, treinoId, isDone) {
   console.log('[renderWorkoutBlocks] treinoId:', treinoId, '| conteudo:', conteudo);
   if (!conteudo) return '<div class="wb-fallback">Sem conteúdo.</div>';
 
+  const normalizedConteudo = String(conteudo || '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[–—]/g, '-')
+    .replace(/\s+\|\s+/g, '\n');
+
   // ── Helpers ────────────────────────────────────────────────────────────────
   function _esc(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -1917,13 +1922,21 @@ function renderWorkoutBlocks(conteudo, treinoId, isDone) {
 
   // ── Block definitions (strength flag controls load inputs) ─────────────────
   const BLOCKS = [
-    { re: /PILLAR\s*PREP/i,              color:'#3B82F6', emoji:'🔵', label:'PILLAR PREP', strength:false },
-    { re: /FOR[ÇC]A|POWER|HIPERTROFIA/i, color:'#F97316', emoji:'🟠', label:'FORÇA',        strength:true  },
-    { re: /ESD|CONDICIONAMENTO/i,         color:'#22C55E', emoji:'🟢', label:'ESD',          strength:false },
+    { re: /^(?:[•\-\u2022*]\s*)?FOAM\s*ROLL\b/i, color:'#64748B', emoji:'⚪', label:'FOAM ROLL', strength:false },
+    { re: /^(?:[•\-\u2022*]\s*)?PILLAR\s*PREP\b/i, color:'#3B82F6', emoji:'🔵', label:'PILLAR PREP', strength:false },
+    { re: /^(?:[•\-\u2022*]\s*)?(?:WARM[\s-]*UP|DYNAMIC\s*WARM|AQUECIMENTO)\b/i, color:'#14B8A6', emoji:'🟦', label:'WARM-UP', strength:false },
+    { re: /^(?:[•\-\u2022*]\s*)?LIGHT\s*POWER\b/i, color:'#F59E0B', emoji:'🟡', label:'LIGHT POWER', strength:true },
+    { re: /^(?:[•\-\u2022*]\s*)?HEAVY\s*POWER\b/i, color:'#EA580C', emoji:'🟠', label:'HEAVY POWER', strength:true },
+    { re: /^(?:[•\-\u2022*]\s*)?(?:STRENGTH\s*POD\s*1|POD\s*1)\b/i, color:'#F97316', emoji:'🟠', label:'STRENGTH POD 1', strength:true },
+    { re: /^(?:[•\-\u2022*]\s*)?(?:STRENGTH\s*POD\s*2|POD\s*2)\b/i, color:'#F97316', emoji:'🟠', label:'STRENGTH POD 2', strength:true },
+    { re: /^(?:[•\-\u2022*]\s*)?(?:STRENGTH\s*POD\s*3|POD\s*3)\b/i, color:'#F97316', emoji:'🟠', label:'STRENGTH POD 3', strength:true },
+    { re: /^(?:[•\-\u2022*]\s*)?(?:FOR[ÇC]A|HIPERTROFIA)\b/i, color:'#F97316', emoji:'🟠', label:'FORÇA', strength:true },
+    { re: /^(?:[•\-\u2022*]\s*)?POWER\b/i, color:'#F97316', emoji:'🟠', label:'POWER', strength:true },
+    { re: /^(?:[•\-\u2022*]\s*)?(?:ESD|CONDITIONING|CONDICIONAMENTO)\b/i, color:'#22C55E', emoji:'🟢', label:'ESD', strength:false }
   ];
 
   function matchBlock(raw) {
-    const c = stripMd(raw);
+    const c = stripMd(String(raw || '')).replace(/^[•\-\u2022*]\s*/, '').trim();
     for (const b of BLOCKS) if (b.re.test(c)) return b;
     return null;
   }
@@ -1931,7 +1944,7 @@ function renderWorkoutBlocks(conteudo, treinoId, isDone) {
   // ── Segment text into blocks ───────────────────────────────────────────────
   const segments = [];
   let cur = null;
-  for (const raw of conteudo.split('\n')) {
+  for (const raw of normalizedConteudo.split('\n')) {
     const def = matchBlock(raw);
     if (def) {
       if (cur) segments.push(cur);
