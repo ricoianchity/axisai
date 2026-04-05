@@ -5285,7 +5285,9 @@ INSTRUÇÃO: Quando o atleta perguntar sobre nutrição, alimentação, proteín
       })
     });
     console.log('[chat] Resposta HTTP status:', response.status, response.ok);
-    const data = await response.json();
+    const rawText = await response.text();
+    console.log('[DEBUG] resposta bruta:', rawText);
+    const data = JSON.parse(rawText);
     if (!response.ok) {
       console.error('[chat] Erro da API:', response.status, data);
       // ── FIX BUG 2: Show specific error for API failures ──
