@@ -17,6 +17,16 @@ function _fmtDateTime(isoStr) {
   return d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
+function _resolveProfileSex(profile) {
+  if (!profile || typeof profile !== 'object') return '';
+  return String(profile.sex || profile.gender || '').trim();
+}
+
+function _isFemaleProfile(profile) {
+  const sex = _resolveProfileSex(profile).toLowerCase();
+  return sex === 'female' || sex === 'feminino';
+}
+
 async function renderCompletedSessions() {
   const container = document.getElementById('completed-sessions-section');
   if (!container) return;
@@ -611,9 +621,7 @@ function getCheckinData() {
 async function saveCheckinData(data) {
   const profileKey = typeof getProfileKey === 'function' ? getProfileKey() : '';
   const cachedProfile = profileKey ? JSON.parse(_lsGet(profileKey) || '{}') : {};
-  const isFemale = cachedProfile.sex === 'female' ||
-                   cachedProfile.sex === 'Feminino' ||
-                   cachedProfile.sex === 'feminino';
+  const isFemale = _isFemaleProfile(cachedProfile);
   const menstrualVal = data?.menstrual_phase ?? null;
   const payload = { ...data, ...(isFemale && menstrualVal != null ? { menstrual_phase: menstrualVal } : {}), user_id: state.user?.id, date: today() };
   if (!isFemale) delete payload.menstrual_phase;
@@ -782,7 +790,7 @@ function openCheckinFlow() {
 
   const readinessFields = READINESS_FIELDS.filter(s => {
     if (s.key !== 'menstrual') return true;
-    const sex = String(state.profile?.sex || '').toLowerCase();
+    const sex = _resolveProfileSex(state.profile).toLowerCase();
     return sex === 'female' || sex === 'feminino';
   });
 
@@ -842,9 +850,7 @@ function openCheckinFlow() {
   // Oculta campo menstrual para usuários não femininos (segurança adicional ao filtro de renderização)
   const profileKey = typeof getProfileKey === 'function' ? getProfileKey() : '';
   const cachedProfile = profileKey ? JSON.parse(_lsGet(profileKey) || '{}') : {};
-  const isFemale = cachedProfile.sex === 'female' ||
-                   cachedProfile.sex === 'Feminino' ||
-                   cachedProfile.sex === 'feminino';
+  const isFemale = _isFemaleProfile(cachedProfile);
   const menstrualField = document.getElementById('ci-menstrual-field');
   if (menstrualField) menstrualField.style.display = isFemale ? '' : 'none';
 
@@ -885,9 +891,7 @@ async function submitCheckin() {
   };
   const profileKey = typeof getProfileKey === 'function' ? getProfileKey() : '';
   const cachedProfile = profileKey ? JSON.parse(_lsGet(profileKey) || '{}') : {};
-  const isFemale = cachedProfile.sex === 'female' ||
-                   cachedProfile.sex === 'Feminino' ||
-                   cachedProfile.sex === 'feminino';
+  const isFemale = _isFemaleProfile(cachedProfile);
   const menstrualEl = document.getElementById('ci-menstrual');
   const menstrualVal = menstrualEl ? (menstrualEl.value === 'true') : null;
   const notes           = (document.getElementById('ci-notes')?.value || '').trim();
@@ -1137,7 +1141,7 @@ function getNutritionData() {
     : 'Consulte a aba Nutrição para orientações';
 
   const weight = parseFloat(state.profile?.weight) || null;
-  const sex = state.profile?.sex || '';
+  const sex = _resolveProfileSex(state.profile);
   const objetivo = state.profile?.objective || state.profile?.level || phaseObjective || '';
 
   let proteinMin = null, proteinMax = null;

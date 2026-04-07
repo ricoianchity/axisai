@@ -42,6 +42,16 @@ function mergeFmsPhotos(basePhotos, incomingPhotos) {
   return merged;
 }
 
+function normalizeProfileSex(profile) {
+  if (!profile || typeof profile !== 'object') return profile;
+  const normalized = { ...profile };
+  if (!normalized.sex && normalized.gender) {
+    normalized.sex = normalized.gender;
+  }
+  delete normalized.gender;
+  return normalized;
+}
+
 function runDiagnosis() {
   const scores = {
     dos:  parseInt(document.getElementById('fms-score-dos')?.value)  || 0,
@@ -136,7 +146,7 @@ function loadProfileHealth() {
 
 async function saveProfileHealth() {
   const profileKey = getProfileKey();
-  const profile = profileKey ? JSON.parse(_lsGet(profileKey) || '{}') : {};
+  const profile = normalizeProfileSex(profileKey ? JSON.parse(_lsGet(profileKey) || '{}') : {});
 
   const displayName = document.getElementById('profile-display-name')?.value?.trim();
   const fullName = document.getElementById('profile-full-name-edit')?.value?.trim();
@@ -155,14 +165,14 @@ async function saveProfileHealth() {
 
   const injuries = document.getElementById('profile-injuries-edit')?.value?.trim();
 
-  const updatedProfile = {
+  const updatedProfile = normalizeProfileSex({
     ...profile,
     display_name:  displayName || profile.display_name,
     full_name:     fullName    || profile.full_name,
     comorbidities: comorbiditiesChecked,
     medications:   medicationsChecked,
     injuries:      injuries !== undefined ? injuries : profile.injuries,
-  };
+  });
   state.profile = updatedProfile;
   const profilePayload = { ...updatedProfile, user_id: state.user?.id };
   delete profilePayload.id;
@@ -265,7 +275,11 @@ async function loadProfile() {
         .eq('user_id', state.user.id)
         .maybeSingle();
       if (remoteProfile) {
-        state.profile = { ...state.profile, ...remoteProfile };
+        const normalizedRemoteProfile = normalizeProfileSex(remoteProfile);
+        if (!normalizedRemoteProfile.fms && normalizedRemoteProfile.fms_scores) {
+          normalizedRemoteProfile.fms = normalizedRemoteProfile.fms_scores;
+        }
+        state.profile = { ...state.profile, ...normalizedRemoteProfile };
         // Normalizar equipment para array
         if (typeof state.profile.equipment === 'string') {
           try { state.profile.equipment = JSON.parse(state.profile.equipment); } catch(e) { state.profile.equipment = []; }
@@ -311,7 +325,10 @@ async function loadProfile() {
 
   const saved = profileKey ? _lsGet(profileKey) : null;
   if (saved) {
-    state.profile = JSON.parse(saved);
+    state.profile = normalizeProfileSex(JSON.parse(saved));
+    if (!state.profile.fms && state.profile.fms_scores) {
+      state.profile.fms = state.profile.fms_scores;
+    }
     // Normalizar equipment para array
     if (typeof state.profile.equipment === 'string') {
       try { state.profile.equipment = JSON.parse(state.profile.equipment); } catch(e) { state.profile.equipment = []; }
@@ -421,8 +438,10 @@ async function saveProfile(silent = false) {
       equipmentArray = state.profile.equipment;
     }
   }
-  state.profile = { ...state.profile, ...p, equipment: equipmentArray };
+  state.profile = normalizeProfileSex({ ...state.profile, ...p, equipment: equipmentArray });
   const profilePayload = { ...state.profile, user_id: state.user?.id };
+  if (profilePayload.fms && !profilePayload.fms_scores) profilePayload.fms_scores = profilePayload.fms;
+  if (profilePayload.fms_scores && !profilePayload.fms) profilePayload.fms = profilePayload.fms_scores;
   // Garantias de tipo antes do upsert
   if (typeof profilePayload.equipment === 'string') {
     try { profilePayload.equipment = JSON.parse(profilePayload.equipment); } catch(e) { profilePayload.equipment = []; }
@@ -454,6 +473,7 @@ async function saveFMS() {
   if (Object.keys(vals).length === 0) return showToast('Preencha ao menos um score.', true);
   if (!state.profile) state.profile = {};
   state.profile.fms = { ...state.profile.fms, ...vals };
+  state.profile.fms_scores = state.profile.fms;
 
   const flags = [];
   const fms = state.profile.fms;

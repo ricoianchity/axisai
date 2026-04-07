@@ -606,6 +606,7 @@ async function _finishWizard() {
   // Merge FMS data if collected in step 5
   if (_wizardFmsData) {
     newData.fms        = _wizardFmsData.fms;
+    newData.fms_scores = _wizardFmsData.fms;
     newData.fmsPhotos  = _wizardFmsData.photos;   // deletado antes do upsert
     newData.toe_touch  = _wizardFmsData.toeTouch;
     newData.risk_flags = _wizardFmsData.riskFlags;
@@ -622,11 +623,14 @@ async function _finishWizard() {
       merged[k] = v;
     }
   });
+  if (!merged.sex && merged.gender) merged.sex = merged.gender;
+  delete merged.gender;
   merged.onboarding_done = true;
   state.profile = merged;
   if (onboardingKey) localStorage.setItem(onboardingKey, '1');
   const profilePayload = { ...merged, user_id: userId, onboarding_done: true };
   delete profilePayload.id; // nunca enviar o id integer ao banco
+  delete profilePayload.gender;
   delete profilePayload.fmsPhotos; // keep photos local to avoid oversized profile payloads
   if (profileKey) localStorage.setItem(profileKey, JSON.stringify(merged));
   try {
