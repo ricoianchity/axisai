@@ -56,6 +56,29 @@ async function initSessionDependentModules(session) {
   }
 }
 
+async function initModuleByTab(tabName) {
+  switch (tabName) {
+    case 'dashboard':
+      if (typeof window.initDashboard === 'function') await window.initDashboard();
+      break;
+    case 'perfil':
+    case 'profile':
+      if (typeof window.initProfile === 'function') await window.initProfile();
+      break;
+    case 'treinos':
+    case 'workouts':
+      if (typeof window.initTreinos === 'function') await window.initTreinos();
+      break;
+    case 'performance':
+      if (typeof window.initPerformance === 'function') await window.initPerformance();
+      break;
+    default:
+      break;
+  }
+}
+
+window.initModuleByTab = initModuleByTab;
+
 async function setupSessionBootstrap() {
   const supabaseClient = await waitForSupabaseClient();
   if (!supabaseClient) {

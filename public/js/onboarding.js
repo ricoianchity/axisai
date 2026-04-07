@@ -975,6 +975,8 @@ async function ensureParqBeforeCoach() {
 }
 
 async function navigate(page) {
+  if (page === 'treinos') page = 'workouts';
+
   if (page === 'landing') {
     window._showingLanding = true;
     // Fechar qualquer modal ativo antes de mostrar a landing
@@ -1027,11 +1029,25 @@ async function navigate(page) {
   closeSidebar();
   if (page === 'dashboard') await refreshDashboard();
   if (page === 'workouts') {
-    renderWorkouts();
-    await renderCompletedWorkouts();
-    switchWorkoutsTab(_workoutsActiveTab || 'active');
+    if (typeof window.initModuleByTab === 'function') {
+      await window.initModuleByTab('treinos');
+    } else if (typeof window.initTreinos === 'function') {
+      await window.initTreinos();
+    } else {
+      renderWorkouts();
+      await renderCompletedWorkouts();
+      switchWorkoutsTab(_workoutsActiveTab || 'active');
+    }
   }
-  if (page === 'performance') await loadPerformanceTab();
+  if (page === 'performance') {
+    if (typeof window.initModuleByTab === 'function') {
+      await window.initModuleByTab('performance');
+    } else if (typeof window.initPerformance === 'function') {
+      await window.initPerformance();
+    } else {
+      await loadPerformanceTab();
+    }
+  }
   if (page === 'diagnosis') renderFmsResults();
   if (page === 'profile') loadProfileHealth();
   if (page === 'nutrition') renderNutrition();

@@ -276,6 +276,21 @@ async function loadProfile() {
         .maybeSingle();
       if (remoteProfile) {
         const normalizedRemoteProfile = normalizeProfileSex(remoteProfile);
+        if (!normalizedRemoteProfile.fms_scores && normalizedRemoteProfile.fms) {
+          const hasFmsData = typeof normalizedRemoteProfile.fms === 'object' &&
+            Object.keys(normalizedRemoteProfile.fms).length > 0;
+          if (hasFmsData) {
+            const { error: syncFmsScoresError } = await supabase
+              .from('profiles')
+              .update({ fms_scores: normalizedRemoteProfile.fms })
+              .eq('user_id', state.user.id);
+            if (syncFmsScoresError) {
+              console.warn('[loadProfile] sync fms_scores:', syncFmsScoresError.message);
+            } else {
+              normalizedRemoteProfile.fms_scores = normalizedRemoteProfile.fms;
+            }
+          }
+        }
         if (!normalizedRemoteProfile.fms && normalizedRemoteProfile.fms_scores) {
           normalizedRemoteProfile.fms = normalizedRemoteProfile.fms_scores;
         }
@@ -413,6 +428,7 @@ async function saveProfile(silent = false) {
     age: document.getElementById('p-age')?.value || state.profile?.age,
     weight: document.getElementById('p-weight')?.value || state.profile?.weight,
     height: document.getElementById('p-height')?.value || state.profile?.height,
+    sex: document.getElementById('p-sex')?.value || state.profile?.sex,
     level: document.getElementById('p-level')?.value || state.profile?.level,
     objective: document.getElementById('p-goal')?.value || state.profile?.objective,
     gym: document.getElementById('p-gym')?.value || state.profile?.gym,

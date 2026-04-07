@@ -261,3 +261,9 @@ async function renderPerformanceChart(exerciseName, userIdFromCaller) {
   chartWrap.style.display = 'block';
   statsWrap.style.display = 'block';
 }
+
+async function initPerformance() {
+  await loadPerformanceTab();
+}
+
+window.initPerformance = initPerformance;

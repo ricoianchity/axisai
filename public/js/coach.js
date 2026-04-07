@@ -303,6 +303,15 @@ async function loadTreinosTab() {
   }
 }
 
+async function initTreinos() {
+  if (typeof renderWorkouts === 'function') renderWorkouts();
+  if (typeof renderCompletedWorkouts === 'function') await renderCompletedWorkouts();
+  if (typeof switchWorkoutsTab === 'function') switchWorkoutsTab(_workoutsActiveTab || 'active');
+  if (typeof loadTreinosTab === 'function') await loadTreinosTab();
+}
+
+window.initTreinos = initTreinos;
+
 function renderTreinosList(container, items, source) {
   if (!items || items.length === 0) {
     container.innerHTML = `
