@@ -1,3 +1,52 @@
+function _getPerformanceSupabaseClient() {
+  if (typeof supabase !== 'undefined' && supabase?.auth?.getSession) return supabase;
+  if (window.supabase?.auth?.getSession) return window.supabase;
+  return null;
+}
+
+let _perfAuthSubscription = null;
+
+function _waitForPerformanceSession(supabaseClient) {
+  if (_perfAuthSubscription || !supabaseClient?.auth?.onAuthStateChange) return;
+  const { data } = supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    if (!state.user) state.user = {};
+    state.user.id = userId;
+    if (session.user?.email && !state.user.email) state.user.email = session.user.email;
+
+    if (_perfAuthSubscription) {
+      _perfAuthSubscription.unsubscribe();
+      _perfAuthSubscription = null;
+    }
+
+    const perfPage = document.getElementById('page-performance');
+    if (perfPage?.classList.contains('active')) {
+      await loadPerformanceTab();
+    }
+  });
+  _perfAuthSubscription = data?.subscription || null;
+}
+
+async function _getPerformanceUserId() {
+  const supabaseClient = _getPerformanceSupabaseClient();
+  if (!supabaseClient) return { userId: '', supabaseClient: null };
+
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const userId = session?.user?.id || '';
+    if (userId) {
+      if (!state.user) state.user = {};
+      state.user.id = userId;
+      if (session.user?.email && !state.user.email) state.user.email = session.user.email;
+    }
+    return { userId, supabaseClient };
+  } catch (_err) {
+    return { userId: '', supabaseClient };
+  }
+}
+
 async function loadPerformanceTab() {
   const emptyEl = document.getElementById('perf-empty');
   const chartWrap = document.getElementById('perf-chart-wrap');
@@ -10,16 +59,18 @@ async function loadPerformanceTab() {
   chartWrap.style.display = 'none';
   statsWrap.style.display = 'none';
 
-  if (!state.user?.id) {
+  const { userId, supabaseClient } = await _getPerformanceUserId();
+  if (!userId || !supabaseClient) {
+    _waitForPerformanceSession(supabaseClient);
     emptyEl.innerHTML = '<p>Faça login novamente para ver performance.</p>';
     return;
   }
 
   try {
-    const { data: logs, error } = await window.supabase
+    const { data: logs, error } = await supabaseClient
       .from('exercise_logs')
       .select('exercise_name, load_kg, logged_at')
-      .eq('user_id', state.user.id)
+      .eq('user_id', userId)
       .not('load_kg', 'is', null)
       .order('logged_at', { ascending: true });
 
@@ -49,7 +100,7 @@ async function loadPerformanceTab() {
 
     if (uniqueExercises.length > 0) {
       exSel.value = uniqueExercises[0];
-      await renderPerformanceChart(uniqueExercises[0]);
+      await renderPerformanceChart(uniqueExercises[0], userId);
     }
   } catch (err) {
     console.error('[loadPerformanceTab]', err);
@@ -57,7 +108,7 @@ async function loadPerformanceTab() {
   }
 }
 
-async function renderPerformanceChart(exerciseName) {
+async function renderPerformanceChart(exerciseName, userIdFromCaller) {
   const exSel = document.getElementById('perf-exercise-select');
   const periodSel = document.getElementById('perf-period-select');
   const emptyEl = document.getElementById('perf-empty');
@@ -66,15 +117,18 @@ async function renderPerformanceChart(exerciseName) {
   const statsEl = document.getElementById('perf-stats');
   const canvas = document.getElementById('perf-chart');
   if (!exSel || !periodSel || !emptyEl || !chartWrap || !statsWrap || !statsEl || !canvas) return;
-  if (!exerciseName || !state.user?.id) return;
+
+  const { userId, supabaseClient } = await _getPerformanceUserId();
+  const resolvedUserId = userIdFromCaller || userId;
+  if (!exerciseName || !resolvedUserId || !supabaseClient) return;
 
   const token = ++_perfLoadingToken;
   const periodDays = Number(periodSel.value || 28);
 
-  let query = window.supabase
+  let query = supabaseClient
     .from('exercise_logs')
     .select('load_kg, actual_rpe, logged_at, session_id')
-    .eq('user_id', state.user.id)
+    .eq('user_id', resolvedUserId)
     .eq('exercise_name', exerciseName)
     .not('load_kg', 'is', null)
     .order('logged_at', { ascending: true });
@@ -208,4 +262,3 @@ async function renderPerformanceChart(exerciseName) {
   chartWrap.style.display = 'block';
   statsWrap.style.display = 'block';
 }
-
