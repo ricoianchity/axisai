@@ -191,7 +191,50 @@ async function saveProfileHealth() {
 // ═══════════════════════════════════════════════
 //  PROFILE
 // ═══════════════════════════════════════════════
+async function _waitForSessionProfile() {
+  let session = null;
+  let tentativas = 0;
+  while (!session && tentativas < 5) {
+    const { data } = await supabase.auth.getSession();
+    session = data?.session;
+    if (!session) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      tentativas++;
+    }
+  }
+  return session;
+}
+
+async function initProfile() {
+  const session = await _waitForSessionProfile();
+  if (!session?.user?.id) {
+    console.warn('initProfile: sessão não disponível');
+    return;
+  }
+  if (!state.user?.id) {
+    state.user = {
+      ...(state.user || {}),
+      id: session.user.id,
+      email: session.user.email || state.user?.email || ''
+    };
+  }
+  await loadProfile();
+}
+
 async function loadProfile() {
+  const session = await _waitForSessionProfile();
+  if (!session?.user?.id) {
+    console.warn('loadProfile: sessão não disponível');
+    return;
+  }
+  if (!state.user?.id) {
+    state.user = {
+      ...(state.user || {}),
+      id: session.user.id,
+      email: session.user.email || state.user?.email || ''
+    };
+  }
+
   const profileKey = getProfileKey();
   const fmsKey = getFmsLatestKey();
   // Restore fmsLatest from dedicated localStorage key
@@ -1023,4 +1066,3 @@ function showToast(msg, isError = false) {
 // ═══════════════════════════════════════════════
 //  EXERCISE LIBRARY — VIDEO LOOKUP
 // ═══════════════════════════════════════════════
-

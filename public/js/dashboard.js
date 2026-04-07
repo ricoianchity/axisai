@@ -537,7 +537,50 @@ async function updateReadinessCard() {
   }
 }
 
+async function _waitForSessionDashboard() {
+  let session = null;
+  let tentativas = 0;
+  while (!session && tentativas < 5) {
+    const { data } = await supabase.auth.getSession();
+    session = data?.session;
+    if (!session) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      tentativas++;
+    }
+  }
+  return session;
+}
+
+async function initDashboard() {
+  const session = await _waitForSessionDashboard();
+  if (!session?.user?.id) {
+    console.warn('initDashboard: sessão não disponível');
+    return;
+  }
+  if (!state.user?.id) {
+    state.user = {
+      ...(state.user || {}),
+      id: session.user.id,
+      email: session.user.email || state.user?.email || ''
+    };
+  }
+  await refreshDashboard();
+}
+
 async function refreshDashboard() {
+  const session = await _waitForSessionDashboard();
+  if (!session?.user?.id) {
+    console.warn('refreshDashboard: sessão não disponível');
+    return;
+  }
+  if (!state.user?.id) {
+    state.user = {
+      ...(state.user || {}),
+      id: session.user.id,
+      email: session.user.email || state.user?.email || ''
+    };
+  }
+
   const treinosIA = loadTreinosIA();
   const active = state.workouts.filter(w => !w.completed);
   const riskCount = (state.profile?.risk_flags || []).filter(f => f !== 'none').length;
