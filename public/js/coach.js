@@ -2521,35 +2521,17 @@ function parseConteudoBlocos(conteudo) {
       });
   }
 
-  // Formato legado: blocos separados por quebra de linha
-  if (normalized.includes('\n')) {
-    return normalized
-      .split('\n')
-      .map(b => b.trim())
-      .filter(Boolean)
-      .map(b => {
-        const colonIdx = findColonOutsideParens(b);
-        return colonIdx > -1
-          ? { nome: b.substring(0, colonIdx).trim(), exercicios: b.substring(colonIdx + 1).trim() }
-          : { nome: b.trim(), exercicios: '' };
-      });
-  }
-
   const BLOCK_PREFIXES = [
     'FOAM ROLL',
     'PILLAR PREP',
     'WARM-UP',
-    'DYNAMIC WARM',
     'LIGHT POWER',
     'HEAVY POWER',
     'STRENGTH POD 1',
     'STRENGTH POD 2',
     'STRENGTH POD 3',
-    'POD',
-    'POD ÚNICO',
-    'FORÇA REGENERATIVA',
-    'FORÇA EXPLOSIVA',
-    'ESD'
+    'ESD',
+    'CONDITIONING'
   ];
 
   const positions = [];
@@ -2561,6 +2543,19 @@ function parseConteudoBlocos(conteudo) {
   positions.sort((a, b) => a.idx - b.idx);
 
   if (positions.length === 0) {
+    // Formato legado: blocos separados por quebra de linha
+    if (normalized.includes('\n')) {
+      return normalized
+        .split('\n')
+        .map(b => b.trim())
+        .filter(Boolean)
+        .map(b => {
+          const colonIdx = findColonOutsideParens(b);
+          return colonIdx > -1
+            ? { nome: b.substring(0, colonIdx).trim(), exercicios: b.substring(colonIdx + 1).trim() }
+            : { nome: b.trim(), exercicios: '' };
+        });
+    }
     return [{ nome: 'TREINO', exercicios: normalized }];
   }
 
@@ -2591,6 +2586,7 @@ function parseTreino(conteudo) {
     .replace(/\r\n?/g, '\n')
     .replace(/[–—]/g, '-')
     .replace(/\s+\|\s+/g, '\n')
+    .replace(/\s+(?=(?:FOAM\s*ROLL|PILLAR\s*PREP|WARM[\s-]*UP|LIGHT\s*POWER|HEAVY\s*POWER|STRENGTH\s*POD\s*[123]|POD\s*[123]|ESD|CONDITIONING)\b)/gi, '\n')
     .replace(/\n{2,}/g, '\n');
 
   const lines = normalized.split('\n').map(l => l.trim()).filter(Boolean);
@@ -2716,6 +2712,10 @@ function parseTreino(conteudo) {
         .replace(/^[:\s]*/, '')
         .trim();
       return { bloco: 'WARM-UP', tipo: 'warm_up', navegavel: false, duracao, descricao: '', inlineContent: wuInline || '' };
+    }
+
+    if (/^LIGHT\s*POWER\b/i.test(line)) {
+      return { bloco: 'LIGHT POWER', tipo: 'power', navegavel: true, duracao, descricao };
     }
 
     if (/^HEAVY\s*POWER\b/i.test(line)) {
