@@ -1,6 +1,5 @@
 function _getPerformanceSupabaseClient() {
   if (typeof supabase !== 'undefined' && supabase?.auth?.getSession) return supabase;
-  if (window.supabase?.auth?.getSession) return window.supabase;
   return null;
 }
 

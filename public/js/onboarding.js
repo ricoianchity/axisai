@@ -509,7 +509,6 @@ async function _saveFmsAndFinish() {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
       state.user = { id: session.user.id, email: session.user.email };
-      localStorage.setItem('axisai_user', JSON.stringify(state.user));
     }
   }
 
@@ -571,7 +570,6 @@ async function _finishWizard() {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
       state.user = { id: session.user.id, email: session.user.email };
-      localStorage.setItem('axisai_user', JSON.stringify(state.user));
     }
   }
 
@@ -616,7 +614,7 @@ async function _finishWizard() {
   }
   const profileKey = getProfileKey();
   const onboardingKey = getOnboardingKey();
-  const existing = profileKey ? JSON.parse(localStorage.getItem(profileKey) || '{}') : {};
+  const existing = profileKey ? JSON.parse(_lsGet(profileKey) || '{}') : {};
   const merged = { ...existing };
   Object.keys(newData).forEach(k => {
     const v = newData[k];
@@ -676,7 +674,7 @@ function applyLocalParqDecision() {
   const key = getParqCacheKey();
   if (!key) return;
   try {
-    const cached = JSON.parse(localStorage.getItem(key) || 'null');
+    const cached = JSON.parse(_lsGet(key) || 'null');
     const decision = getParqDecision(cached);
     if (!decision) return;
     state.profile = { ...(state.profile || {}), ...decision };
@@ -1018,12 +1016,12 @@ async function navigate(page) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const target = document.getElementById('page-' + page);
   if (target) target.classList.add('active');
-  if (page === 'profile') loadProfile();
+  if (page === 'profile') await loadProfile();
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick')?.includes("'" + page + "'")) n.classList.add('active');
   });
   closeSidebar();
-  if (page === 'dashboard') refreshDashboard();
+  if (page === 'dashboard') await refreshDashboard();
   if (page === 'workouts') {
     renderWorkouts();
     await renderCompletedWorkouts();

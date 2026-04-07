@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════
 //  WORKOUTS
 // ═══════════════════════════════════════════════
-function loadWorkouts() { state.workouts = JSON.parse(localStorage.getItem('axisai_workouts') || '[]'); }
+function loadWorkouts() { state.workouts = JSON.parse(_lsGet('axisai_workouts') || '[]'); }
 function saveWorkouts() { localStorage.setItem('axisai_workouts', JSON.stringify(state.workouts)); }
 
 function _safeParseJson(value, fallback) {
@@ -216,7 +216,7 @@ async function loadTreinosTab() {
 
   // --- FALLBACK LOCAL ---
   const treinosKey = getTreinosKey();
-  const local = treinosKey ? JSON.parse(localStorage.getItem(treinosKey) || '[]') : [];
+  const local = treinosKey ? JSON.parse(_lsGet(treinosKey) || '[]') : [];
 
   if (!state.user?.id) {
     renderTreinosList(container, local, 'local');
@@ -587,7 +587,7 @@ async function iniciarTreino() {
     let insertData = null;
     let insertErr = null;
 
-    const { data: firstData, error: firstErr } = await window.supabase
+    const { data: firstData, error: firstErr } = await supabase
       .from('session_logs')
       .insert({
         user_id: state.user.id,
@@ -603,7 +603,7 @@ async function iniciarTreino() {
       let mbscWorkoutId = _activeWorkoutPlan?.id || null;
       if (mbscWorkoutId) {
         try {
-          const { data: mbscRow } = await window.supabase
+          const { data: mbscRow } = await supabase
             .from('workouts')
             .select('supabase_id')
             .eq('id', mbscWorkoutId)
@@ -611,7 +611,7 @@ async function iniciarTreino() {
           if (mbscRow?.supabase_id) mbscWorkoutId = mbscRow.supabase_id;
         } catch (_) {}
       }
-      const { data: secondData, error: secondErr } = await window.supabase
+      const { data: secondData, error: secondErr } = await supabase
         .from('session_logs')
         .insert({
           user_id: state.user.id,
@@ -737,7 +737,7 @@ async function expandBloc(blockType, plan = _activeWorkoutPlan) {
 
   if (blocoMeta.hasLoads && exerciseNames.length > 0 && state.user?.id) {
     try {
-      const { data: histData, error: histErr } = await window.supabase
+      const { data: histData, error: histErr } = await supabase
         .from('exercise_logs')
         .select('exercise_name, actual_weight_kg, actual_rpe, created_at')
         .eq('user_id', state.user.id)
@@ -990,7 +990,7 @@ async function finalizarTreino() {
       blocks_completed: blocksCompletedObj
     };
 
-    let { error: sessionError } = await window.supabase
+    let { error: sessionError } = await supabase
       .from('session_logs')
       .update(fullUpdate)
       .eq('id', _activeSessionId);
@@ -1003,7 +1003,7 @@ async function finalizarTreino() {
         rpe: rpeGeral,
         notes: feedback
       };
-      const { error: fallbackErr } = await window.supabase
+      const { error: fallbackErr } = await supabase
         .from('session_logs')
         .update(fallbackUpdate)
         .eq('id', _activeSessionId);
@@ -1044,7 +1044,7 @@ async function finalizarTreino() {
       const chunkSize = 50;
       for (let i = 0; i < exerciseRows.length; i += chunkSize) {
         const chunk = exerciseRows.slice(i, i + chunkSize);
-        const { error: logsError } = await window.supabase
+        const { error: logsError } = await supabase
           .from('exercise_logs')
           .insert(chunk);
         if (logsError) console.error(`Erro ao inserir exercise_logs (chunk ${i}):`, logsError);
@@ -1205,7 +1205,7 @@ function _setInlineSessionStart(startMs) {
 }
 
 function _getInlineElapsedSeconds() {
-  const start = parseInt(localStorage.getItem(_INLINE_SESSION_START_KEY) || '0', 10);
+  const start = parseInt(_lsGet(_INLINE_SESSION_START_KEY) || '0', 10);
   const fallbackStart = Number(_inlineSession?.startedAtMs || 0);
   const startMs = Number.isFinite(start) && start > 0 ? start : fallbackStart;
   if (!startMs) return 0;
@@ -1273,7 +1273,7 @@ function _clearInlineSessionState() {
 
 function _getPersistedSession() {
   try {
-    const raw = localStorage.getItem(_INLINE_SESSION_KEY);
+    const raw = _lsGet(_INLINE_SESSION_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch (_) { return null; }
 }
@@ -1570,7 +1570,7 @@ async function renderCompletedWorkouts() {
   }
 
   const treinosKey = getTreinosKey();
-  const treinos = treinosKey ? JSON.parse(localStorage.getItem(treinosKey) || '[]') : [];
+  const treinos = treinosKey ? JSON.parse(_lsGet(treinosKey) || '[]') : [];
   const localWorkouts = Array.isArray(state.workouts) ? state.workouts : [];
 
   container.innerHTML = logs.map(log => {
@@ -1649,7 +1649,7 @@ function deleteWorkout(i) { state.workouts.splice(i,1); saveWorkouts(); renderWo
 // ═══════════════════════════════════════════════
 function loadTreinosIA() {
   const treinosKey = getTreinosKey();
-  return treinosKey ? JSON.parse(localStorage.getItem(treinosKey) || '[]') : [];
+  return treinosKey ? JSON.parse(_lsGet(treinosKey) || '[]') : [];
 }
 function _buildApiPayload(t, userId) {
   return {
@@ -1670,7 +1670,7 @@ function _buildApiPayload(t, userId) {
 function _markSyncedInStorage(localId, supabaseId) {
   const treinosKey = getTreinosKey();
   if (!treinosKey) return;
-  const all = JSON.parse(localStorage.getItem(treinosKey) || '[]');
+  const all = JSON.parse(_lsGet(treinosKey) || '[]');
   const idx = all.findIndex(x => String(x.id) === String(localId));
   if (idx !== -1) {
     all[idx].synced = true;
@@ -1732,7 +1732,7 @@ function saveTreinosIA(treinos) {
 async function syncPendingWorkouts() {
   if (!state.user?.id) return;
   const treinosKey = getTreinosKey();
-  const treinos = treinosKey ? JSON.parse(localStorage.getItem(treinosKey) || '[]') : [];
+  const treinos = treinosKey ? JSON.parse(_lsGet(treinosKey) || '[]') : [];
   const pending = treinos.filter(t => !t.supabase_id);
   if (pending.length === 0) return;
 
@@ -1991,7 +1991,7 @@ function renderWorkoutBlocks(conteudo, treinoId, isDone) {
   }
 
   // ── Saved loads from localStorage ─────────────────────────────────────────
-  const cargas = JSON.parse(localStorage.getItem('axisai_cargas') || '{}');
+  const cargas = JSON.parse(_lsGet('axisai_cargas') || '{}');
 
   // ── Parse "3 séries × 8" → { count:3, reps:8 } ────────────────────────────
   function parseSeries(setsStr) {
@@ -2309,7 +2309,7 @@ async function completarTreinoIA(id) {
     if (!t) return;
 
     // ── Collect load data from localStorage ───────────────────────────────────
-    const allCargas = JSON.parse(localStorage.getItem('axisai_cargas') || '{}');
+    const allCargas = JSON.parse(_lsGet('axisai_cargas') || '{}');
     const prefix    = `${id}_`;
     const loadData  = {};
     Object.entries(allCargas).forEach(([k, v]) => {
@@ -4424,7 +4424,7 @@ async function _saveSession(finishedAt, duration) {
 
 // ── Save individual set load to localStorage (axisai_cargas) ──────────────
 function saveLoadInput(treinoId, exIdx, serieIdx, val) {
-  const cargas = JSON.parse(localStorage.getItem('axisai_cargas') || '{}');
+  const cargas = JSON.parse(_lsGet('axisai_cargas') || '{}');
   const key = `${treinoId}_ex${exIdx}_s${serieIdx}`;
   if (val !== '' && !isNaN(parseFloat(val))) {
     cargas[key] = parseFloat(val);
@@ -4454,7 +4454,7 @@ function _saveLoadInput(inputEl) {
 
 // ── Save checkbox state ────────────────────────────────────────────────────
 function saveLoadCheck(treinoId, exIdx, serieIdx, checked) {
-  const cargas = JSON.parse(localStorage.getItem('axisai_cargas') || '{}');
+  const cargas = JSON.parse(_lsGet('axisai_cargas') || '{}');
   cargas[`${treinoId}_ex${exIdx}_s${serieIdx}_done`] = checked;
   localStorage.setItem('axisai_cargas', JSON.stringify(cargas));
 }

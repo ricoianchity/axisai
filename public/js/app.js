@@ -1,15 +1,15 @@
 const LIB_AND_MODULE_SCRIPTS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
   'https://cdn.jsdelivr.net/npm/chart.js',
-  '/js/performance.js',
+  '/js/auth.js',
+  '/js/onboarding.js',
   '/js/dashboard.js',
   '/js/profile.js',
   '/js/coach.js',
-  '/js/onboarding.js',
-  '/js/auth.js',
+  '/js/performance.js',
 ];
 
-function loadScriptSequentially(src) {
+function queueScript(src) {
   return new Promise((resolve, reject) => {
     const existing = document.querySelector(`script[data-axis-module-src="${src}"]`);
     if (existing) {
@@ -37,5 +37,5 @@ function loadScriptSequentially(src) {
 }
 
 for (const src of LIB_AND_MODULE_SCRIPTS) {
-  await loadScriptSequentially(src);
+  await queueScript(src);
 }

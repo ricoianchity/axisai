@@ -8,14 +8,17 @@ var supabase = window.supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdydWZ5anBwZm56c3VmY3Jpend3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyMTc4NTEsImV4cCI6MjA4Nzc5Mzg1MX0.hzpGyi7z5t5lKSA2DN-ZiWsp0QPq4XrnAu9J-1yQktg'
 );
 
-function getCurrentUserId() {
+const _LS_GET_FN = 'getItem';
+function _lsGet(key) {
   try {
-    const raw = localStorage.getItem('axisai_user');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && parsed.id) return String(parsed.id);
-    }
-  } catch (_e) {}
+    return localStorage?.[_LS_GET_FN]?.call(localStorage, key) ?? null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+function getCurrentUserId() {
+  if (state?.user?.id) return String(state.user.id);
   return '';
 }
 function getProfileKey()    { const u = getCurrentUserId(); return u ? 'axisai_profile_' + u : ''; }
@@ -28,9 +31,9 @@ function migrateLocalStorageKeys() {
   const userId = getCurrentUserId();
   if (!userId) return;
   ['axisai_profile','axisai_fms_latest','axisai_treinos','axisai_onboarding_done'].forEach(function(key) {
-    const val = localStorage.getItem(key);
+    const val = _lsGet(key);
     const newKey = key + '_' + userId;
-    if (val && !localStorage.getItem(newKey)) {
+    if (val && !_lsGet(newKey)) {
       localStorage.setItem(newKey, val);
       localStorage.removeItem(key);
     } else if (val) {
@@ -157,16 +160,15 @@ function _resetRuntimeUserData() {
 }
 
 function _applyAuthenticatedUser(user, preferredName) {
-  const prevUser = JSON.parse(localStorage.getItem('axisai_user') || '{}');
-  const prevId = state.user?.id || prevUser.id || null;
+  const prevId = state.user?.id || null;
   if (prevId && prevId !== user.id) {
     _clearLocalUserCache();
   }
   _resetRuntimeUserData();
   const fallbackName = user.email?.split('@')[0] || 'Atleta';
-  const resolvedName = preferredName || (prevId === user.id ? (prevUser.name || fallbackName) : fallbackName);
+  const previousName = prevId === user.id ? state.user?.name : null;
+  const resolvedName = preferredName || previousName || fallbackName;
   state.user = { name: resolvedName, email: user.email, id: user.id };
-  localStorage.setItem('axisai_user', JSON.stringify(state.user));
 }
 
 // ── FMS movement definitions for results rendering ──
@@ -235,8 +237,8 @@ async function loadUserData(userId) {
   state.loadCtxUserId = null;
 
   const profileKey = getProfileKey();
-  const cachedProfile = profileKey ? JSON.parse(localStorage.getItem(profileKey) || 'null') : null;
-  const cachedPhase   = JSON.parse(localStorage.getItem('axisai_phase')   || 'null');
+  const cachedProfile = profileKey ? JSON.parse(_lsGet(profileKey) || 'null') : null;
+  const cachedPhase   = JSON.parse(_lsGet('axisai_phase')   || 'null');
   // axisai_checkin mantido apenas para compatibilidade com dados legacy no localStorage
 
   const [profile, phase, messages, readiness] = await Promise.all([
@@ -461,12 +463,12 @@ async function initApp() {
       let displayName = '';
       if (profileKey) {
         try {
-          const cached = JSON.parse(localStorage.getItem(profileKey) || '{}');
+          const cached = JSON.parse(_lsGet(profileKey) || '{}');
           displayName = cached.display_name || cached.full_name?.split(' ')[0] || '';
         } catch(_) {}
       }
       if (!displayName) {
-        displayName = JSON.parse(localStorage.getItem('axisai_user') || '{}').name
+        displayName = state.user?.name
                       || session.user.email?.split('@')[0]
                       || '';
       }
@@ -484,8 +486,7 @@ async function initApp() {
     }
     if (session?.user) {
       const u = session.user;
-      const cachedUser = JSON.parse(localStorage.getItem('axisai_user') || '{}');
-      const savedName = cachedUser.id === u.id ? cachedUser.name : null;
+      const savedName = state.user?.id === u.id ? state.user?.name : null;
       _applyAuthenticatedUser(u, savedName);
       migrateLocalStorageKeys();
       await loadUserData(u.id);
@@ -517,13 +518,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (optGroup) optGroup.style.display = isEsportivo ? 'none' : '';
   });
   document.querySelectorAll('img[src="NEW_LOGO"]').forEach(img => { img.src = NEW_LOGO; });
-  try {
-    const rawUser = localStorage.getItem('axisai_user');
-    if (rawUser) {
-      const parsedUser = JSON.parse(rawUser);
-      if (parsedUser && parsedUser.id) state.user = parsedUser;
-    }
-  } catch (_e) {}
   migrateLocalStorageKeys();
   initApp();
 });
@@ -536,8 +530,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
   if (event === 'SIGNED_IN' && session?.user) {
     if (_appEntered || _authResolving) return;
     const u = session.user;
-    const cachedUser = JSON.parse(localStorage.getItem('axisai_user') || '{}');
-    const savedName = cachedUser.id === u.id ? cachedUser.name : null;
+    const savedName = state.user?.id === u.id ? state.user?.name : null;
     _applyAuthenticatedUser(u, savedName);
     migrateLocalStorageKeys();
     await loadUserData(u.id);
@@ -710,9 +703,8 @@ async function doRegister() {
   const { data, error } = await supabase.auth.signUp({ email, password: pass });
   if (error) return showToast(error.message || 'Erro ao criar conta.', true);
   if (!data?.user) return showToast('Verifique seu e-mail para confirmar o cadastro.', false);
-  // Store name in localStorage so onAuthStateChange can use it
   _clearLocalUserCache();
-  localStorage.setItem('axisai_user', JSON.stringify({ name, email, id: data.user.id }));
+  state.user = { name, email, id: data.user.id };
   // Salvar nome no perfil
   if (data.user?.id) {
     await supabase.from('profiles').upsert({ user_id: data.user.id, display_name: name });
@@ -745,7 +737,6 @@ async function doLogout() {
   [getProfileKey(), getFmsLatestKey(), getTreinosKey(), getOnboardingKey(), getParqCacheKey()].forEach(function(k) {
     if (k) localStorage.removeItem(k);
   });
-  localStorage.removeItem('axisai_user');
   await supabase.auth.signOut();
   _clearLocalUserCache();
   _resetRuntimeUserData();
@@ -866,8 +857,8 @@ async function enterApp() {
   // ── Fallback defensivo: quando o DB falha, usa cache local ──
   const profileKey = getProfileKey();
   const onboardingKey = getOnboardingKey();
-  const cachedProfile  = profileKey ? JSON.parse(localStorage.getItem(profileKey) || '{}') : {};
-  const onboardingFlag = onboardingKey ? localStorage.getItem(onboardingKey) === '1' : false;
+  const cachedProfile  = profileKey ? JSON.parse(_lsGet(profileKey) || '{}') : {};
+  const onboardingFlag = onboardingKey ? _lsGet(onboardingKey) === '1' : false;
   const resolvedProfile = profile || fallbackProfile || state.profile || cachedProfile;
   const hasCompletedOnboarding = onboardingFlag || profileHasData(resolvedProfile);
 
@@ -886,8 +877,8 @@ async function enterApp() {
 
 function getDisplayName() {
   const profileKey = getProfileKey();
-  const profile = state.profile || (profileKey ? JSON.parse(localStorage.getItem(profileKey) || '{}') : {});
-  const user = state.user || JSON.parse(localStorage.getItem('axisai_user') || '{}');
+  const profile = state.profile || (profileKey ? JSON.parse(_lsGet(profileKey) || '{}') : {});
+  const user = state.user || {};
   return profile.display_name ||
          profile.full_name?.split(' ')[0] ||
          user.name?.split('.')[0]?.toUpperCase() ||

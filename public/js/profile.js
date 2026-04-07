@@ -105,7 +105,7 @@ function runDiagnosis() {
 // ═══════════════════════════════════════════════
 function loadProfileHealth() {
   const profileKey = getProfileKey();
-  const profile = profileKey ? JSON.parse(localStorage.getItem(profileKey) || '{}') : {};
+  const profile = profileKey ? JSON.parse(_lsGet(profileKey) || '{}') : {};
 
   const displayNameEl = document.getElementById('profile-display-name');
   const fullNameEl = document.getElementById('profile-full-name-edit');
@@ -136,7 +136,7 @@ function loadProfileHealth() {
 
 async function saveProfileHealth() {
   const profileKey = getProfileKey();
-  const profile = profileKey ? JSON.parse(localStorage.getItem(profileKey) || '{}') : {};
+  const profile = profileKey ? JSON.parse(_lsGet(profileKey) || '{}') : {};
 
   const displayName = document.getElementById('profile-display-name')?.value?.trim();
   const fullName = document.getElementById('profile-full-name-edit')?.value?.trim();
@@ -196,14 +196,14 @@ async function loadProfile() {
   const fmsKey = getFmsLatestKey();
   // Restore fmsLatest from dedicated localStorage key
   if (!state.fmsLatest) {
-    const savedFms = fmsKey ? localStorage.getItem(fmsKey) : null;
+    const savedFms = fmsKey ? _lsGet(fmsKey) : null;
     if (savedFms) {
       try { state.fmsLatest = JSON.parse(savedFms); } catch(e) {}
     }
   }
   // Bootstrap from profile if no dedicated entry yet
   if (!state.fmsLatest) {
-    const profileRaw = profileKey ? localStorage.getItem(profileKey) : null;
+    const profileRaw = profileKey ? _lsGet(profileKey) : null;
     if (profileRaw) {
       try {
         const prof = JSON.parse(profileRaw);
@@ -266,7 +266,7 @@ async function loadProfile() {
     }
   }
 
-  const saved = profileKey ? localStorage.getItem(profileKey) : null;
+  const saved = profileKey ? _lsGet(profileKey) : null;
   if (saved) {
     state.profile = JSON.parse(saved);
     // Normalizar equipment para array
@@ -508,7 +508,7 @@ function renderFmsResults() {
 
   // Medication alerts
   const profileKey = getProfileKey();
-  const _healthProfile = profileKey ? JSON.parse(localStorage.getItem(profileKey) || '{}') : {};
+  const _healthProfile = profileKey ? JSON.parse(_lsGet(profileKey) || '{}') : {};
   const _medications = _healthProfile.medications || [];
   if (_medications.length > 0) {
     const medAlerts = [];
@@ -637,7 +637,7 @@ function _buildFmsReportSource() {
     };
   }
   const profileKey = getProfileKey();
-  const cachedProfile = profileKey ? JSON.parse(localStorage.getItem(profileKey) || '{}') : {};
+  const cachedProfile = profileKey ? JSON.parse(_lsGet(profileKey) || '{}') : {};
   const profile = state.profile || cachedProfile || {};
   return {
     scores: profile.fms || state.fmsLatest?.fms || {},
@@ -776,7 +776,7 @@ function displayAvatar(dataUrl) {
 }
 
 function loadAvatar() {
-  const saved = localStorage.getItem('axisai_avatar');
+  const saved = _lsGet('axisai_avatar');
   if (saved) displayAvatar(saved);
 }
 
@@ -787,7 +787,7 @@ const LGPD_CONSENT_KEY = 'axisai_lgpd_consent';
 const LGPD_VERSION = '1.0';
 
 function getLGPDConsent() {
-  return JSON.parse(localStorage.getItem(LGPD_CONSENT_KEY) || 'null');
+  return JSON.parse(_lsGet(LGPD_CONSENT_KEY) || 'null');
 }
 
 async function saveLGPDConsent(consent) {
@@ -875,7 +875,7 @@ function exportUserData() {
   const dynamicKeys = [getProfileKey(), getTreinosKey(), getFmsLatestKey(), getOnboardingKey(), getParqCacheKey()].filter(Boolean);
   const data = {};
   [...keys, ...dynamicKeys, 'axisai_profile', 'axisai_treinos', 'axisai_fms_latest', 'axisai_onboarding_done'].forEach(k => {
-    const val = localStorage.getItem(k);
+    const val = _lsGet(k);
     if (val) {
       try { data[k] = JSON.parse(val); } catch { data[k] = val; }
     }

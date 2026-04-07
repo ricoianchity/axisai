@@ -200,8 +200,8 @@ async function renderFmsPreviewCard() {
 
   const profileKey = getProfileKey();
   const fmsKey = getFmsLatestKey();
-  const profile = profileKey ? JSON.parse(localStorage.getItem(profileKey) || '{}') : {};
-  let fmsLatest = fmsKey ? JSON.parse(localStorage.getItem(fmsKey) || '{}') : {};
+  const profile = profileKey ? JSON.parse(_lsGet(profileKey) || '{}') : {};
+  let fmsLatest = fmsKey ? JSON.parse(_lsGet(fmsKey) || '{}') : {};
   if (state.user?.id) {
     try {
       const { data: fmsRow } = await supabase
@@ -563,11 +563,11 @@ async function refreshDashboard() {
 
 // ── Check-in helpers (legacy — mantém escrita em 'checkins' para compatibilidade) ──
 function getCheckinData() {
-  return JSON.parse(localStorage.getItem('axisai_checkin') || 'null');
+  return JSON.parse(_lsGet('axisai_checkin') || 'null');
 }
 async function saveCheckinData(data) {
   const profileKey = typeof getProfileKey === 'function' ? getProfileKey() : '';
-  const cachedProfile = profileKey ? JSON.parse(localStorage.getItem(profileKey) || '{}') : {};
+  const cachedProfile = profileKey ? JSON.parse(_lsGet(profileKey) || '{}') : {};
   const isFemale = cachedProfile.sex === 'female' ||
                    cachedProfile.sex === 'Feminino' ||
                    cachedProfile.sex === 'feminino';
@@ -798,7 +798,7 @@ function openCheckinFlow() {
 
   // Oculta campo menstrual para usuários não femininos (segurança adicional ao filtro de renderização)
   const profileKey = typeof getProfileKey === 'function' ? getProfileKey() : '';
-  const cachedProfile = profileKey ? JSON.parse(localStorage.getItem(profileKey) || '{}') : {};
+  const cachedProfile = profileKey ? JSON.parse(_lsGet(profileKey) || '{}') : {};
   const isFemale = cachedProfile.sex === 'female' ||
                    cachedProfile.sex === 'Feminino' ||
                    cachedProfile.sex === 'feminino';
@@ -841,7 +841,7 @@ async function submitCheckin() {
     stress_level:    parseInt(document.getElementById('ci-stress').value)
   };
   const profileKey = typeof getProfileKey === 'function' ? getProfileKey() : '';
-  const cachedProfile = profileKey ? JSON.parse(localStorage.getItem(profileKey) || '{}') : {};
+  const cachedProfile = profileKey ? JSON.parse(_lsGet(profileKey) || '{}') : {};
   const isFemale = cachedProfile.sex === 'female' ||
                    cachedProfile.sex === 'Feminino' ||
                    cachedProfile.sex === 'feminino';
@@ -1003,7 +1003,7 @@ function renderStreakCard() {
 
 // ── Card 3: Current Phase Summary ──
 function getPhaseData() {
-  return JSON.parse(localStorage.getItem('axisai_phase') || 'null');
+  return JSON.parse(_lsGet('axisai_phase') || 'null');
 }
 async function savePhaseData(data) {
   const payload = { ...data, user_id: state.user?.id, started_at: data.started_at || new Date().toISOString() };
