@@ -561,6 +561,51 @@ async function _waitForSessionDashboard() {
   return session;
 }
 
+const DASHBOARD_ACTIVE_WORKOUT_STATUSES = ['active', 'em_andamento', 'pending', 'ativo'];
+
+function _isDashboardActiveStatus(status) {
+  return DASHBOARD_ACTIVE_WORKOUT_STATUSES.includes(String(status || '').toLowerCase());
+}
+
+function _hasDashboardFms(profile) {
+  const fmsScores = profile?.fms_scores;
+  const fms = profile?.fms;
+  const hasFmsScores = !!(fmsScores && typeof fmsScores === 'object' && Object.keys(fmsScores).length > 0);
+  const hasFms = !!(fms && typeof fms === 'object' && Object.keys(fms).length > 0);
+  return hasFmsScores || hasFms;
+}
+
+function _getDashboardRoot() {
+  return document.querySelector('#page-dashboard, #dashboard, [id*="dashboard"], .dashboard-content');
+}
+
+async function _prefetchDashboardData(userId) {
+  const [profileRes, workoutsRes, sessionLogsRes] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('weight, objective, sex, fms, fms_scores, comorbidities, phase, day, risk_flags')
+      .eq('user_id', userId)
+      .maybeSingle(),
+    supabase
+      .from('workouts')
+      .select('id, titulo, status, created_at')
+      .eq('user_id', userId)
+      .in('status', DASHBOARD_ACTIVE_WORKOUT_STATUSES),
+    supabase
+      .from('session_logs')
+      .select('id, created_at, duration_seconds')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(30)
+  ]);
+
+  return {
+    profileRes,
+    workoutsRes,
+    sessionLogsRes
+  };
+}
+
 async function initDashboard() {
   const session = await _waitForSessionDashboard();
   if (!session?.user?.id) {
@@ -574,7 +619,72 @@ async function initDashboard() {
       email: session.user.email || state.user?.email || ''
     };
   }
-  await refreshDashboard();
+
+  const dashboardRoot = _getDashboardRoot();
+  const previousOpacity = dashboardRoot?.style.opacity || '';
+  const previousPointerEvents = dashboardRoot?.style.pointerEvents || '';
+
+  if (dashboardRoot) {
+    dashboardRoot.style.opacity = '0';
+    dashboardRoot.style.pointerEvents = 'none';
+  }
+
+  try {
+    const { profileRes, workoutsRes, sessionLogsRes } = await _prefetchDashboardData(session.user.id);
+
+    if (!profileRes?.error && profileRes?.data) {
+      const profile = profileRes.data;
+      if (!profile.fms_scores && profile.fms) {
+        profile.fms_scores = profile.fms;
+      }
+      if (!profile.fms && profile.fms_scores) {
+        profile.fms = profile.fms_scores;
+      }
+      state.profile = { ...(state.profile || {}), ...profile };
+      if (_hasDashboardFms(state.profile)) {
+        state.fmsLatest = {
+          ...(state.fmsLatest || {}),
+          fms: state.profile.fms_scores || state.profile.fms || state.fmsLatest?.fms || null
+        };
+      }
+    }
+
+    const remoteWorkouts = !workoutsRes?.error && Array.isArray(workoutsRes?.data) ? workoutsRes.data : [];
+    const activeRemoteWorkouts = remoteWorkouts.filter((workout) => _isDashboardActiveStatus(workout?.status));
+    if (!workoutsRes?.error && Array.isArray(workoutsRes?.data)) {
+      state.workouts = activeRemoteWorkouts.map((workout) => ({
+        ...workout,
+        completed: false,
+        date: workout?.created_at || null
+      }));
+    }
+
+    state.dashboard_session_logs = !sessionLogsRes?.error && Array.isArray(sessionLogsRes?.data)
+      ? sessionLogsRes.data
+      : [];
+
+    const hasFms = _hasDashboardFms(state.profile);
+    const banner = document.querySelector('#fms-pending-alert, .fms-pending-alert');
+    if (banner) banner.style.display = hasFms ? 'none' : 'flex';
+
+    const planosAtivos = activeRemoteWorkouts.length;
+    const treinosIA = loadTreinosIA();
+    const planosEl = document.querySelector('#stat-workouts, [class*="plano-count"], [id*="planos"]');
+    if (planosEl) planosEl.textContent = String(planosAtivos + treinosIA.length);
+
+    const temPerfil = !!(state.profile?.weight && state.profile?.objective);
+    const nutriEl = document.getElementById('nutri-dash-phrase');
+    if (nutriEl && !temPerfil) {
+      nutriEl.textContent = 'Consulte a aba Nutrição para orientações';
+    }
+
+    await refreshDashboard();
+  } finally {
+    if (dashboardRoot) {
+      dashboardRoot.style.opacity = previousOpacity || '1';
+      dashboardRoot.style.pointerEvents = previousPointerEvents || '';
+    }
+  }
 }
 
 async function refreshDashboard() {
@@ -600,7 +710,7 @@ async function refreshDashboard() {
 
   renderRecentWorkouts();
   updateFirstWorkoutCTA();
-  renderFmsPreviewCard();
+  await renderFmsPreviewCard();
   refreshDashboardCards();
   refreshPendingAlert();
   renderDashboardNutritionCard();
