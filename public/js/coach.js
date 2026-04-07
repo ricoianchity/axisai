@@ -1197,6 +1197,45 @@ let _inlineSessionTimer = null;
 
 // ── BUG-2 FIX: Persist active session state across tab navigation ─────────
 const _INLINE_SESSION_KEY = 'axisai_inline_session';
+const _INLINE_SESSION_START_KEY = 'axis_session_start';
+
+function _setInlineSessionStart(startMs) {
+  const normalized = Number(startMs) || Date.now();
+  localStorage.setItem(_INLINE_SESSION_START_KEY, String(normalized));
+}
+
+function _getInlineElapsedSeconds() {
+  const start = parseInt(localStorage.getItem(_INLINE_SESSION_START_KEY) || '0', 10);
+  const fallbackStart = Number(_inlineSession?.startedAtMs || 0);
+  const startMs = Number.isFinite(start) && start > 0 ? start : fallbackStart;
+  if (!startMs) return 0;
+  return Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+}
+
+function _updateInlineTimerDisplay() {
+  if (!_inlineSession || _inlineSession.finished) return;
+  const elapsed = _getInlineElapsedSeconds();
+  _inlineSession.timerSecs = elapsed;
+  const formatted = _formatClock(elapsed);
+  const timer = document.getElementById(`timer-${_inlineSession.cardDomId}`);
+  if (timer) timer.textContent = formatted;
+  const stickyTimer = document.getElementById(`sticky-timer-${_inlineSession.cardDomId}`);
+  if (stickyTimer) stickyTimer.textContent = formatted;
+}
+
+function _startInlineSessionTimerLoop() {
+  _stopInlineSessionTimer();
+  _updateInlineTimerDisplay();
+  _inlineSessionTimer = setInterval(() => {
+    _updateInlineTimerDisplay();
+  }, 1000);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    _updateInlineTimerDisplay();
+  }
+});
 
 function _saveInlineSessionState() {
   if (!_inlineSession || _inlineSession.finished) {
@@ -1229,6 +1268,7 @@ function _saveInlineSessionState() {
 
 function _clearInlineSessionState() {
   localStorage.removeItem(_INLINE_SESSION_KEY);
+  localStorage.removeItem(_INLINE_SESSION_START_KEY);
 }
 
 function _getPersistedSession() {
@@ -1264,12 +1304,14 @@ function _restoreInlineSession() {
     bodyEl:       body,
     startedAtMs:  snap.startedAtMs,
     startedAtIso: snap.startedAtIso,
-    timerSecs:    snap.timerSecs || Math.floor((Date.now() - snap.startedAtMs) / 1000),
+    timerSecs:    Math.max(0, Math.floor((Date.now() - Number(snap.startedAtMs || Date.now())) / 1000)),
     blocks:       snap.blocks,
     finished:     false,
     sessionLogId:   snap.sessionLogId || null,
     realWorkoutId:  snap.realWorkoutId || null
   };
+
+  _setInlineSessionStart(_inlineSession.startedAtMs);
 
   // Re-render the session UI
   card.classList.add('session-active');
@@ -1278,11 +1320,7 @@ function _restoreInlineSession() {
   _injectInlineTimer();
 
   // Update timer display with elapsed time
-  const formatted = _formatClock(_inlineSession.timerSecs);
-  const timer = document.getElementById(`timer-${_inlineSession.cardDomId}`);
-  if (timer) timer.textContent = formatted;
-  const stickyTimer = document.getElementById(`sticky-timer-${_inlineSession.cardDomId}`);
-  if (stickyTimer) stickyTimer.textContent = formatted;
+  _updateInlineTimerDisplay();
 
   // Update start button to show "Em andamento"
   const startBtn = card.querySelector('.btn-start-session');
@@ -1293,17 +1331,9 @@ function _restoreInlineSession() {
   }
 
   // Restart timer interval
-  _inlineSessionTimer = setInterval(() => {
-    if (!_inlineSession || _inlineSession.finished) return;
-    _inlineSession.timerSecs += 1;
-    const fmt = _formatClock(_inlineSession.timerSecs);
-    const t = document.getElementById(`timer-${_inlineSession.cardDomId}`);
-    if (t) t.textContent = fmt;
-    const st = document.getElementById(`sticky-timer-${_inlineSession.cardDomId}`);
-    if (st) st.textContent = fmt;
-  }, 1000);
+  _startInlineSessionTimerLoop();
 
-  console.log('[BUG-2] Session restored for workoutId:', snap.workoutId, 'elapsed:', _inlineSession.timerSecs + 's');
+  console.log('[BUG-2] Session restored for workoutId:', snap.workoutId, 'elapsed:', _getInlineElapsedSeconds() + 's');
   return true;
 }
 
@@ -1434,9 +1464,7 @@ function renderWorkouts() {
         existingBody.classList.add('open');
         _renderInlineSessionBody();
         _injectInlineTimer();
-        const fmt = _formatClock(_inlineSession.timerSecs);
-        const st = document.getElementById(`sticky-timer-${_inlineSession.cardDomId}`);
-        if (st) st.textContent = fmt;
+        _updateInlineTimerDisplay();
         const startBtn = existingCard.querySelector('.btn-start-session');
         if (startBtn) {
           startBtn.disabled = true;
@@ -3093,6 +3121,8 @@ function _startInlineSession({ workoutId, title, conteudo, card, source, sourceI
     finished: false
   };
 
+  _setInlineSessionStart(_inlineSession.startedAtMs);
+
   card.classList.add('session-active');
   body.classList.add('open');
   _renderInlineSessionBody();  // body.innerHTML setado ANTES da injeção do sticky bar
@@ -3108,17 +3138,7 @@ function _startInlineSession({ workoutId, title, conteudo, card, source, sourceI
     startBtn.textContent = 'Em andamento';
   }
 
-  _inlineSessionTimer = setInterval(() => {
-    if (!_inlineSession || _inlineSession.finished) return;
-    _inlineSession.timerSecs += 1;
-    const formatted = _formatClock(_inlineSession.timerSecs);
-    // Atualizar header timer (legado, pode estar oculto)
-    const timer = document.getElementById(`timer-${_inlineSession.cardDomId}`);
-    if (timer) timer.textContent = formatted;
-    // Atualizar sticky timer bar
-    const stickyTimer = document.getElementById(`sticky-timer-${_inlineSession.cardDomId}`);
-    if (stickyTimer) stickyTimer.textContent = formatted;
-  }, 1000);
+  _startInlineSessionTimerLoop();
 
   // FE-002 / TASK 2 & 3: lookup supabase_id + criar session_log antecipado (async, não bloqueia UI)
   (async () => {
@@ -3544,9 +3564,10 @@ function finishSession(workoutId) {
 
   _stopInlineSessionTimer();
   _inlineSession.finished = true;
+  const durationSeconds = Math.max(1, _getInlineElapsedSeconds());
+  _inlineSession.timerSecs = durationSeconds;
   // BUG-2 FIX: clear persisted session on finish
   _clearInlineSessionState();
-  const durationSeconds = Math.max(1, _inlineSession.timerSecs || 0);
   const totalVolume = _computeSessionLoadsTotal();
   const volumeKg = totalVolume > 0 ? totalVolume : _computeInlineVolumeKg(_inlineSession.cardEl);
   const key = _inlineSession.cardDomId;
