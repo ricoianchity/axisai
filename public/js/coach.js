@@ -5199,7 +5199,7 @@ async function clearChat() {
   const _initPayload = {
     model: 'claude-sonnet-4-5',
     max_tokens: 2048,
-    system: CORE_PROMPT,
+    system: buildCoachSystemPrompt(),   // usa perfil completo do usuário logado
     messages: [_initMsg]
   };
 
@@ -5263,6 +5263,108 @@ async function preloadCoachLoadCtx(force = false) {
   return state.loadCtx;
 }
 
+// ── Helper: constrói o system prompt completo com contexto do usuário ──
+// Usado tanto no clearChat (greeting inicial) quanto no sendMessage.
+function buildCoachSystemPrompt(text = '') {
+  const p = state.profile;
+  let profileCtx = p ? `\n\n## PERFIL DO USUÁRIO\nIdade: ${p.age||'?'} | Peso: ${p.weight||'?'}kg | Altura: ${p.height||'?'}cm | Sexo: ${p.sex||'?'} | Nível: ${p.level||'?'} | Objetivo: ${p.objective||'?'} | Frequência: ${p.frequency||'?'}/semana | Tempo/sessão: ${p.session_time||'?'} | Lesões: ${p.injuries||'Nenhuma'} | PAR-Q cardíaco: ${p.parq==='yes'?'Sim — recomendado acompanhamento médico':'Não'}.\nProfissão: ${p.profissao||'?'} | Jornada: ${p.horas_trabalho||'?'}h/dia | Perfil postural: ${p.perfil_postural||'?'}${p.perfil_postural==='Misto'?' ('+(p.horas_sentado||'?')+'h sentado)':''} | Estresse ocupacional: ${p.estresse_ocup||'?'} | Turno: ${p.turno_trabalho||'?'}.` : '\n\n## PERFIL\nNão preenchido — pergunte dados essenciais.';
+  if (p && p.gym) profileCtx += `\nLocal de treino: ${p.gym}`;
+  if (p && p.equipment) {
+    const equip = Array.isArray(p.equipment) ? p.equipment.join(', ') : p.equipment;
+    if (equip) profileCtx += `\nEquipamentos disponíveis: ${equip}`;
+  }
+  const benchmarks = p?.strength_benchmarks || state.profile?.strength_benchmarks;
+  if (benchmarks && Object.keys(benchmarks).length > 0) {
+    const bmLabels = { deadlift:'Deadlift bilateral', squat:'Agachamento', bench:'Supino reto', rfe_split:'RFE Split Squat', chin_up:'Chin-Up ponderado' };
+    const bmLines = Object.entries(benchmarks).map(([k, v]) => `${bmLabels[k]||k}: ${v}kg (1RM estimado)`).join(', ');
+    profileCtx += `\nForça — 1RM estimados: ${bmLines}`;
+    profileCtx += `\nUSAR esses valores para prescrever cargas específicas. Ex: para 3×8 use 75-80% do 1RM.`;
+  }
+  const modalidade = p?.modalidade || '';
+  if (modalidade) {
+    profileCtx += `\nModalidade esportiva: ${modalidade}`;
+    profileCtx += `\nCONSIDERAR NA PRESCRIÇÃO: adaptar exercícios para melhorar performance em ${modalidade} e prevenir lesões típicas dessa modalidade.`;
+  }
+  const fmsTotal = p?.fms ? (p.fms.dos??0)+(p.fms.il??0)+(p.fms.hs??0)+(p.fms.sm??0)+(p.fms.aslr??0) : null;
+  const fmsFlags = (Array.isArray(p?.risk_flags) ? p.risk_flags : []).filter(f=>f!=='none');
+  const fmsFlagMap = { squat_dysfunction:'Deep Squat ≤1', lunge_dysfunction:'Inline Lunge ≤1', hip_instability:'Hurdle Step ≤1', shoulder_restriction:'Shoulder Mobility ≤1', hamstring_restriction:'ASLR ≤1', toe_touch_negative:'Toe Touch negativo' };
+  const _ttLabel = p?.fms?.tt === 'positive' ? 'Sim' : p?.fms?.tt === 'negative' ? 'Não' : '?';
+  const fmsCtx = p?.fms ? `\n\n## SCORES FMS\nFMS Total: ${fmsTotal}/15 | DOS: ${p.fms.dos??'?'} | IL: ${p.fms.il??'?'} | HS: ${p.fms.hs??'?'} | SM: ${p.fms.sm??'?'} | ASLR: ${p.fms.aslr??'?'} | Toe Touch: ${_ttLabel}\nFlags: ${fmsFlags.length>0?fmsFlags.map(f=>fmsFlagMap[f]||f).join(', '):'Nenhuma'}` : '';
+  const flagMap = { shoulder_restriction:'Restrição de Ombro', hamstring_restriction:'Restrição de Isquiotibiais', hip_instability:'Instabilidade de Quadril', squat_dysfunction:'Disfunção de Agachamento', lunge_dysfunction:'Disfunção de Avanço', apt:'APT/Hiperlordose', rib_flare:'Costelas Abertas', knee_valgus:'Valgo de Joelho', toe_touch_negative:'Toe Touch Negativo' };
+  const activeFlags = (Array.isArray(p?.risk_flags) ? p.risk_flags : []).filter(f => f !== 'none');
+  const flagCtx = activeFlags.length > 0 ? `\n\n## FLAGS ATIVAS\n${activeFlags.map(f => '⚠️ ' + (flagMap[f]||f)).join('\n')}` : '\n\n## FLAGS\nNenhuma disfunção.';
+  const prescriptionTriggers = /treino|exerc[ií]cio|s[ée]rie|programa|prescrever|monte|gerar|plano|aquecimento|pillar|prep|warm|workout|periodiza/i;
+  const needsReference = prescriptionTriggers.test(text);
+  let readinessCtx = '';
+  const rdToday = state.readiness;
+  if (rdToday && rdToday.readiness_score != null) {
+    const rdBand = getReadinessBand(rdToday.readiness_score);
+    const rdNotes = rdToday.notes ? `\nObservações: ${rdToday.notes}` : '';
+    readinessCtx = `\n\n## PRONTIDÃO DO ATLETA (hoje)\nScore: ${rdToday.readiness_score}/100 (${rdBand.label})\n- Qualidade do sono: ${rdToday.sleep_quality}/5\n- Nível de energia: ${rdToday.energy_level}/5\n- Dor muscular: ${rdToday.muscle_soreness}/5\n- Nível de estresse: ${rdToday.stress_level}/5${rdNotes}\n\nINSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino de hoje com base neste score:\n- Prontidão Alta (70-100): treino normal conforme fase planejada\n- Prontidão Moderada (40-69): reduza volume em 20%, mantenha intensidade ou reduza levemente, priorize movimentos de menor impacto articular\n- Prontidão Baixa (0-39): sessão de recuperação ativa ou técnica — sem trabalho de alta intensidade, foque em mobilidade, ativação e movimentos do padrão de baixo risco do FMS do atleta`;
+    if (rdToday?.menstrual_phase === true || rdToday?.menstrual_phase === 'true') {
+      readinessCtx += '\n⚠️ CICLO MENSTRUAL: atleta em período menstrual hoje. Reduzir intensidade 10-15%, priorizar técnica e mobilidade, evitar esforços máximos. Ajustar score de prontidão -10 pontos.';
+    }
+  } else {
+    readinessCtx = '\n\nSem dados de prontidão hoje — prescreva com base no histórico recente e no planejamento de fase.';
+  }
+  const _healthComorbidities = p?.comorbidities || [];
+  const _healthMedications = p?.medications || [];
+  let healthCtx = '';
+  if (_healthComorbidities.length > 0 || _healthMedications.length > 0) {
+    healthCtx = '\n\nDADOS DE SAÚDE DO ATLETA:';
+    if (_healthComorbidities.length > 0) healthCtx += `\nComorbidades: ${_healthComorbidities.join(', ')}`;
+    if (_healthMedications.length > 0) {
+      healthCtx += `\nMedicações contínuas: ${_healthMedications.join(', ')}`;
+      if (_healthMedications.includes('betabloqueador')) healthCtx += '\n⚠️ BETABLOQUEADOR: não usar FC como parâmetro de intensidade. Usar PSE obrigatoriamente.';
+      if (_healthMedications.includes('ozempic')) healthCtx += '\n⚠️ GLP-1 (Ozempic/Mounjaro): priorizar volume de treino de força, monitorar composição corporal, atenção ao aporte proteico.';
+      if (_healthMedications.includes('antidepressivo') || _healthMedications.includes('ansiolitico')) healthCtx += '\n⚠️ Medicação psiquiátrica: dados de sono/energia/humor do check-in podem ser influenciados pela medicação. Interpretar prontidão com contexto clínico.';
+      if (_healthMedications.includes('corticoide')) healthCtx += '\n⚠️ CORTICOIDE: atenção ao volume e recuperação. Pode mascarar dor e inflamação.';
+      if (_healthMedications.includes('anticoagulante')) healthCtx += '\n⚠️ ANTICOAGULANTE: evitar exercícios de impacto e contato físico.';
+      if (_healthMedications.includes('insulina') || _healthMedications.includes('metformina')) healthCtx += '\n⚠️ DIABETES/INSULINA: nunca prescrever treino em jejum. Monitorar sintomas.';
+    }
+  }
+  let nutriCtx = '';
+  const _weight = parseFloat(p?.weight) || null;
+  const _sex = p?.sex || '';
+  const _obj = p?.objective || '';
+  if (_weight) {
+    let _protMin, _protMax;
+    if (/emagrecimento|déficit|definição/i.test(_obj)) { _protMin = (_weight*1.8).toFixed(0); _protMax = (_weight*2.7).toFixed(0); }
+    else if (/endurance|aeróbic|resistência/i.test(_obj)) { _protMin = (_weight*1.0).toFixed(0); _protMax = (_weight*1.6).toFixed(0); }
+    else { _protMin = (_weight*1.4).toFixed(0); _protMax = (_weight*1.7).toFixed(0); }
+    const _phase = getPhaseData() || inferPhaseFromWorkouts();
+    const _phaseName = _phase?.name || '';
+    let _carbMultiplierMin, _carbMultiplierMax;
+    if (/deload|recupera/i.test(_phaseName)) { _carbMultiplierMin=3; _carbMultiplierMax=4; }
+    else if (/realiza/i.test(_phaseName)) { _carbMultiplierMin=4; _carbMultiplierMax=5; }
+    else if (/transmuta/i.test(_phaseName)) { _carbMultiplierMin=4; _carbMultiplierMax=6; }
+    else { _carbMultiplierMin=5; _carbMultiplierMax=7; }
+    const _carbTreino_min = (_weight*_carbMultiplierMin).toFixed(0);
+    const _carbTreino_max = (_weight*_carbMultiplierMax).toFixed(0);
+    const _carbDescanso_min = (_weight*Math.max(_carbMultiplierMin-1,1)).toFixed(0);
+    const _carbDescanso_max = (_weight*Math.max(_carbMultiplierMax-1,1)).toFixed(0);
+    const _agua = _sex==='Feminino' ? '2,7L' : '3,7L';
+    const _hydration = state.readiness?.hydration_level || null;
+    let _hydrationNote = '';
+    if (_hydration!=null && _hydration<=2) _hydrationNote = `\n⚠️ CHECK-IN HOJE: hidratação baixa (${_hydration}/5) — priorize atingir ${_agua} e oriente o atleta sobre isso antes de qualquer outra recomendação nutricional.`;
+    else if (_hydration!=null && _hydration>=4) _hydrationNote = `\nCheck-in hoje: hidratação boa (${_hydration}/5).`;
+    nutriCtx = `\n\n## METAS NUTRICIONAIS DE REFERÊNCIA DO ATLETA\nPeso corporal: ${_weight}kg\nProteína diária recomendada: ${_protMin}–${_protMax}g/dia (${(_weight*1.4).toFixed(1)}–${(_weight*1.7).toFixed(1)} g/kg)\nCarboidrato em dia de treino: ${_carbTreino_min}–${_carbTreino_max}g/dia\nCarboidrato em dia de descanso: ${_carbDescanso_min}–${_carbDescanso_max}g/dia\nHidratação mínima: ${_agua}/dia\n\nINSTRUÇÃO: Quando o atleta perguntar sobre nutrição, alimentação, proteína, carboidrato, hidratação ou suplementação — use esses valores como referência personalizada. Sempre que citar gramas de proteína ou carbo, calcule com base no peso real acima. Lembre o atleta que são estimativas e que um nutricionista é indispensável para prescrição individualizada.${_hydrationNote}`;
+  }
+  let profCtx = '';
+  const prof = state.profile;
+  if (prof?.profissao || prof?.perfil_postural || prof?.estresse_ocup) {
+    profCtx = '\n\nROTINA PROFISSIONAL DO ATLETA:';
+    if (prof.profissao)       profCtx += `\nProfissão: ${prof.profissao}`;
+    if (prof.horas_trabalho)  profCtx += `\nHoras de trabalho/dia: ${prof.horas_trabalho}h`;
+    if (prof.perfil_postural) profCtx += `\nPerfil postural: ${prof.perfil_postural}`;
+    if (prof.horas_sentado)   profCtx += `\nHoras sentado/dia: ${prof.horas_sentado}h`;
+    if (prof.estresse_ocup)   profCtx += `\nEstresse ocupacional: ${prof.estresse_ocup}`;
+    if (prof.turno_trabalho)  profCtx += `\nTurno: ${prof.turno_trabalho}`;
+  }
+  const loadCtx = typeof state.loadCtx === 'string' ? state.loadCtx : '';
+  return CORE_PROMPT + profileCtx + fmsCtx + flagCtx + healthCtx + nutriCtx + profCtx + readinessCtx + loadCtx + (needsReference ? REF_TABLES : '');
+}
+
 async function sendMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
@@ -5299,188 +5401,7 @@ async function sendMessage() {
   box.scrollTop = box.scrollHeight;
 
   try {
-    const p = state.profile;
-    let profileCtx = p ? `\n\n## PERFIL DO USUÁRIO\nIdade: ${p.age||'?'} | Peso: ${p.weight||'?'}kg | Altura: ${p.height||'?'}cm | Sexo: ${p.sex||'?'} | Nível: ${p.level||'?'} | Objetivo: ${p.objective||'?'} | Frequência: ${p.frequency||'?'}/semana | Tempo/sessão: ${p.session_time||'?'} | Lesões: ${p.injuries||'Nenhuma'} | PAR-Q cardíaco: ${p.parq==='yes'?'Sim — recomendado acompanhamento médico':'Não'}.\nProfissão: ${p.profissao||'?'} | Jornada: ${p.horas_trabalho||'?'}h/dia | Perfil postural: ${p.perfil_postural||'?'}${p.perfil_postural==='Misto'?' ('+(p.horas_sentado||'?')+'h sentado)':''} | Estresse ocupacional: ${p.estresse_ocup||'?'} | Turno: ${p.turno_trabalho||'?'}.` : '\n\n## PERFIL\nNão preenchido — pergunte dados essenciais.';
-    if (p && p.gym) profileCtx += `\nLocal de treino: ${p.gym}`;
-    if (p && p.equipment) {
-      const equip = Array.isArray(p.equipment) ? p.equipment.join(', ') : p.equipment;
-      if (equip) profileCtx += `\nEquipamentos disponíveis: ${equip}`;
-    }
-    const benchmarks = p?.strength_benchmarks || state.profile?.strength_benchmarks;
-    if (benchmarks && Object.keys(benchmarks).length > 0) {
-      const bmLabels = {
-        deadlift: 'Deadlift bilateral',
-        squat: 'Agachamento',
-        bench: 'Supino reto',
-        rfe_split: 'RFE Split Squat',
-        chin_up: 'Chin-Up ponderado',
-      };
-      const bmLines = Object.entries(benchmarks)
-        .map(([k, v]) => `${bmLabels[k] || k}: ${v}kg (1RM estimado)`)
-        .join(', ');
-      profileCtx += `\nForça — 1RM estimados: ${bmLines}`;
-      profileCtx += `\nUSAR esses valores para prescrever cargas específicas. Ex: para 3×8 use 75-80% do 1RM.`;
-    }
-    const modalidade = p?.modalidade || state.profile?.modalidade || '';
-    if (modalidade) {
-      profileCtx += `\nModalidade esportiva: ${modalidade}`;
-      profileCtx += `\nCONSIDERAR NA PRESCRIÇÃO: adaptar exercícios para melhorar performance em ${modalidade} e prevenir lesões típicas dessa modalidade.`;
-    }
-    const fmsTotal = p?.fms ? (p.fms.dos??0)+(p.fms.il??0)+(p.fms.hs??0)+(p.fms.sm??0)+(p.fms.aslr??0) : null;
-    const fmsFlags = (Array.isArray(p?.risk_flags) ? p.risk_flags : []).filter(f=>f!=='none');
-    const fmsFlagMap = { squat_dysfunction:'Deep Squat ≤1', lunge_dysfunction:'Inline Lunge ≤1', hip_instability:'Hurdle Step ≤1', shoulder_restriction:'Shoulder Mobility ≤1', hamstring_restriction:'ASLR ≤1', toe_touch_negative:'Toe Touch negativo' };
-    const _ttLabel = p?.fms?.tt === 'positive' ? 'Sim' : p?.fms?.tt === 'negative' ? 'Não' : '?';
-    const fmsCtx = p?.fms ? `\n\n## SCORES FMS\nFMS Total: ${fmsTotal}/15 | DOS: ${p.fms.dos??'?'} | IL: ${p.fms.il??'?'} | HS: ${p.fms.hs??'?'} | SM: ${p.fms.sm??'?'} | ASLR: ${p.fms.aslr??'?'} | Toe Touch: ${_ttLabel}\nFlags: ${fmsFlags.length>0?fmsFlags.map(f=>fmsFlagMap[f]||f).join(', '):'Nenhuma'}` : '';
-    const flagMap = { shoulder_restriction:'Restrição de Ombro', hamstring_restriction:'Restrição de Isquiotibiais', hip_instability:'Instabilidade de Quadril', squat_dysfunction:'Disfunção de Agachamento', lunge_dysfunction:'Disfunção de Avanço', apt:'APT/Hiperlordose', rib_flare:'Costelas Abertas', knee_valgus:'Valgo de Joelho', toe_touch_negative:'Toe Touch Negativo' };
-    const activeFlags = (Array.isArray(p?.risk_flags) ? p.risk_flags : []).filter(f => f !== 'none');
-    const flagCtx = activeFlags.length > 0 ? `\n\n## FLAGS ATIVAS\n${activeFlags.map(f => '⚠️ ' + (flagMap[f]||f)).join('\n')}` : '\n\n## FLAGS\nNenhuma disfunção.';
-
-    // ── DETECT if user is requesting a workout/prescription ──
-    const prescriptionTriggers = /treino|exerc[ií]cio|s[ée]rie|programa|prescrever|monte|gerar|plano|aquecimento|pillar|prep|warm|workout|periodiza/i;
-    const needsReference = prescriptionTriggers.test(text);
-
-    // ── CORE PROMPT (always sent — v16.0) ──
-
-
-    // ── REFERENCE TABLES (injected only when prescribing) ──
-    const REF_TABLES = `
-
-## MASTER SCHEDULE 4-DAY (CFSC)
-DAY1: Pod1[Linear Power+Anti-Extension] Pod2[Uni Knee Dom+Horiz Pull] Pod3[Uni Hip Dom+Vert Pull+Knee Flex] ESD:Run
-DAY2: Pod1[Rot Power+Anti-Rot Chop] Pod2[Bilat Horiz Push+Vert Pull] Pod3[Uni Vert Push+Uni Horiz Pull+Hip Ext] ESD:Bike
-DAY3: Pod1[Uni Power+Anti-Extension] Pod2[Bilat Hip Dom+Horiz Push BW] Pod3[Uni Knee Dom+Horiz Pull+Anti-Rot Lift+TGU] ESD:Run
-DAY4: Pod1[Rot Power+Anti-Rot Chop] Pod2[Incline Push+Vert Pull] Pod3[Uni Hip Dom+Uni Horiz Pull+Hip Add+TGU+Carry] ESD:Bike
-2x/sem→Sample 2 Day | 3x→Sample 3 Day | 4x→Sample 4 Day
-
-## EXERCÍCIOS CFSC (PROGRESSÕES POR CATEGORIA)
-HIP DOM: Assisted SLDL→Cross Reaching→Medball Reaching→1KB SLDL→2KB SLDL→Barbell SLDL. Toe Touch Seq→Hip Hinge→KB DL→KB Swing. *Dor lombar→Goblet Sq ou Split Sq.
-KNEE DOM: Assisted Split Sq→SS Hold→SS→Goblet SS→2KB SS→RFESS→5s ECC RFESS→Goblet RFESS→2DB RFESS→U-Bar RFESS. Heels Elev Sq→MB Reaching Sq→Goblet Sq Box→2KB Goblet Sq Box→Front Sq Box. Slider Rev Lunge: BW→Goblet→1KB→2KB→2KB Rack. Lateral Sq: BW→MB Reaching→Goblet→1-2DB→1-2DB Lunge. Rev Lunge FFE: BW→BW FFE→Goblet FFE→1DB FFE→2DB FFE.
-KNEE FLEX: 2-Leg Bridge→1-Leg Bridge→Shoulders Elev 2L→Shoulders Elev 1L→w/Sandbag→Slider 2L ECC→Slider 2L→Slider 1L ECC→Slider 1L.
-ANTI-EXT: Elbows Elev Plank→Plank→FE Plank→Body Saw→Ring Fallout→SB Rollout→Wheel Rollout. SA Plank→Clock Plank→Plank Taps→SA Sandbag Pull.
-ANTI-ROT: TK Anti-Rot→½KN Anti-Rot→Iso SS Anti-Rot→Standing Anti-Rot→SL Anti-Rot.
-ANTI-LAT: Short Lever SP→Side Plank→SP Row→FE SP→SP w/Adduction.
-CHOP/LIFT: TK→½KN Inline→Iso SS Inline→Standing Static→Dynamic. TK Landmine Anti-Rot→½KN→Standing→w/Rotation.
-HORIZ PUSH: SA Plank→Hands Elev PU→Push Up→FE PU→Weighted PU→Ring PU. DB Bench→Alt DB Bench→1-Arm DB Bench.
-VERT PUSH: ½KN Landmine→½KN Alt KB/DB→½KN 1-Arm→Standing Alt→Standing 1-Arm. TK 1-Arm Cable→½KN Push/Pull→Standing PP→Dynamic PP. ½KN Inline Press→Iso SS Inline→Standing 1-Arm Cable.
-VERT PULL: Cable X-Pulldown. Chin-Up ECC→Band Assisted→Chin-Up→Weighted→Pull-Up→Weighted Pull-Up.
-HORIZ PULL: Ring Row→FE Ring Row→WV Ring Row. Bench DB Row→DB Row. ½KN 1-Arm Cable→Iso SS→Standing→1A1L Row→Dynamic→Rotational Row.
-CARRIES: Goblet→Farmer→Suitcase→Waiter's BU→OH Carry.
-POWER JUMPS: Drop Squat→Box Jump→Jump Sq Stick→Continuous→MB/WV Jump Sq→Shuttle. Lateral: Alt SL Balance→SL Drop Sq→SL Lat Bound Stick→@45° Stick→@45° Mini-bounce→Continuous→Vert Jump.
-POWER MED BALL: Chest Pass: TK No Hinge→TK Dynamic→Standing→2-Point→Sprint Start. Side Toss: ½KN→Standing→Stepping→Lat Bound→Shuffle/Crossover.
-TGU: ¼ No Wt→½ No Wt→½ w/Wt→¾ w/Wt→Full w/Wt.
-SPRINT/SKIP: Supine Banded Hip Flex→SA Plank Slider Hip Flex→½KN Hip Flex→Linear Skip→Lateral Skip→High Knee Run→SL Walk→SL Skip.
-
-FORMATO OBRIGATÓRIO DE EXERCÍCIOS:
-Nome em inglês (Nome popular em português): descrição curta de execução.
-Exemplo: Wall Slides (Deslize na Parede): costas na parede, braços deslizam para cima mantendo contato.
-Sempre usar este formato. Nunca omitir o nome em português.
-
-VERIFICAÇÃO ANTI-REDUNDÂNCIA: Antes de finalizar qualquer treino, verificar se algum exercício se repete ou se dois exercícios treinam o mesmo padrão motor no mesmo bloco ou sessão. Se sim, substituir um deles por variação complementar.
-
-TERMINOLOGIA OBRIGATÓRIA: Proibido usar: "omoplata" (usar "escápula"), "músculo da coxa" (usar quadríceps/isquiotibiais), "barriga da perna" (usar gastrocnêmio/sóleo). Sempre usar nomenclatura anatômica correta e atual.`;
-
-    // ── PRONTIDÃO: contexto injetado diretamente no system prompt ──
-    let readinessCtx = '';
-    const rdToday = state.readiness;
-    if (rdToday && rdToday.readiness_score != null) {
-      const rdBand = getReadinessBand(rdToday.readiness_score);
-      const rdNotes = rdToday.notes ? `\nObservações: ${rdToday.notes}` : '';
-      readinessCtx = `\n\n## PRONTIDÃO DO ATLETA (hoje)
-Score: ${rdToday.readiness_score}/100 (${rdBand.label})
-- Qualidade do sono: ${rdToday.sleep_quality}/5
-- Nível de energia: ${rdToday.energy_level}/5
-- Dor muscular: ${rdToday.muscle_soreness}/5
-- Nível de estresse: ${rdToday.stress_level}/5${rdNotes}
-
-INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino de hoje com base neste score:
-- Prontidão Alta (70-100): treino normal conforme fase planejada
-- Prontidão Moderada (40-69): reduza volume em 20%, mantenha intensidade ou reduza levemente, priorize movimentos de menor impacto articular
-- Prontidão Baixa (0-39): sessão de recuperação ativa ou técnica — sem trabalho de alta intensidade, foque em mobilidade, ativação e movimentos do padrão de baixo risco do FMS do atleta`;
-      if (rdToday?.menstrual_phase === true || rdToday?.menstrual_phase === 'true') {
-        readinessCtx += '\n⚠️ CICLO MENSTRUAL: atleta em período menstrual hoje. Reduzir intensidade 10-15%, priorizar técnica e mobilidade, evitar esforços máximos. Ajustar score de prontidão -10 pontos.';
-      }
-    } else {
-      readinessCtx = '\n\nSem dados de prontidão hoje — prescreva com base no histórico recente e no planejamento de fase.';
-    }
-
-    const _healthComorbidities = p?.comorbidities || [];
-    const _healthMedications = p?.medications || [];
-    let healthCtx = '';
-    if (_healthComorbidities.length > 0 || _healthMedications.length > 0) {
-      healthCtx = '\n\nDADOS DE SAÚDE DO ATLETA:';
-      if (_healthComorbidities.length > 0) healthCtx += `\nComorbidades: ${_healthComorbidities.join(', ')}`;
-      if (_healthMedications.length > 0) {
-        healthCtx += `\nMedicações contínuas: ${_healthMedications.join(', ')}`;
-        if (_healthMedications.includes('betabloqueador')) healthCtx += '\n⚠️ BETABLOQUEADOR: não usar FC como parâmetro de intensidade. Usar PSE obrigatoriamente.';
-        if (_healthMedications.includes('ozempic')) healthCtx += '\n⚠️ GLP-1 (Ozempic/Mounjaro): priorizar volume de treino de força, monitorar composição corporal, atenção ao aporte proteico.';
-        if (_healthMedications.includes('antidepressivo') || _healthMedications.includes('ansiolitico')) healthCtx += '\n⚠️ Medicação psiquiátrica: dados de sono/energia/humor do check-in podem ser influenciados pela medicação. Interpretar prontidão com contexto clínico.';
-        if (_healthMedications.includes('corticoide')) healthCtx += '\n⚠️ CORTICOIDE: atenção ao volume e recuperação. Pode mascarar dor e inflamação.';
-        if (_healthMedications.includes('anticoagulante')) healthCtx += '\n⚠️ ANTICOAGULANTE: evitar exercícios de impacto e contato físico.';
-        if (_healthMedications.includes('insulina') || _healthMedications.includes('metformina')) healthCtx += '\n⚠️ DIABETES/INSULINA: nunca prescrever treino em jejum. Monitorar sintomas.';
-      }
-    }
-    // ── NUTRIÇÃO: contexto de metas injetado no system prompt ──
-    let nutriCtx = '';
-    const _weight = parseFloat(p?.weight) || null;
-    const _sex = p?.sex || '';
-    const _obj = p?.objective || '';
-
-    if (_weight) {
-      let _protMin, _protMax;
-      if (/emagrecimento|déficit|definição/i.test(_obj)) {
-        _protMin = (_weight * 1.8).toFixed(0); _protMax = (_weight * 2.7).toFixed(0);
-      } else if (/endurance|aeróbic|resistência/i.test(_obj)) {
-        _protMin = (_weight * 1.0).toFixed(0); _protMax = (_weight * 1.6).toFixed(0);
-      } else {
-        _protMin = (_weight * 1.4).toFixed(0); _protMax = (_weight * 1.7).toFixed(0);
-      }
-      const _phase = getPhaseData() || inferPhaseFromWorkouts();
-      const _phaseName = _phase?.name || '';
-      let _carbMultiplierMin, _carbMultiplierMax;
-      if (/deload|recupera/i.test(_phaseName)) {
-        _carbMultiplierMin = 3; _carbMultiplierMax = 4;
-      } else if (/realiza/i.test(_phaseName)) {
-        _carbMultiplierMin = 4; _carbMultiplierMax = 5;
-      } else if (/transmuta/i.test(_phaseName)) {
-        _carbMultiplierMin = 4; _carbMultiplierMax = 6;
-      } else {
-        _carbMultiplierMin = 5; _carbMultiplierMax = 7;
-      }
-      const _carbTreino_min = (_weight * _carbMultiplierMin).toFixed(0);
-      const _carbTreino_max = (_weight * _carbMultiplierMax).toFixed(0);
-      const _carbDescanso_min = (_weight * Math.max(_carbMultiplierMin - 1, 1)).toFixed(0);
-      const _carbDescanso_max = (_weight * Math.max(_carbMultiplierMax - 1, 1)).toFixed(0);
-      const _agua = _sex === 'Feminino' ? '2,7L' : '3,7L';
-      const _hydration = state.readiness?.hydration_level || null;
-      let _hydrationNote = '';
-      if (_hydration != null && _hydration <= 2) {
-        _hydrationNote = `\n⚠️ CHECK-IN HOJE: hidratação baixa (${_hydration}/5) — priorize atingir ${_agua} e oriente o atleta sobre isso antes de qualquer outra recomendação nutricional.`;
-      } else if (_hydration != null && _hydration >= 4) {
-        _hydrationNote = `\nCheck-in hoje: hidratação boa (${_hydration}/5).`;
-      }
-
-      nutriCtx = `\n\n## METAS NUTRICIONAIS DE REFERÊNCIA DO ATLETA
-Peso corporal: ${_weight}kg
-Proteína diária recomendada: ${_protMin}–${_protMax}g/dia (${(_weight*1.4).toFixed(1)}–${(_weight*1.7).toFixed(1)} g/kg)
-Carboidrato em dia de treino: ${_carbTreino_min}–${_carbTreino_max}g/dia
-Carboidrato em dia de descanso: ${_carbDescanso_min}–${_carbDescanso_max}g/dia
-Hidratação mínima: ${_agua}/dia
-
-INSTRUÇÃO: Quando o atleta perguntar sobre nutrição, alimentação, proteína, carboidrato, hidratação ou suplementação — use esses valores como referência personalizada. Sempre que citar gramas de proteína ou carbo, calcule com base no peso real acima. Lembre o atleta que são estimativas e que um nutricionista é indispensável para prescrição individualizada.${_hydrationNote}`;
-    }
-    let profCtx = '';
-    const prof = state.profile;
-    if (prof?.profissao || prof?.perfil_postural || prof?.estresse_ocup) {
-      profCtx = '\n\nROTINA PROFISSIONAL DO ATLETA:';
-      if (prof.profissao)      profCtx += `\nProfissão: ${prof.profissao}`;
-      if (prof.horas_trabalho) profCtx += `\nHoras de trabalho/dia: ${prof.horas_trabalho}h`;
-      if (prof.perfil_postural) profCtx += `\nPerfil postural: ${prof.perfil_postural}`;
-      if (prof.horas_sentado)  profCtx += `\nHoras sentado/dia: ${prof.horas_sentado}h`;
-      if (prof.estresse_ocup)  profCtx += `\nEstresse ocupacional: ${prof.estresse_ocup}`;
-      if (prof.turno_trabalho) profCtx += `\nTurno: ${prof.turno_trabalho}`;
-    }
-    const loadCtx = typeof state.loadCtx === 'string' ? state.loadCtx : '';
-    const systemPrompt = CORE_PROMPT + profileCtx + fmsCtx + flagCtx + healthCtx + nutriCtx + profCtx + readinessCtx + loadCtx + (needsReference ? REF_TABLES : '');
+    const systemPrompt = buildCoachSystemPrompt(text);
 
     const historico = Array.isArray(state.chatHistory) ? state.chatHistory : [];
     let mensagensParaEnviar = historico.slice(-10);
