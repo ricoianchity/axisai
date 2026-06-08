@@ -26,11 +26,12 @@ function getFmsLatestKey()  { const u = getCurrentUserId(); return u ? 'axisai_f
 function getTreinosKey()    { const u = getCurrentUserId(); return u ? 'axisai_treinos_' + u : ''; }
 function getOnboardingKey() { const u = getCurrentUserId(); return u ? 'axisai_onboarding_done_' + u : ''; }
 function getParqCacheKey()  { const u = getCurrentUserId(); return u ? 'axisai_parq_cache_' + u : ''; }
+function getPhaseKey()      { const u = getCurrentUserId(); return u ? 'axisai_phase_' + u : ''; }
 
 function migrateLocalStorageKeys() {
   const userId = getCurrentUserId();
   if (!userId) return;
-  ['axisai_profile','axisai_fms_latest','axisai_treinos','axisai_onboarding_done'].forEach(function(key) {
+  ['axisai_profile','axisai_fms_latest','axisai_treinos','axisai_onboarding_done','axisai_phase'].forEach(function(key) {
     const val = _lsGet(key);
     const newKey = key + '_' + userId;
     if (val && !_lsGet(newKey)) {
@@ -158,7 +159,7 @@ let _authResolving = true;   // true while initApp() is resolving the session
 const USER_LOCAL_KEYS = [
   'axisai_profile',
   'axisai_checkin',
-  'axisai_phase',
+  'axisai_phase',           // legacy key sem user-scope (mantido para limpeza no logout)
   'axisai_fms_latest',
   'axisai_onboarding_done',
   'axisai_avatar',
@@ -269,8 +270,10 @@ async function loadUserData(userId) {
   state.loadCtxUserId = null;
 
   const profileKey = getProfileKey();
+  const phaseKey   = getPhaseKey();
   const cachedProfile = profileKey ? JSON.parse(_lsGet(profileKey) || 'null') : null;
-  const cachedPhase   = JSON.parse(_lsGet('axisai_phase')   || 'null');
+  // Lê chave com user-scope; fallback para chave legacy sem scope (migrada por migrateLocalStorageKeys)
+  const cachedPhase   = phaseKey ? JSON.parse(_lsGet(phaseKey) || 'null') : null;
   // axisai_checkin mantido apenas para compatibilidade com dados legacy no localStorage
 
   const [profile, phase, messages, readiness] = await Promise.all([
@@ -289,7 +292,8 @@ async function loadUserData(userId) {
   }
   if (phase.data) {
     state.phase = phase.data;
-    localStorage.setItem('axisai_phase', JSON.stringify(phase.data));
+    if (phaseKey) localStorage.setItem(phaseKey, JSON.stringify(phase.data));
+    localStorage.removeItem('axisai_phase'); // remove legacy key sem scope
   } else if (cachedPhase && String(cachedPhase.user_id || '') === String(userId)) {
     state.phase = cachedPhase;
   }
@@ -767,7 +771,7 @@ async function showForgotPassword() {
 }
 
 async function doLogout() {
-  [getProfileKey(), getFmsLatestKey(), getTreinosKey(), getOnboardingKey(), getParqCacheKey()].forEach(function(k) {
+  [getProfileKey(), getFmsLatestKey(), getTreinosKey(), getOnboardingKey(), getParqCacheKey(), getPhaseKey()].forEach(function(k) {
     if (k) localStorage.removeItem(k);
   });
   await supabase.auth.signOut();
