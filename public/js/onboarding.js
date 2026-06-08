@@ -1004,6 +1004,20 @@ async function navigate(page) {
       closeSidebar();
       return;
     }
+    // ── FIX BUG: garantir que o DOM do chat reflita o usuário atual ──
+    // Limpa mensagens de sessões anteriores (outro usuário) e dispara clearChat
+    // apenas se o chat estiver vazio ou pertencer a um usuário diferente.
+    const _chatBox = document.getElementById('chat-messages');
+    const _chatUserId = _chatBox?.dataset?.userId;
+    const _currentUserId = typeof state !== 'undefined' ? state.user?.id : null;
+    if (_chatBox && _chatUserId !== _currentUserId) {
+      _chatBox.innerHTML = '';
+      if (_currentUserId) _chatBox.dataset.userId = _currentUserId;
+      // Disparar clearChat para exibir a saudação personalizada
+      if (typeof clearChat === 'function') {
+        try { clearChat(); } catch (e) { console.warn('[navigate/chat] clearChat:', e); }
+      }
+    }
     if (typeof preloadCoachLoadCtx === 'function') {
       try {
         await preloadCoachLoadCtx();
@@ -1048,7 +1062,10 @@ async function navigate(page) {
       await loadPerformanceTab();
     }
   }
-  if (page === 'diagnosis') renderFmsResults();
+  if (page === 'diagnosis') {
+    renderFmsResults();
+    if (typeof renderPosturalSection === 'function') renderPosturalSection();
+  }
   if (page === 'profile') loadProfileHealth();
   if (page === 'nutrition') renderNutrition();
   if (page === 'admin') await loadAdminPage();

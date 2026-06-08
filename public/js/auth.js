@@ -75,6 +75,38 @@ async function _logError(fnName, error, context = {}) {
 // ═══════════════════════════════════════════════
 const state = { user: null, workouts: [], profile: null, chatHistory: [], toeTouch: null, fmsLatest: null, readiness: null, loadCtx: '', loadCtxUserId: null };
 
+function getCurrentUser() {
+  return state.user;
+}
+
+let _resolveAuthReadyPromise = null;
+let _authReadyResolved = false;
+
+const authReady = new Promise((resolve) => {
+  _resolveAuthReadyPromise = resolve;
+});
+
+function _resolveAuthReady(user) {
+  if (_authReadyResolved) return;
+  _authReadyResolved = true;
+  _resolveAuthReadyPromise(user || null);
+}
+
+window.getCurrentUser = getCurrentUser;
+window.authReady = authReady;
+
+(async function _primeAuthReadyFromSession() {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      _resolveAuthReady(session.user);
+    }
+  } catch (_) {
+    // authReady continua aguardando o primeiro evento de auth
+  }
+})();
+
+
 // ── MBSC structure (hardcoded) ─────────────────────────────
 const MBSC_STRUCTURE = {
   upper_body: [
@@ -523,6 +555,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 supabase.auth.onAuthStateChange(async (event, session) => {
+  _resolveAuthReady(session?.user || null);
   // ── FIX BUG 1: Prevent double routing ──
   // If initApp() is still resolving or the app was already entered, skip.
   // initApp() and doLogin() handle routing themselves; this listener only
@@ -743,6 +776,9 @@ async function doLogout() {
   state.user = null;
   state.workouts = [];
   _appEntered = false; // ── FIX BUG 1: Reset guard so next login can route correctly ──
+  // ── FIX BUG: limpar DOM do chat para evitar vazamento de mensagens entre usuários ──
+  const _chatBox = document.getElementById('chat-messages');
+  if (_chatBox) _chatBox.innerHTML = '';
   updateCoachNavIndicator();
   document.getElementById('screen-app').classList.remove('visible');
   document.getElementById('screen-app').style.display = '';

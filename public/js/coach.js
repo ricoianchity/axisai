@@ -304,6 +304,9 @@ async function loadTreinosTab() {
 }
 
 async function initTreinos() {
+  if (typeof authReady !== 'undefined') {
+    await authReady;
+  }
   if (typeof renderWorkouts === 'function') renderWorkouts();
   if (typeof renderCompletedWorkouts === 'function') await renderCompletedWorkouts();
   if (typeof switchWorkoutsTab === 'function') switchWorkoutsTab(_workoutsActiveTab || 'active');
@@ -4548,6 +4551,7 @@ function renderWorkoutConfirmCard(data) {
       <div class="axis-confirm-header">💪 <strong>${data.titulo}</strong> <span class="cat-badge cat-${data.categoria||'fullbody'}">${data.categoria||'fullbody'}</span></div>
       <div class="axis-confirm-btns">
         <button class="btn-accept" onclick="aceitarTreino(${id})">✅ Aceitar treino</button>
+        <button class="btn-secondary" onclick="iniciarTreinoExec(${id})">🏋️ Iniciar treino</button>
         <button class="btn-secondary" onclick="descartarConfirm(${id})">❌ Descartar</button>
       </div>`;
   } else {
@@ -4630,8 +4634,178 @@ function aceitarSessoesSelecionadas(id) {
 
 function descartarConfirm(id) {
   delete window._axisWorkouts[id];
+  delete window._axisExecState?.[id];
   document.getElementById('axiscard-' + id)?.remove();
   showToast('Treino descartado.');
+}
+
+// ── EXECUÇÃO DE TREINO (série a série com logging de carga) ──
+
+window._axisExecState = window._axisExecState || {};
+
+function _buildExecList(conteudo) {
+  const blocks = _normalizePlanBlocks(conteudo);
+  const skipRe = /^(?:PILLAR\s*PREP|WARM[\s-]*UP|FOAM\s*ROLL|COOL\s*DOWN)/i;
+  const exercises = [];
+  for (const block of blocks) {
+    if (skipRe.test(block.nome)) continue;
+    if (block.exercicios.length) {
+      for (let i = 0; i < block.exercicios.length; i++) {
+        const parsed = _parseExerciseFromLine(block.exercicios[i], exercises.length);
+        if (parsed.name) exercises.push(parsed);
+      }
+    } else {
+      exercises.push(_parseExerciseFromLine(block.nome, exercises.length));
+    }
+  }
+  if (!exercises.length && conteudo) {
+    exercises.push({ name: 'Treino', spec: 'prescrição livre', sets: 3 });
+  }
+  return exercises;
+}
+
+function _renderExecCard(cardId) {
+  const card = document.getElementById('axiscard-' + cardId);
+  if (!card) return;
+  const s = window._axisExecState[cardId];
+  if (!s) return;
+  const { exercises, exIdx, setNum } = s;
+  const ex = exercises[exIdx];
+
+  if (!ex) {
+    card.innerHTML = `
+      <div style="padding:20px;text-align:center;">
+        <div style="font-size:32px;margin-bottom:8px;">💪</div>
+        <div style="font-family:var(--font-display);font-size:22px;letter-spacing:2px;color:var(--green);margin-bottom:6px;">TREINO CONCLUÍDO</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">${exercises.length} exercício(s) registrados</div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="aceitarTreinoFromExec(${cardId})" style="flex:1;background:var(--green);color:#000;border:none;padding:14px;border-radius:10px;font-family:var(--font-display);font-size:16px;letter-spacing:1px;cursor:pointer;font-weight:700;">SALVAR TREINO</button>
+          <button onclick="descartarConfirm(${cardId})" style="background:none;border:1px solid var(--border);color:var(--muted);padding:14px 12px;border-radius:10px;font-size:13px;cursor:pointer;">Descartar</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const totalEx = exercises.length;
+  const totalSets = ex.sets || 3;
+  const specHtml = ex.spec && ex.spec !== 'prescrição livre'
+    ? `<div style="font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:3px;">${_escapeWorkoutHTML(ex.spec)}</div>` : '';
+
+  card.innerHTML = `
+    <div style="padding:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">EX ${exIdx+1}/${totalEx}</div>
+        <button onclick="descartarExec(${cardId})" style="background:none;border:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:4px 8px;">✕</button>
+      </div>
+      <div style="font-family:var(--font-display);font-size:22px;letter-spacing:1px;color:var(--text);line-height:1.2;">${_escapeWorkoutHTML(ex.name)}</div>
+      ${specHtml}
+      <div style="font-size:14px;font-weight:700;color:var(--green);margin:14px 0 12px;letter-spacing:1px;">SÉRIE ${setNum} / ${totalSets}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">CARGA (kg)</label>
+          <input id="exec-load-${cardId}" type="number" inputmode="decimal" min="0" max="500" step="0.5" placeholder="0"
+            style="width:100%;padding:14px 10px;background:var(--bg2);border:2px solid var(--border);border-radius:10px;color:var(--text);font-size:24px;font-family:var(--font-display);text-align:center;outline:none;-webkit-appearance:none;appearance:none;"
+            onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--border)'"
+            onkeydown="if(event.key==='Enter')document.getElementById('exec-reps-${cardId}')?.focus()">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">REPS</label>
+          <input id="exec-reps-${cardId}" type="number" inputmode="numeric" min="1" max="100" step="1" placeholder="0"
+            style="width:100%;padding:14px 10px;background:var(--bg2);border:2px solid var(--border);border-radius:10px;color:var(--text);font-size:24px;font-family:var(--font-display);text-align:center;outline:none;-webkit-appearance:none;appearance:none;"
+            onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--border)'"
+            onkeydown="if(event.key==='Enter')confirmarSerie(${cardId})">
+        </div>
+      </div>
+      <button onclick="confirmarSerie(${cardId})"
+        style="width:100%;padding:18px;background:var(--green);color:#000;border:none;border-radius:12px;font-family:var(--font-display);font-size:18px;letter-spacing:2px;font-weight:700;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
+        CONFIRMAR SÉRIE ✓
+      </button>
+      <button onclick="pularExercicio(${cardId})"
+        style="width:100%;margin-top:8px;padding:10px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:10px;font-size:12px;cursor:pointer;touch-action:manipulation;">
+        Pular exercício →
+      </button>
+    </div>`;
+}
+
+async function confirmarSerie(cardId) {
+  const s = window._axisExecState[cardId];
+  if (!s) return;
+  const { exercises, exIdx, setNum, workoutId } = s;
+  const ex = exercises[exIdx];
+  if (!ex) return;
+
+  const load = parseFloat(document.getElementById(`exec-load-${cardId}`)?.value) || 0;
+  const reps = parseInt(document.getElementById(`exec-reps-${cardId}`)?.value, 10) || 0;
+
+  const userId = state.user?.id;
+  if (userId) {
+    supabase.from('exercise_logs').insert({
+      user_id: userId,
+      exercise_name: ex.name,
+      set_number: setNum,
+      load_kg: load > 0 ? load : null,
+      reps: reps > 0 ? reps : null,
+      workout_id: workoutId || null,
+      logged_at: new Date().toISOString()
+    }).then(({ error }) => {
+      if (error) console.warn('[confirmarSerie] exercise_logs:', error.message);
+    });
+  }
+
+  showToast(`✅ Série ${setNum} — ${load > 0 ? load + 'kg' : 'livre'} × ${reps > 0 ? reps : '?'} reps`);
+
+  const totalSets = ex.sets || 3;
+  if (setNum < totalSets) {
+    s.setNum = setNum + 1;
+  } else {
+    s.exIdx = exIdx + 1;
+    s.setNum = 1;
+  }
+
+  _renderExecCard(cardId);
+  setTimeout(() => document.getElementById(`exec-load-${cardId}`)?.focus(), 80);
+}
+
+function pularExercicio(cardId) {
+  const s = window._axisExecState[cardId];
+  if (!s) return;
+  s.exIdx++;
+  s.setNum = 1;
+  _renderExecCard(cardId);
+  setTimeout(() => document.getElementById(`exec-load-${cardId}`)?.focus(), 80);
+}
+
+function descartarExec(cardId) {
+  delete window._axisExecState[cardId];
+  const card = document.getElementById('axiscard-' + cardId);
+  if (!card) return;
+  const data = window._axisWorkouts[cardId];
+  if (!data) { card.remove(); return; }
+  card.innerHTML = `
+    <div class="axis-confirm-header">💪 <strong>${data.titulo}</strong> <span class="cat-badge cat-${data.categoria||'fullbody'}">${data.categoria||'fullbody'}</span></div>
+    <div class="axis-confirm-btns">
+      <button class="btn-accept" onclick="aceitarTreino(${cardId})">✅ Aceitar treino</button>
+      <button class="btn-secondary" onclick="iniciarTreinoExec(${cardId})">🏋️ Iniciar treino</button>
+      <button class="btn-secondary" onclick="descartarConfirm(${cardId})">❌ Descartar</button>
+    </div>`;
+}
+
+function aceitarTreinoFromExec(cardId) {
+  delete window._axisExecState[cardId];
+  aceitarTreino(cardId);
+}
+
+function iniciarTreinoExec(cardId) {
+  const data = window._axisWorkouts[cardId];
+  if (!data) return;
+  const exercises = _buildExecList(data.conteudo || '');
+  if (!exercises.length) {
+    showToast('Não foi possível extrair exercícios do treino.', true);
+    return;
+  }
+  window._axisExecState[cardId] = { exercises, exIdx: 0, setNum: 1, workoutId: data.id || null };
+  _renderExecCard(cardId);
+  setTimeout(() => document.getElementById(`exec-load-${cardId}`)?.focus(), 80);
 }
 
 function toggleTreino(bodyId, btn) {
@@ -5015,6 +5189,8 @@ FIM DO SYSTEM PROMPT — AXISAI PERFORMANCE OS v17.0`;
 async function clearChat() {
   state.chatHistory = [];
   const box = document.getElementById('chat-messages');
+  // Marcar o chat com o user_id atual para detectar troca de sessão
+  if (box && state.user?.id) box.dataset.userId = state.user.id;
   const typingId = 'typing-init-' + Date.now();
   box.innerHTML = `<div class="msg bot" id="${typingId}"><div class="msg-avatar" style="background:transparent;"><img src="${NEW_LOGO}" alt="Axis" style="width:26px; height:26px; object-fit:contain; background:transparent; flex-shrink:0;"></div><div class="msg-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>`;
   box.scrollTop = box.scrollHeight;
@@ -5818,4 +5994,160 @@ async function abrirVideoModal(exerciseName) {
     '</div>';
 
   document.body.appendChild(modal);
+}
+
+// ═══════════════════════════════════════════════
+//  ANÁLISE POSTURAL (Feature 3)
+// ═══════════════════════════════════════════════
+
+const _POSTURAL_ANGLES = [
+  { key: 'frente', label: 'FRENTE' },
+  { key: 'lado',   label: 'LADO'   },
+  { key: 'costas', label: 'COSTAS' },
+  { key: 'toque',  label: 'TOQUE NO PÉ' },
+];
+
+window._posturalPhotos = {};
+
+function renderPosturalSection() {
+  const page = document.getElementById('page-diagnosis');
+  if (!page) return;
+
+  const existing = document.getElementById('postural-analysis-section');
+  if (existing) return;
+
+  const section = document.createElement('div');
+  section.id = 'postural-analysis-section';
+  section.style.cssText = 'margin-bottom:24px;';
+
+  section.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div style="font-family:var(--font-display);font-size:18px;letter-spacing:2px;color:var(--text);">ANÁLISE POSTURAL</div>
+        <span style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">IA • Claude</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Envie até 4 fotos. A IA identifica APT e Rib Flare automaticamente.</div>
+
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px;">
+        ${_POSTURAL_ANGLES.map(a => `
+          <label for="postural-input-${a.key}" style="cursor:pointer;">
+            <div id="postural-zone-${a.key}"
+              style="border:1.5px dashed var(--border);border-radius:10px;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px;transition:border-color 0.2s;position:relative;overflow:hidden;">
+              <img id="postural-prev-${a.key}" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:9px;" alt="">
+              <div id="postural-icon-${a.key}" style="font-size:22px;">📷</div>
+              <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);">${a.label}</div>
+            </div>
+            <input type="file" id="postural-input-${a.key}" accept="image/*" capture="environment" style="display:none"
+              onchange="handlePosturalPhoto(this,'${a.key}')">
+          </label>
+        `).join('')}
+      </div>
+
+      <button id="postural-btn-analyze" onclick="submitPosturalAnalysis()"
+        style="width:100%;padding:14px;background:var(--green);color:#000;border:none;border-radius:12px;font-family:var(--font-display);font-size:16px;letter-spacing:2px;font-weight:700;cursor:pointer;touch-action:manipulation;">
+        ANALISAR POSTURA →
+      </button>
+
+      <div id="postural-result" style="display:none;margin-top:16px;padding:14px;border-radius:10px;border:1px solid var(--border);"></div>
+    </div>
+  `;
+
+  const fmsReportBtn = page.querySelector('.fms-report-btn');
+  if (fmsReportBtn) {
+    page.insertBefore(section, fmsReportBtn);
+  } else {
+    const header = page.querySelector('.page-header');
+    if (header) header.after(section);
+    else page.prepend(section);
+  }
+}
+
+function handlePosturalPhoto(input, key) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const b64 = e.target.result;
+    window._posturalPhotos[key] = b64;
+    const prev = document.getElementById(`postural-prev-${key}`);
+    const icon = document.getElementById(`postural-icon-${key}`);
+    const zone = document.getElementById(`postural-zone-${key}`);
+    if (prev) { prev.src = b64; prev.style.display = 'block'; }
+    if (icon) icon.style.display = 'none';
+    if (zone) zone.style.borderColor = 'var(--green)';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitPosturalAnalysis() {
+  const photos = Object.values(window._posturalPhotos);
+  if (photos.length === 0) {
+    showToast('Adicione pelo menos uma foto antes de analisar.', true);
+    return;
+  }
+
+  const btn = document.getElementById('postural-btn-analyze');
+  const resultEl = document.getElementById('postural-result');
+  if (btn) { btn.disabled = true; btn.textContent = 'ANALISANDO...'; }
+  if (resultEl) resultEl.style.display = 'none';
+
+  try {
+    const token = await (async () => {
+      const { data } = await supabase.auth.getSession();
+      return data?.session?.access_token || null;
+    })();
+
+    if (!token) {
+      showToast('Sessão expirada. Faça login novamente.', true);
+      return;
+    }
+
+    const payload = photos.map(b64 => b64.replace(/^data:image\/[^;]+;base64,/, ''));
+
+    const res = await fetch('/api/assess', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ photos: payload }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data?.error || `Erro ${res.status}`);
+    }
+
+    const approved = data.approved;
+    const issues = Array.isArray(data.detected_issues) ? data.detected_issues : [];
+    const issueLabels = { apt: 'Hiperextensão Lombar (APT)', rib_flare: 'Costelas Abertas (Rib Flare)' };
+    const issuesHtml = issues.length
+      ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">${issues.map(i => `<span style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#ef4444;font-size:11px;font-weight:700;letter-spacing:1px;padding:3px 8px;border-radius:6px;">${issueLabels[i] || i}</span>`).join('')}</div>`
+      : '';
+
+    if (resultEl) {
+      resultEl.style.display = 'block';
+      resultEl.style.borderColor = approved ? 'rgba(0,255,135,0.3)' : 'rgba(239,68,68,0.3)';
+      resultEl.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:20px;">${approved ? '✅' : '⚠️'}</span>
+          <span style="font-family:var(--font-display);font-size:16px;letter-spacing:1px;color:${approved ? 'var(--green)' : '#ef4444'};">${approved ? 'BOA POSTURA' : 'ATENÇÃO NECESSÁRIA'}</span>
+        </div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;">${_escapeWorkoutHTML(data.feedback || '')}</div>
+        ${issuesHtml}
+      `;
+    }
+
+    if (issues.length > 0) {
+      showToast(`⚠️ ${issues.length} problema(s) identificado(s)`, false);
+    } else {
+      showToast('✅ Análise postural concluída!', false);
+    }
+  } catch (err) {
+    console.error('[submitPosturalAnalysis]', err);
+    showToast('Erro na análise: ' + (err.message || 'tente novamente'), true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'ANALISAR POSTURA →'; }
+  }
 }
