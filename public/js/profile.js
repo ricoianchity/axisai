@@ -301,6 +301,8 @@ async function loadProfile() {
         }
         if (!Array.isArray(state.profile.equipment)) state.profile.equipment = [];
         if (profileKey) localStorage.setItem(profileKey, JSON.stringify(state.profile));
+        // ── FIX: garantir que nomes no DOM reflitam o perfil recém carregado ──
+        if (typeof window._refreshNameElements === 'function') window._refreshNameElements();
       }
     } catch(e) {
       console.warn('[loadProfile] Supabase fallback para localStorage:', e);

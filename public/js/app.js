@@ -49,10 +49,18 @@ async function waitForSupabaseClient(maxAttempts = 40, delayMs = 150) {
 async function initSessionDependentModules(session) {
   if (!session?.user) return;
   if (typeof window.initDashboard === 'function') {
-    await window.initDashboard();
+    try {
+      await window.initDashboard();
+    } catch (err) {
+      console.warn('[initDashboard]', err?.message || err);
+    }
   }
   if (typeof window.initProfile === 'function') {
-    await window.initProfile();
+    try {
+      await window.initProfile();
+    } catch (err) {
+      console.warn('[initProfile]', err?.message || err);
+    }
   }
 }
 

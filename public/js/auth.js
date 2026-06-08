@@ -167,6 +167,8 @@ const USER_LOCAL_KEYS = [
 
 function _clearLocalUserCache() {
   USER_LOCAL_KEYS.forEach((k) => localStorage.removeItem(k));
+  // Limpa também chaves legadas sem user-scope (segurança + evitar contaminação cross-user)
+  ['axisai_user', 'axisai_users'].forEach((k) => localStorage.removeItem(k));
   [getProfileKey(), getFmsLatestKey(), getTreinosKey(), getOnboardingKey(), getParqCacheKey()].forEach(function(k) {
     if (k) localStorage.removeItem(k);
   });
@@ -310,6 +312,10 @@ async function loadUserData(userId) {
   state.role = role;
   document.body.setAttribute('data-role', role);
   updateCoachNavIndicator();
+  // ── Atualizar DOM de nome/avatar se app já estiver montado ──
+  // loadUserData() pode ser chamado de múltiplos pontos (initApp, doLogin, etc.)
+  // _refreshNameElements() é no-op se o DOM ainda não foi montado (guard interno).
+  _refreshNameElements();
 }
 
 /* ── LANDING PAGE ── */
@@ -526,6 +532,7 @@ async function initApp() {
       _applyAuthenticatedUser(u, savedName);
       migrateLocalStorageKeys();
       await loadUserData(u.id);
+      _refreshNameElements(); // ← atualiza DOM após dados carregarem
       syncPendingWorkouts();
       loadWorkouts();
       loadProfile();
@@ -728,6 +735,7 @@ async function doLogin() {
 
     // Carregar dados ANTES de entrar no app (evita estado parcial no dashboard)
     await loadUserData(data.user.id);
+    _refreshNameElements(); // ← atualiza DOM após dados carregarem
 
     loadWorkouts();
     loadProfile();
@@ -780,6 +788,14 @@ async function showForgotPassword() {
 async function doLogout() {
   [getProfileKey(), getFmsLatestKey(), getTreinosKey(), getOnboardingKey(), getParqCacheKey(), getPhaseKey()].forEach(function(k) {
     if (k) localStorage.removeItem(k);
+  });
+  // ── Limpar chaves legadas sem user-scope (não capturadas pelo getProfileKey etc.) ──
+  // axisai_user e axisai_users contêm dados do usuário sem escopo — nunca são limpos
+  // automaticamente. axisai_users armazena senhas em plaintext (issue de segurança).
+  ['axisai_user', 'axisai_users', 'axisai_profile', 'axisai_fms_latest',
+   'axisai_treinos', 'axisai_onboarding_done', 'axisai_phase', 'axisai_avatar',
+   'axisai_checkin', 'axisai_lgpd_consent'].forEach(function(k) {
+    localStorage.removeItem(k);
   });
   // ── FIX: remover token Supabase do localStorage de forma explícita ──
   // signOut() pode falhar silenciosamente em caso de erro de rede, deixando
@@ -871,10 +887,15 @@ async function _getProfileFromSupabase(userId) {
 }
 
 async function enterApp() {
-  // ── Guard against double execution ──
+  // ── Guard contra execução dupla — setado IMEDIATAMENTE para evitar race condition ──
+  // Se duas chamadas concorrentes passarem pelo check antes de qualquer await, ambas
+  // entrariam em completeEnterApp() e o DOM seria sobrescrito com dados parciais.
   if (_appEntered) return;
+  _appEntered = true; // ← setado antes de qualquer await
+
   if (window._showingLanding) {
     window._showingLanding = false;
+    _appEntered = false; // ← resetar se saindo sem entrar no app
     return;
   }
   migrateLocalStorageKeys();
@@ -920,6 +941,7 @@ async function enterApp() {
   const hasCompletedOnboarding = onboardingFlag || profileHasData(resolvedProfile);
 
   if (!hasCompletedOnboarding) {
+    _appEntered = false; // ← onboarding vai completar o fluxo via _finishWizard()
     showOnboarding();
     return;
   }
@@ -928,7 +950,7 @@ async function enterApp() {
     state.profile = { ...(state.profile || {}), ...cachedProfile };
   }
 
-  _appEntered = true;
+  // _appEntered já foi setado true no início da função
   await completeEnterApp();
 }
 
@@ -942,20 +964,36 @@ function getDisplayName() {
          'ATLETA';
 }
 
+// ── Atualiza todos os elementos DOM com nome/avatar do usuário atual ──
+// Chamada por completeEnterApp() e por loadUserData() após dados carregarem,
+// garantindo que o DOM sempre reflete o usuário correto mesmo em casos de race.
+function _refreshNameElements() {
+  if (!document.getElementById('user-display-name')) return; // app ainda não montado
+  const displayName = getDisplayName();
+  const name = state.user?.name || '';
+  const initial = name ? name.charAt(0).toUpperCase() : (displayName ? displayName.charAt(0) : 'A');
+  const avatarEl = document.getElementById('user-avatar-letter');
+  const nameEl = document.getElementById('user-display-name');
+  const greetingEl = document.getElementById('greeting-name');
+  const avatarBigEl = document.getElementById('profile-avatar-big');
+  const profileNameEl = document.getElementById('profile-full-name');
+  const emailEl = document.getElementById('profile-email-display');
+  if (avatarEl) avatarEl.textContent = initial;
+  if (nameEl) nameEl.textContent = displayName;
+  if (greetingEl) greetingEl.textContent = displayName;
+  if (avatarBigEl) avatarBigEl.textContent = initial;
+  if (profileNameEl) profileNameEl.textContent = name || displayName;
+  if (emailEl) emailEl.textContent = state.user?.email || '';
+}
+window._refreshNameElements = _refreshNameElements;
+
 async function completeEnterApp() {
   document.getElementById('screen-onboarding').style.display = 'none';
   // ── FIX BUG 1: Ensure guard is set even when called directly from _finishWizard ──
   _appEntered = true;
   _showOnly('screen-app');
   const loadingOverlay = document.getElementById('loading-overlay');
-  const name = state.user?.name || 'Atleta';
-  const initial = name.charAt(0).toUpperCase();
-  document.getElementById('user-avatar-letter').textContent = initial;
-  document.getElementById('user-display-name').textContent = getDisplayName();
-  document.getElementById('greeting-name').textContent = getDisplayName();
-  document.getElementById('profile-avatar-big').textContent = initial;
-  document.getElementById('profile-full-name').textContent = name;
-  document.getElementById('profile-email-display').textContent = state.user?.email || '';
+  _refreshNameElements();
   loadAvatar();
   // ── FIX: sempre navegar para dashboard no carregamento do app
   // navigate('dashboard') já chama refreshDashboard() internamente e garante

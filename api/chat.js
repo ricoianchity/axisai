@@ -58,17 +58,23 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
       messages: body.messages || [],
     };
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify(anthropicPayload),
-    });
-
-    const data = await response.json();
+    let response;
+    let data;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      if (attempt > 1) await new Promise(r => setTimeout(r, 1000));
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify(anthropicPayload),
+      });
+      data = await response.json();
+      if (response.ok || response.status < 500) break;
+      console.warn(`[api/chat] tentativa ${attempt} falhou com status ${response.status}`);
+    }
     if (!response.ok) {
       console.error('[api/chat] Anthropic error:', response.status, JSON.stringify(data));
     }

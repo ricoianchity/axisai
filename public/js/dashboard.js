@@ -44,7 +44,11 @@ async function renderCompletedSessions() {
     .order('created_at', { ascending: false })
     .limit(10);
 
-  if (error) { console.warn('[completed sessions]', error.message); container.innerHTML = ''; return; }
+  if (error) {
+    console.warn('[completed sessions] session_logs indisponível:', error.message);
+    container.innerHTML = '';
+    return;
+  }
 
   const rpeLabels = ['','Muito leve','Muito leve','Muito leve','Moderado','Moderado','Difícil','Difícil','Muito difícil','Muito difícil','Máximo'];
   const treinos   = loadTreinosIA();
@@ -430,8 +434,12 @@ async function updateStreakAndConsistency() {
         .eq('user_id', userId)
     ]);
 
-    if (recentResp.error) throw recentResp.error;
-    if (totalResp.error) throw totalResp.error;
+    if (recentResp.error || totalResp.error) {
+      console.warn('[updateStreakAndConsistency] session_logs error — usando estado vazio',
+        recentResp.error?.message || totalResp.error?.message);
+      setEmptyState();
+      return;
+    }
 
     const recentLogs = Array.isArray(recentResp.data) ? recentResp.data : [];
     const totalSessions = typeof totalResp.count === 'number' ? totalResp.count : 0;
@@ -580,23 +588,25 @@ function _getDashboardRoot() {
 }
 
 async function _prefetchDashboardData(userId) {
+  const _safeQuery = (promise) => promise.catch(err => ({ data: null, error: err }));
+
   const [profileRes, workoutsRes, sessionLogsRes] = await Promise.all([
-    supabase
+    _safeQuery(supabase
       .from('profiles')
       .select('weight, objective, sex, fms, fms_scores, comorbidities, phase, day, risk_flags')
       .eq('user_id', userId)
-      .maybeSingle(),
-    supabase
+      .maybeSingle()),
+    _safeQuery(supabase
       .from('workouts')
       .select('id, titulo, status, created_at')
       .eq('user_id', userId)
-      .in('status', DASHBOARD_ACTIVE_WORKOUT_STATUSES),
-    supabase
+      .in('status', DASHBOARD_ACTIVE_WORKOUT_STATUSES)),
+    _safeQuery(supabase
       .from('session_logs')
       .select('id, created_at, duration_seconds')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(30)
+      .limit(30))
   ]);
 
   return {
@@ -607,6 +617,9 @@ async function _prefetchDashboardData(userId) {
 }
 
 async function initDashboard() {
+  if (typeof authReady !== 'undefined') {
+    await authReady;
+  }
   const session = await _waitForSessionDashboard();
   if (!session?.user?.id) {
     console.warn('initDashboard: sessão não disponível');
@@ -618,15 +631,6 @@ async function initDashboard() {
       id: session.user.id,
       email: session.user.email || state.user?.email || ''
     };
-  }
-
-  const dashboardRoot = _getDashboardRoot();
-  const previousOpacity = dashboardRoot?.style.opacity || '';
-  const previousPointerEvents = dashboardRoot?.style.pointerEvents || '';
-
-  if (dashboardRoot) {
-    dashboardRoot.style.opacity = '0';
-    dashboardRoot.style.pointerEvents = 'none';
   }
 
   try {
@@ -679,15 +683,15 @@ async function initDashboard() {
     }
 
     await refreshDashboard();
-  } finally {
-    if (dashboardRoot) {
-      dashboardRoot.style.opacity = previousOpacity || '1';
-      dashboardRoot.style.pointerEvents = previousPointerEvents || '';
-    }
+  } catch (err) {
+    console.warn('[initDashboard]', err?.message || err);
   }
 }
 
 async function refreshDashboard() {
+  if (typeof authReady !== 'undefined') {
+    await authReady;
+  }
   const session = await _waitForSessionDashboard();
   if (!session?.user?.id) {
     console.warn('refreshDashboard: sessão não disponível');
