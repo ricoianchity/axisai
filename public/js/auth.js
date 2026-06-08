@@ -711,6 +711,13 @@ async function doLogin() {
 
   try {
     // Limpar sessão local antes de logar com nova/mesma conta
+    // Remove token Supabase explicitamente para garantir troca de conta limpa
+    try {
+      const _sbKey = Object.keys(localStorage).find(function(k) {
+        return k.startsWith('sb-') && k.endsWith('-auth-token');
+      });
+      if (_sbKey) localStorage.removeItem(_sbKey);
+    } catch (_) {}
     await supabase.auth.signOut({ scope: 'local' });
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
@@ -774,6 +781,16 @@ async function doLogout() {
   [getProfileKey(), getFmsLatestKey(), getTreinosKey(), getOnboardingKey(), getParqCacheKey(), getPhaseKey()].forEach(function(k) {
     if (k) localStorage.removeItem(k);
   });
+  // ── FIX: remover token Supabase do localStorage de forma explícita ──
+  // signOut() pode falhar silenciosamente em caso de erro de rede, deixando
+  // o JWT do usuário anterior no localStorage e causando reautenticação cruzada.
+  // Removemos a chave diretamente para garantir limpeza independente de rede.
+  try {
+    const _sbKey = Object.keys(localStorage).find(function(k) {
+      return k.startsWith('sb-') && k.endsWith('-auth-token');
+    });
+    if (_sbKey) localStorage.removeItem(_sbKey);
+  } catch (_) {}
   await supabase.auth.signOut();
   _clearLocalUserCache();
   _resetRuntimeUserData();
