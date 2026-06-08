@@ -936,7 +936,11 @@ async function completeEnterApp() {
   document.getElementById('profile-full-name').textContent = name;
   document.getElementById('profile-email-display').textContent = state.user?.email || '';
   loadAvatar();
-  await refreshDashboard();
+  // ── FIX: sempre navegar para dashboard no carregamento do app
+  // navigate('dashboard') já chama refreshDashboard() internamente e garante
+  // que page-dashboard receba a classe 'active', evitando que o BFCache da PWA
+  // restaure a última página ativa (ex: perfil) após CMD+R ou reload.
+  await navigate('dashboard');
   if (loadingOverlay) loadingOverlay.style.display = 'none';
   refreshChatSidebar();
   await checkLGPDConsent();
