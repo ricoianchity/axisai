@@ -1,8 +1,14 @@
 // ═══════════════════════════════════════════════
 //  WORKOUTS
 // ═══════════════════════════════════════════════
-function loadWorkouts() { state.workouts = JSON.parse(_lsGet('axisai_workouts') || '[]'); }
-function saveWorkouts() { localStorage.setItem('axisai_workouts', JSON.stringify(state.workouts)); }
+function loadWorkouts() {
+  const key = (typeof getWorkoutsKey === 'function' && getWorkoutsKey()) || 'axisai_workouts';
+  state.workouts = JSON.parse(_lsGet(key) || '[]');
+}
+function saveWorkouts() {
+  const key = (typeof getWorkoutsKey === 'function' && getWorkoutsKey()) || 'axisai_workouts';
+  localStorage.setItem(key, JSON.stringify(state.workouts));
+}
 
 function _safeParseJson(value, fallback) {
   if (value == null) return fallback;

@@ -27,11 +27,13 @@ function getTreinosKey()    { const u = getCurrentUserId(); return u ? 'axisai_t
 function getOnboardingKey() { const u = getCurrentUserId(); return u ? 'axisai_onboarding_done_' + u : ''; }
 function getParqCacheKey()  { const u = getCurrentUserId(); return u ? 'axisai_parq_cache_' + u : ''; }
 function getPhaseKey()      { const u = getCurrentUserId(); return u ? 'axisai_phase_' + u : ''; }
+function getWorkoutsKey()   { const u = getCurrentUserId(); return u ? 'axisai_workouts_' + u : ''; }
+window.getWorkoutsKey = getWorkoutsKey;
 
 function migrateLocalStorageKeys() {
   const userId = getCurrentUserId();
   if (!userId) return;
-  ['axisai_profile','axisai_fms_latest','axisai_treinos','axisai_onboarding_done','axisai_phase'].forEach(function(key) {
+  ['axisai_profile','axisai_fms_latest','axisai_treinos','axisai_onboarding_done','axisai_phase','axisai_workouts'].forEach(function(key) {
     const val = _lsGet(key);
     const newKey = key + '_' + userId;
     if (val && !_lsGet(newKey)) {
@@ -163,13 +165,14 @@ const USER_LOCAL_KEYS = [
   'axisai_fms_latest',
   'axisai_onboarding_done',
   'axisai_avatar',
+  'axisai_workouts',        // legacy key sem user-scope (fix cross-user contamination)
 ];
 
 function _clearLocalUserCache() {
   USER_LOCAL_KEYS.forEach((k) => localStorage.removeItem(k));
   // Limpa também chaves legadas sem user-scope (segurança + evitar contaminação cross-user)
   ['axisai_user', 'axisai_users'].forEach((k) => localStorage.removeItem(k));
-  [getProfileKey(), getFmsLatestKey(), getTreinosKey(), getOnboardingKey(), getParqCacheKey()].forEach(function(k) {
+  [getProfileKey(), getFmsLatestKey(), getTreinosKey(), getOnboardingKey(), getParqCacheKey(), getWorkoutsKey()].forEach(function(k) {
     if (k) localStorage.removeItem(k);
   });
 }
@@ -794,7 +797,7 @@ async function doLogout() {
   // automaticamente. axisai_users armazena senhas em plaintext (issue de segurança).
   ['axisai_user', 'axisai_users', 'axisai_profile', 'axisai_fms_latest',
    'axisai_treinos', 'axisai_onboarding_done', 'axisai_phase', 'axisai_avatar',
-   'axisai_checkin', 'axisai_lgpd_consent'].forEach(function(k) {
+   'axisai_checkin', 'axisai_lgpd_consent', 'axisai_workouts'].forEach(function(k) {
     localStorage.removeItem(k);
   });
   // ── FIX: remover token Supabase do localStorage de forma explícita ──
