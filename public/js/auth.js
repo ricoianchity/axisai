@@ -27,7 +27,7 @@ function getTreinosKey()    { const u = getCurrentUserId(); return u ? 'axisai_t
 function getOnboardingKey() { const u = getCurrentUserId(); return u ? 'axisai_onboarding_done_' + u : ''; }
 function getParqCacheKey()  { const u = getCurrentUserId(); return u ? 'axisai_parq_cache_' + u : ''; }
 function getPhaseKey()      { const u = getCurrentUserId(); return u ? 'axisai_phase_' + u : ''; }
-function getWorkoutsKey()   { const u = getCurrentUserId(); return u ? 'axisai_workouts_' + u : ''; }
+function getWorkoutsKey()   { const u = getCurrentUserId(); return u ? 'axisai_workouts_' + u : ''; } // v2
 window.getWorkoutsKey = getWorkoutsKey;
 
 function migrateLocalStorageKeys() {
