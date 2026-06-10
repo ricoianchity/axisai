@@ -2,8 +2,8 @@
 //  ONBOARDING WIZARD
 // ═══════════════════════════════════════════════
 let _wizardStep = 1;
-const WIZARD_TOTAL_STEPS = 5;
-const WIZARD_STEP_NAMES = ['SOBRE VOCÊ', 'SEU TREINO', 'SEU ESPAÇO', 'SAÚDE E OBJETIVO', 'RAIO-X DO MOVIMENTO'];
+const WIZARD_TOTAL_STEPS = 6;
+const WIZARD_STEP_NAMES = ['SOBRE VOCÊ', 'SEU TREINO', 'SEU ESPAÇO', 'SAÚDE E OBJETIVO', 'NUTRIÇÃO', 'RAIO-X DO MOVIMENTO'];
 
 function showOnboarding() {
   if (window._showingLanding) {
@@ -27,8 +27,8 @@ function _goToWizardStep(n) {
   document.getElementById('wizard-step-label').textContent = 'ETAPA ' + n + ' DE ' + WIZARD_TOTAL_STEPS;
   document.getElementById('wizard-step-name').textContent = WIZARD_STEP_NAMES[n - 1];
 
-  // Step 5 uses its own nav; steps 1-4 use the standard nav
-  const isFms = n === 5;
+  // Step 6 uses its own nav; steps 1-5 use the standard nav
+  const isFms = n === 6;
   document.getElementById('wizard-nav-std').style.display = isFms ? 'none' : 'flex';
   document.getElementById('wizard-nav-fms').style.display = isFms ? 'block' : 'none';
   if (isFms) {
@@ -566,6 +566,23 @@ async function _finishWizard() {
     return;
   }
 
+  const goalVal = document.getElementById('w-goal')?.value || '';
+  if (goalVal === 'Performance Esportiva' || goalVal === 'Força e Performance') {
+    const modalidadeVal = (document.getElementById('w-modalidade')?.value || document.getElementById('w-modalidade-opt')?.value || '').trim();
+    if (!modalidadeVal) {
+      showToast('Informe a modalidade esportiva antes de continuar.', true);
+      document.getElementById('w-modalidade')?.focus();
+      return;
+    }
+  }
+
+  const sexVal = document.getElementById('w-sex')?.value || '';
+  if (!sexVal) {
+    showToast('Informe o sexo biológico antes de continuar.', true);
+    document.getElementById('w-sex')?.focus();
+    return;
+  }
+
   if (!state.user && userId) {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
@@ -602,6 +619,10 @@ async function _finishWizard() {
     turno_trabalho: document.getElementById('w-turno')?.value || '',
     comorbidities: comorbiditiesChecked,
     medications:   medicationsChecked,
+    diet_type:     document.getElementById('w-diet-type')?.value || '',
+    has_nutritionist: document.getElementById('w-has-nutritionist')?.value === 'true',
+    food_restrictions: (document.getElementById('w-food-restrictions')?.value || '')
+      .split(',').map(s => s.trim()).filter(Boolean),
   };
   // Merge FMS data if collected in step 5
   if (_wizardFmsData) {

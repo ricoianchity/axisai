@@ -555,7 +555,9 @@ async function initApp() {
   }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
+// ── FIX: auth.js é carregado dinamicamente por app.js DEPOIS do DOMContentLoaded.
+// Usar listener direto faria initApp() nunca rodar. Verificamos readyState antes.
+function _doAuthInit() {
   document.getElementById('w-goal')?.addEventListener('change', function() {
     const isEsportivo = this.value === 'Performance Esportiva';
     const group = document.getElementById('w-modalidade-group');
@@ -566,7 +568,12 @@ window.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('img[src="NEW_LOGO"]').forEach(img => { img.src = NEW_LOGO; });
   migrateLocalStorageKeys();
   initApp();
-});
+}
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', _doAuthInit);
+} else {
+  _doAuthInit(); // DOMContentLoaded já disparou — rodar imediatamente
+}
 
 supabase.auth.onAuthStateChange(async (event, session) => {
   _resolveAuthReady(session?.user || null);

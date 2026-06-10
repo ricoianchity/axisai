@@ -588,7 +588,8 @@ function _getDashboardRoot() {
 }
 
 async function _prefetchDashboardData(userId) {
-  const _safeQuery = (promise) => promise.catch(err => ({ data: null, error: err }));
+  // Supabase v2 query builder é thenable mas não expõe .catch() diretamente
+  const _safeQuery = async (p) => { try { return await p; } catch (err) { return { data: null, error: err }; } };
 
   const [profileRes, workoutsRes, sessionLogsRes] = await Promise.all([
     _safeQuery(supabase

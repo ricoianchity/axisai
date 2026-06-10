@@ -5192,6 +5192,8 @@ Esta regra aplica-se a todos os blocos: FOAM ROLL, PILLAR PREP, WARM-UP, DYNAMIC
 
 FIM DO SYSTEM PROMPT — AXISAI PERFORMANCE OS v17.0`;
 
+const REF_TABLES = '';
+
 async function clearChat() {
   state.chatHistory = [];
   const box = document.getElementById('chat-messages');
@@ -5334,10 +5336,18 @@ function buildCoachSystemPrompt(text = '') {
   const _sex = p?.sex || '';
   const _obj = p?.objective || '';
   if (_weight) {
-    let _protMin, _protMax;
-    if (/emagrecimento|déficit|definição/i.test(_obj)) { _protMin = (_weight*1.8).toFixed(0); _protMax = (_weight*2.7).toFixed(0); }
-    else if (/endurance|aeróbic|resistência/i.test(_obj)) { _protMin = (_weight*1.0).toFixed(0); _protMax = (_weight*1.6).toFixed(0); }
-    else { _protMin = (_weight*1.4).toFixed(0); _protMax = (_weight*1.7).toFixed(0); }
+    let _protMin, _protMax, _protMinKg, _protMaxKg;
+    if (/emagrecimento|déficit|definição/i.test(_obj)) {
+      _protMinKg = 1.8; _protMaxKg = 2.7;
+    } else if (/endurance|aeróbic|resistência/i.test(_obj)) {
+      _protMinKg = 1.0; _protMaxKg = 1.6;
+    } else if (/força|performance|esport/i.test(_obj)) {
+      _protMinKg = 1.6; _protMaxKg = 2.0;
+    } else {
+      _protMinKg = 1.4; _protMaxKg = 1.7;
+    }
+    _protMin = (_weight * _protMinKg).toFixed(0);
+    _protMax = (_weight * _protMaxKg).toFixed(0);
     const _phase = getPhaseData() || inferPhaseFromWorkouts();
     const _phaseName = _phase?.name || '';
     let _carbMultiplierMin, _carbMultiplierMax;
@@ -5354,7 +5364,13 @@ function buildCoachSystemPrompt(text = '') {
     let _hydrationNote = '';
     if (_hydration!=null && _hydration<=2) _hydrationNote = `\n⚠️ CHECK-IN HOJE: hidratação baixa (${_hydration}/5) — priorize atingir ${_agua} e oriente o atleta sobre isso antes de qualquer outra recomendação nutricional.`;
     else if (_hydration!=null && _hydration>=4) _hydrationNote = `\nCheck-in hoje: hidratação boa (${_hydration}/5).`;
-    nutriCtx = `\n\n## METAS NUTRICIONAIS DE REFERÊNCIA DO ATLETA\nPeso corporal: ${_weight}kg\nProteína diária recomendada: ${_protMin}–${_protMax}g/dia (${(_weight*1.4).toFixed(1)}–${(_weight*1.7).toFixed(1)} g/kg)\nCarboidrato em dia de treino: ${_carbTreino_min}–${_carbTreino_max}g/dia\nCarboidrato em dia de descanso: ${_carbDescanso_min}–${_carbDescanso_max}g/dia\nHidratação mínima: ${_agua}/dia\n\nINSTRUÇÃO: Quando o atleta perguntar sobre nutrição, alimentação, proteína, carboidrato, hidratação ou suplementação — use esses valores como referência personalizada. Sempre que citar gramas de proteína ou carbo, calcule com base no peso real acima. Lembre o atleta que são estimativas e que um nutricionista é indispensável para prescrição individualizada.${_hydrationNote}`;
+    const _dietType = p?.diet_type || '';
+    const _dietNote = _dietType ? `\nDieta/Restrição: ${_dietType}` : '';
+    const _hasNutri = p?.has_nutritionist || false;
+    const _nutriScope = _hasNutri
+      ? '\n\nINSTRUÇÃO: Atleta acompanhado por nutricionista. Use esses valores apenas como referência de contexto — não contrarie orientações do profissional. Ao falar de nutrição, reforce que as metas personalizadas vêm do nutricionista dele.'
+      : '\n\nINSTRUÇÃO: Quando o atleta perguntar sobre nutrição, alimentação, proteína, carboidrato, hidratação ou suplementação — use esses valores como referência personalizada. Sempre que citar gramas de proteína ou carbo, calcule com base no peso real acima. Lembre o atleta que são estimativas e que um nutricionista é indispensável para prescrição individualizada.';
+    nutriCtx = `\n\n## METAS NUTRICIONAIS DE REFERÊNCIA DO ATLETA\nPeso corporal: ${_weight}kg\nProteína diária recomendada: ${_protMin}–${_protMax}g/dia (${_protMinKg}–${_protMaxKg} g/kg)\nCarboidrato em dia de treino: ${_carbTreino_min}–${_carbTreino_max}g/dia\nCarboidrato em dia de descanso: ${_carbDescanso_min}–${_carbDescanso_max}g/dia\nHidratação mínima: ${_agua}/dia${_dietNote}${_nutriScope}${_hydrationNote}`;
   }
   let profCtx = '';
   const prof = state.profile;
