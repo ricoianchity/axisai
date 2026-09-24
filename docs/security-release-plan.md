@@ -9,13 +9,25 @@ applied to the production database.
   `axisaibeta` (`prj_sWtwpEmYFmsL3gkwjVAu6aslmMF9`) and deployment
   `dpl_3BYCa75bRu27H57sNuGK6252aqRJ`. Vercel reports `source=cli`, repository
   `ricoianchity/axisai`, and commit `c2ec20a01030070e229ca421fc5eea7f822c1f40`.
-- GitHub and `git fetch` cannot retrieve that commit. The repository `main` at
-  audit time was `54a62133971392c4956f4431f74529eb65d64b97`.
-- Public production assets contain an athlete panel and script changes missing
-  from that `main`. This PR restores the athlete panel from the public client
-  behavior, corrects its queries to match the current catalog, and escapes
-  profile text before adding it to HTML. Serverless code in the CLI deployment
-  remains unavailable for a file-by-file comparison.
+- The commit is present in the active local checkout
+  `~/Desktop/axisai-prod` (`c2ec20a01030070e229ca421fc5eea7f822c1f40`),
+  two commits ahead of the GitHub `main` at audit time
+  (`54a62133971392c4956f4431f74529eb65d64b97`). This PR restores the
+  published athlete page behavior using a guarded runtime mount, without
+  replacing the large HTML file or copying uncommitted work from the active
+  checkout. GitHub still does not contain the original commit, and the CLI
+  deployment bundle has not been compared byte for byte with the local source.
+- The athlete panel retains the published behavior while its queries are
+  corrected to match the current database catalog and profile text is escaped
+  before adding it to HTML.
+- The published `index.html`, `athletes.js`, `onboarding.js`, `coach.js`,
+  `dashboard.js`, `performance.js`, and `profile.js` match the recovered local
+  files byte for byte. Published `app.js` and `auth.js` also match that local
+  checkout, but include 32 uncommitted lines absent from `c2ec20a`: a
+  `SIGNED_OUT` workaround that trusts a cached local session after the event.
+  This PR intentionally does not copy that workaround because a stale local
+  session is insufficient to retain access to private dashboard data. Test
+  sign-out and transient Supabase failures on the preview before release.
 - The local Codex project named AxisAI points to the distinct
   `ricoianchity/axisaibeta` React/Express repository. It was not used as the
   source for this static AxisOS PR.
@@ -23,6 +35,11 @@ applied to the production database.
   `axisaibeta`. That status does not verify the production project. Before any
   release, identify the Vercel project's Git settings and verify a preview
   built explicitly for `axisaibeta` from the intended source commit.
+- The local `017_coach_role.sql` in the recovered commit was never applied
+  according to Supabase migration history. It assumes `profiles.id` is a UUID,
+  but the current catalog defines it as an integer and uses `profiles.user_id`
+  for the auth UUID. It was excluded from this PR; do not apply it. The new
+  authority migration targets the observed schema.
 
 ## Change and validation
 
@@ -49,10 +66,11 @@ applied to the production database.
 
 ## Required release sequence
 
-1. Recover or identify the complete production source for `c2ec20a` and
-   reconcile it with this PR. Confirm which repository is the current AxisOS
-   source, and resolve the Vercel project mismatch. Build a preview for the
-   actual `axisaibeta` project without production credentials or real user data.
+1. Confirm that the recovered local checkout is the complete source used for
+   the CLI deployment, including its serverless bundle. Confirm which
+   repository is the current AxisOS source and resolve the Vercel project
+   mismatch. Build a preview for the actual `axisaibeta` project without
+   production credentials or real user data.
 2. In an isolated Supabase environment with the current schema, run only the
    **new** `20260924154130_guard_profile_authority_and_chat_quota` migration.
    The older `20260924010845_close_public_delete_and_exercise_view_access`
