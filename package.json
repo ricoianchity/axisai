@@ -2,7 +2,13 @@
   "name": "axisai-proxy",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "test": "node --test test/security.test.mjs test/db-security.mjs"
+  },
   "dependencies": {
     "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8"
   }
 }

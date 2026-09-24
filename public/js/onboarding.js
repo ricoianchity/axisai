@@ -724,6 +724,11 @@ function persistParqDecisionLocal(payload) {
 function updateCoachNavIndicator() {
   const icon = document.getElementById('nav-chat-icon');
   const btn = document.getElementById('nav-chat-btn');
+  const isCoach = Boolean(state.user?.id && state.profile?.role === 'coach');
+  const athletesBtn = document.getElementById('nav-athletes-btn');
+  const coachSection = document.getElementById('nav-coach-section');
+  if (athletesBtn) athletesBtn.style.display = isCoach ? '' : 'none';
+  if (coachSection) coachSection.style.display = isCoach ? '' : 'none';
   if (!icon || !btn) return;
 
   if (!state.user?.id) {
@@ -1090,6 +1095,10 @@ async function navigate(page) {
   if (page === 'profile') loadProfileHealth();
   if (page === 'nutrition') renderNutrition();
   if (page === 'admin') await loadAdminPage();
+  if (page === 'athletes' && state.profile?.role === 'coach' &&
+      typeof window.renderAthletesList === 'function') {
+    await window.renderAthletesList();
+  }
 
   // Reset de scroll — deve ser a ÚLTIMA coisa na função
   window.scrollTo(0, 0);

@@ -7,6 +7,7 @@ const LIB_AND_MODULE_SCRIPTS = [
   '/js/profile.js',
   '/js/coach.js',
   '/js/performance.js',
+  '/js/athletes.js',
 ];
 
 function queueScript(src) {
@@ -119,6 +120,40 @@ async function setupSessionBootstrap() {
 
 for (const src of LIB_AND_MODULE_SCRIPTS) {
   await queueScript(src);
+}
+
+function mountAthletesPanel() {
+  const nav = document.querySelector('.sidebar-nav');
+  if (nav && !document.getElementById('nav-athletes-btn')) {
+    const section = document.createElement('div');
+    section.className = 'nav-section-label';
+    section.id = 'nav-coach-section';
+    section.style.display = 'none';
+    section.textContent = 'Treinador';
+    nav.appendChild(section);
+
+    const button = document.createElement('button');
+    button.className = 'nav-item';
+    button.id = 'nav-athletes-btn';
+    button.style.display = 'none';
+    button.innerHTML = '<span class="icon">👥</span><span class="label">Atletas</span>';
+    button.addEventListener('click', () => window.navigate?.('athletes'));
+    nav.appendChild(button);
+  }
+
+  const main = document.querySelector('main');
+  if (main && !document.getElementById('page-athletes')) {
+    const page = document.createElement('div');
+    page.className = 'page';
+    page.id = 'page-athletes';
+    page.innerHTML = '<div class="page-header"><h1>SEUS <span style="color:var(--green)">ATLETAS</span></h1><p style="color:var(--muted);font-size:13px;">Acompanhe prontidão, FMS e histórico em tempo real.</p></div><div id="athletes-list-view"><div id="athletes-list-container"></div></div><div id="athlete-detail-view" style="display:none"></div>';
+    main.appendChild(page);
+  }
+}
+
+mountAthletesPanel();
+if (typeof window.__axisInitApp === 'function') {
+  await window.__axisInitApp();
 }
 
 await setupSessionBootstrap();

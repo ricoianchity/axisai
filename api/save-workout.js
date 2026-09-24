@@ -1,3 +1,5 @@
+import { bearerToken, verifiedUser } from '../lib/supabase-auth.mjs';
+
 async function fetchJson(res) {
   try {
     return await res.json();
@@ -6,11 +8,11 @@ async function fetchJson(res) {
   }
 }
 
-function buildSbHeaders() {
+function buildSbHeaders(token) {
   return {
     'Content-Type': 'application/json',
-    'apikey': process.env.SUPABASE_SERVICE_KEY,
-    'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+    'apikey': process.env.SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${token}`,
     'Prefer': 'return=representation'
   };
 }
@@ -56,8 +58,18 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const user = await verifiedUser(req.headers.authorization || req.headers.Authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const body = req.body;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return res.status(400).json({ error: 'Dados de treino inválidos' });
+  }
+  if (Buffer.byteLength(JSON.stringify(body), 'utf8') > 64_000) {
+    return res.status(413).json({ error: 'Treino muito grande' });
+  }
+
   const {
-    user_id,
     local_id,
     titulo,
     data: dataField,
@@ -68,14 +80,29 @@ export default async function handler(req, res) {
     fase_nome,
     plano_titulo,
     fonte
-  } = req.body || {};
+  } = body;
+  const user_id = user.id;
 
-  if (!user_id || !titulo) {
-    return res.status(400).json({ error: 'user_id e titulo são obrigatórios' });
+  if (body.user_id && body.user_id !== user_id) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const optionalText = [
+    [dataField, 40], [conteudo, 50_000], [categoria, 80], [tipo, 80],
+    [fase_nome, 160], [plano_titulo, 240], [fonte, 80],
+  ];
+  const localIdText = String(local_id);
+  if (typeof titulo !== 'string' || !titulo.trim() || titulo.length > 200 ||
+      (local_id != null && (!/^\d{1,19}$/.test(localIdText) ||
+        BigInt(localIdText) > 9223372036854775807n)) ||
+      (fase_num != null && (!Number.isInteger(fase_num) || fase_num < 0 || fase_num > 100)) ||
+      optionalText.some(([value, max]) => value != null &&
+        (typeof value !== 'string' || value.length > max))) {
+    return res.status(400).json({ error: 'Dados de treino inválidos' });
   }
 
   const baseUrl = `${process.env.SUPABASE_URL}/rest/v1/workouts`;
-  const headers = buildSbHeaders();
+  const headers = buildSbHeaders(bearerToken(req.headers.authorization || req.headers.Authorization));
 
   // Se local_id fornecido, verificar se row já existe
   if (local_id) {

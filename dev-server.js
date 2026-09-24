@@ -1,88 +1,66 @@
-// dev-server.js — rode com: node dev-server.js
-// Requer: ANTHROPIC_API_KEY no ambiente ou num arquivo .env
-
+// Local development server. API requests use the same authorization and quota
+// checks as the deployed Edge function.
 require('dotenv').config();
-const http  = require('http');
-const fs    = require('fs');
-const path  = require('path');
-const https = require('https');
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
 
-const PORT    = 3000;
-const API_KEY = process.env.ANTHROPIC_API_KEY;
+const PORT = 3000;
+const PUBLIC_ROOT = path.resolve(__dirname, 'public');
+const mime = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css' };
 
-if (!API_KEY) {
-  console.error('❌ ANTHROPIC_API_KEY não encontrada. Crie um arquivo .env com: ANTHROPIC_API_KEY=sk-ant-...');
-  process.exit(1);
-}
-
-const server = http.createServer((req, res) => {
-
-  // ── Proxy endpoint ───────────────────────────────────────────────────────
-  if (req.method === 'POST' && req.url === '/api/chat') {
-    let body = '';
-    req.on('data', chunk => body += chunk);
-    req.on('end', () => {
-      const options = {
-        hostname: 'api.anthropic.com',
-        path:     '/v1/messages',
-        method:   'POST',
-        headers: {
-          'Content-Type':    'application/json',
-          'x-api-key':       API_KEY,
-          'anthropic-version': '2023-06-01',
-          'Content-Length':  Buffer.byteLength(body),
-        },
-      };
-
-      const proxyReq = https.request(options, proxyRes => {
-        res.writeHead(proxyRes.statusCode, {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        });
-        proxyRes.pipe(res);
+const server = http.createServer(async (req, res) => {
+  if (req.url === '/api/chat' && req.method === 'POST') {
+    try {
+      const { default: chat } = await import('./api/chat.js');
+      const request = new Request(`http://localhost:${PORT}/api/chat`, {
+        method: 'POST',
+        headers: req.headers,
+        body: req,
+        duplex: 'half',
       });
-
-      proxyReq.on('error', err => {
-        res.writeHead(500);
-        res.end(JSON.stringify({ error: err.message }));
-      });
-
-      proxyReq.write(body);
-      proxyReq.end();
-    });
+      const response = await chat(request);
+      res.writeHead(response.status, Object.fromEntries(response.headers));
+      res.end(Buffer.from(await response.arrayBuffer()));
+    } catch {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Chat unavailable' }));
+    }
     return;
   }
 
-  // ── OPTIONS preflight ────────────────────────────────────────────────────
-  if (req.method === 'OPTIONS') {
-    res.writeHead(204, {
-      'Access-Control-Allow-Origin':  '*',
-      'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    });
-    res.end();
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    res.writeHead(405);
+    res.end('Method not allowed');
     return;
   }
 
-  // ── Serve static files ───────────────────────────────────────────────────
-  const filePath = req.url === '/'
-    ? path.join(__dirname, 'public', 'AxisAI — Performance OS.html')
-    : path.join(__dirname, 'public', req.url);
+  let filePath;
+  try {
+    const pathname = decodeURIComponent(new URL(req.url, `http://localhost:${PORT}`).pathname);
+    filePath = path.resolve(PUBLIC_ROOT, `.${pathname === '/' ? '/index.html' : pathname}`);
+  } catch {
+    res.writeHead(400);
+    res.end('Invalid path');
+    return;
+  }
+  if (!filePath.startsWith(PUBLIC_ROOT + path.sep)) {
+    res.writeHead(403);
+    res.end('Forbidden');
+    return;
+  }
 
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
+  fs.readFile(filePath, (error, data) => {
+    if (error) {
       res.writeHead(404);
       res.end('Not found');
       return;
     }
-    const ext  = path.extname(filePath);
-    const mime = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css' };
-    res.writeHead(200, { 'Content-Type': mime[ext] || 'text/plain' });
-    res.end(data);
+    res.writeHead(200, { 'Content-Type': mime[path.extname(filePath)] || 'text/plain' });
+    res.end(req.method === 'HEAD' ? undefined : data);
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`✅ AxisAI rodando em http://localhost:${PORT}`);
-  console.log(`🔑 API Key carregada: ${API_KEY.substring(0, 15)}...`);
+server.listen(PORT, '127.0.0.1', () => {
+  console.log(`AxisOS local: http://127.0.0.1:${PORT}`);
 });

@@ -1,27 +1,61 @@
+import { bearerToken, verifiedUser } from '../lib/supabase-auth.mjs';
+import { readLimitedJson } from '../lib/limited-json.mjs';
+
 export const config = { runtime: 'edge' };
+
+async function reserveAiRequest(token) {
+  try {
+    const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/rpc/reserve_ai_request`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: process.env.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+      },
+      body: '{}',
+    });
+    if (!response.ok) return { error: true };
+    return { allowed: (await response.json()) === true };
+  } catch {
+    return { error: true };
+  }
+}
 
 export default async function handler(req) {
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-    });
+    return new Response(null, { status: 204 });
   }
 
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
   }
 
+  const user = await verifiedUser(req.headers.get('Authorization'));
+  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
-    const body = await req.json();
+    const parsed = await readLimitedJson(req, 128_000);
+    if (parsed.error) return Response.json({ error: parsed.error }, { status: parsed.status });
+    const body = parsed.data;
+    const messages = body?.messages;
+    if (!Array.isArray(messages) || messages.length < 1 || messages.length > 20 ||
+        messages.some(message => !['user', 'assistant'].includes(message?.role) ||
+          typeof message?.content !== 'string' || message.content.length > 12_000) ||
+        messages.reduce((length, message) => length + message.content.length, 0) > 30_000 ||
+        typeof body.system !== 'string' || body.system.length > 40_000) {
+      return Response.json({ error: 'Invalid chat payload' }, { status: 400 });
+    }
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return Response.json({ error: 'Chat unavailable' }, { status: 503 });
+    }
+
+    const quota = await reserveAiRequest(bearerToken(req.headers.get('Authorization')));
+    if (quota.error) return Response.json({ error: 'Chat quota unavailable' }, { status: 503 });
+    if (!quota.allowed) return Response.json({ error: 'Daily chat quota reached' }, { status: 429 });
 
     // Extrair dados relevantes do body
     const { readiness } = body;
-
-    console.log('[api/chat] model:', body.model, '| messages:', body.messages?.length, '| readiness_score:', readiness?.readiness_score ?? 'n/a');
 
     // Construir contexto de prontidão — usa 'readiness' (novo) se disponível, senão tenta 'checkin' legacy
     let readinessContext = '';
@@ -52,16 +86,21 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
     }
 
     const anthropicPayload = {
-      model: body.model || 'claude-sonnet-4-5',
-      max_tokens: body.max_tokens || 2048,
+      model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5',
+      max_tokens: 2048,
       system: body.system || readinessContext,
-      messages: body.messages || [],
+      messages,
     };
 
     let response;
     let data;
     for (let attempt = 1; attempt <= 3; attempt++) {
-      if (attempt > 1) await new Promise(r => setTimeout(r, 1000));
+      if (attempt > 1) {
+        await new Promise(r => setTimeout(r, 1000));
+        const retryQuota = await reserveAiRequest(bearerToken(req.headers.get('Authorization')));
+        if (retryQuota.error) return Response.json({ error: 'Chat quota unavailable' }, { status: 503 });
+        if (!retryQuota.allowed) return Response.json({ error: 'Daily chat quota reached' }, { status: 429 });
+      }
       response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -76,22 +115,20 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
       console.warn(`[api/chat] tentativa ${attempt} falhou com status ${response.status}`);
     }
     if (!response.ok) {
-      console.error('[api/chat] Anthropic error:', response.status, JSON.stringify(data));
+      console.error('[api/chat] Anthropic error:', response.status);
     }
 
     return new Response(JSON.stringify(data), {
       status: response.status,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
       },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: 'Chat unavailable' }), {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
       },
     });
   }
