@@ -1,3 +1,5 @@
+import { readLimitedJson } from '../lib/limited-json.mjs';
+
 export const config = { runtime: 'edge' };
 
 async function readJsonSafe(res) {
@@ -117,7 +119,11 @@ export default async function handler(req) {
   }
 
   if (req.method === 'POST') {
-    const body = await req.json();
+    const parsed = await readLimitedJson(req, 8_000);
+    if (parsed.error) {
+      return new Response(JSON.stringify({ error: parsed.error }), { status: parsed.status, headers });
+    }
+    const body = parsed.data;
     const answers = body?.parq_answers;
     const allowedKeys = new Set(['parq_answers', 'parq_cleared', 'parq_completed_at']);
     if (!body || typeof body !== 'object' || Object.keys(body).some(key => !allowedKeys.has(key)) ||

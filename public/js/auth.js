@@ -567,13 +567,14 @@ function _doAuthInit() {
   });
   document.querySelectorAll('img[src="NEW_LOGO"]').forEach(img => { img.src = NEW_LOGO; });
   migrateLocalStorageKeys();
-  initApp();
 }
 if (document.readyState === 'loading') {
   window.addEventListener('DOMContentLoaded', _doAuthInit);
 } else {
   _doAuthInit(); // DOMContentLoaded já disparou — rodar imediatamente
 }
+// app.js starts the app after every dependent module has loaded.
+window.__axisInitApp = initApp;
 
 supabase.auth.onAuthStateChange(async (event, session) => {
   _resolveAuthReady(session?.user || null);

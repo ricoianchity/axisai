@@ -61,6 +61,14 @@ export default async function handler(req, res) {
   const user = await verifiedUser(req.headers.authorization || req.headers.Authorization);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
+  const body = req.body;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return res.status(400).json({ error: 'Dados de treino inválidos' });
+  }
+  if (Buffer.byteLength(JSON.stringify(body), 'utf8') > 64_000) {
+    return res.status(413).json({ error: 'Treino muito grande' });
+  }
+
   const {
     local_id,
     titulo,
@@ -72,16 +80,24 @@ export default async function handler(req, res) {
     fase_nome,
     plano_titulo,
     fonte
-  } = req.body || {};
+  } = body;
   const user_id = user.id;
 
-  if (req.body?.user_id && req.body.user_id !== user_id) {
+  if (body.user_id && body.user_id !== user_id) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
+  const optionalText = [
+    [dataField, 40], [conteudo, 50_000], [categoria, 80], [tipo, 80],
+    [fase_nome, 160], [plano_titulo, 240], [fonte, 80],
+  ];
+  const localIdText = String(local_id);
   if (typeof titulo !== 'string' || !titulo.trim() || titulo.length > 200 ||
-      (local_id != null && !/^\d{1,19}$/.test(String(local_id))) ||
-      (conteudo != null && (typeof conteudo !== 'string' || conteudo.length > 50_000))) {
+      (local_id != null && (!/^\d{1,19}$/.test(localIdText) ||
+        BigInt(localIdText) > 9223372036854775807n)) ||
+      (fase_num != null && (!Number.isInteger(fase_num) || fase_num < 0 || fase_num > 100)) ||
+      optionalText.some(([value, max]) => value != null &&
+        (typeof value !== 'string' || value.length > max))) {
     return res.status(400).json({ error: 'Dados de treino inválidos' });
   }
 

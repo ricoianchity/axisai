@@ -1,3 +1,5 @@
+import { readLimitedJson } from '../lib/limited-json.mjs';
+
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
@@ -11,8 +13,13 @@ export default async function handler(req) {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
   try {
-    const { email } = await req.json();
-    if (!email) return new Response(JSON.stringify({ error: 'Email required' }), { status: 400, headers: { 'Content-Type': 'application/json', ...cors } });
+    const parsed = await readLimitedJson(req, 2_000);
+    if (parsed.error) return Response.json({ error: parsed.error }, { status: parsed.status, headers: cors });
+    const email = parsed.data?.email;
+    if (typeof email !== 'string' || email.length > 254 ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return Response.json({ error: 'Invalid email' }, { status: 400, headers: cors });
+    }
 
     const res = await fetch(`${process.env.SUPABASE_URL}/auth/v1/recover`, {
       method: 'POST',
@@ -30,8 +37,8 @@ export default async function handler(req) {
       status: res.status,
       headers: { 'Content-Type': 'application/json', ...cors },
     });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch {
+    return new Response(JSON.stringify({ error: 'Password recovery unavailable' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     });
