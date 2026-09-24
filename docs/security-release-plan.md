@@ -56,6 +56,11 @@ applied to the production database.
   updates and rejects privileged values on unprivileged inserts. It allows
   legitimate profile upserts and leaves privileged assignment to the service
   role or database owner.
+- Supabase's security advisor also found that the `SECURITY DEFINER`
+  `handle_new_user()` trigger function was executable directly by `anon` and
+  `authenticated`. The new migration revokes those grants and fixes its
+  `search_path`; the embedded PostgreSQL test confirms new-user profile
+  creation still works through the trigger.
 - `npm test` passes local API tests and an embedded PostgreSQL test that
   executes the new migration. The database test uses two fictional UUIDs and
   checks profile authority, quota denial, anonymous RPC denial, and row-level
@@ -63,6 +68,19 @@ applied to the production database.
   anonymous chat request and did not serve a path outside `public`.
 - No real user records were queried. The tests did not use live Supabase test
   accounts or exercise the unknown production serverless bundle.
+
+## Remaining security review
+
+The production security advisor still flags mutable search paths on six old
+functions (including the now non-public `delete_user_data`), anonymous GraphQL
+schema visibility for 14 tables, and leaked-password protection being disabled.
+The new migration addresses `handle_new_user` only; it has not been applied in
+production. Review the remaining findings against actual RLS policies and
+signup flows before changing grants. The GraphQL warning describes schema
+visibility, not proof that RLS permits row reads. References:
+[function search path](https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable),
+[anonymous GraphQL exposure](https://supabase.com/docs/guides/database/database-linter?lint=0026_pg_graphql_anon_table_exposed),
+[leaked-password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 
 ## Required release sequence
 

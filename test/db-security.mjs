@@ -5,6 +5,7 @@ import { PGlite } from '@electric-sql/pglite';
 const db = new PGlite();
 const userA = '11111111-1111-4111-8111-111111111111';
 const userB = '22222222-2222-4222-8222-222222222222';
+const userC = '33333333-3333-4333-8333-333333333333';
 
 await db.exec(`
   CREATE ROLE anon;
@@ -37,9 +38,28 @@ await db.exec(`
   GRANT SELECT, INSERT, UPDATE, DELETE ON public.workouts TO authenticated;
 `);
 await db.query('INSERT INTO auth.users(id) VALUES ($1), ($2)', [userA, userB]);
+await db.exec(`
+  CREATE FUNCTION public.handle_new_user() RETURNS trigger LANGUAGE plpgsql
+    SECURITY DEFINER AS $$ BEGIN
+      INSERT INTO public.profiles(user_id) VALUES (NEW.id) ON CONFLICT DO NOTHING;
+      RETURN NEW;
+    END $$;
+  CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+  GRANT EXECUTE ON FUNCTION public.handle_new_user() TO PUBLIC, anon, authenticated;
+  GRANT INSERT ON auth.users TO service_role;
+`);
 
 const migration = readFileSync(new URL('../supabase/migrations/20260924154130_guard_profile_authority_and_chat_quota.sql', import.meta.url), 'utf8');
 await db.exec(migration);
+for (const role of ['anon', 'authenticated']) {
+  const result = await db.query('SELECT has_function_privilege($1, $2, $3) AS allowed', [role, 'public.handle_new_user()', 'EXECUTE']);
+  assert.equal(result.rows[0].allowed, false);
+}
+await db.exec('SET ROLE service_role');
+await db.query('INSERT INTO auth.users(id) VALUES ($1)', [userC]);
+await db.exec('RESET ROLE');
+assert.equal((await db.query('SELECT role FROM public.profiles WHERE user_id = $1', [userC])).rows[0].role, 'client');
 
 await db.exec('SET ROLE authenticated');
 await db.query("SELECT set_config('request.jwt.claim.sub', $1, false)", [userA]);

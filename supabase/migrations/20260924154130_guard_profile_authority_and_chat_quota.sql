@@ -75,3 +75,9 @@ $$;
 
 REVOKE ALL ON FUNCTION public.reserve_ai_request() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.reserve_ai_request() TO authenticated;
+
+-- This SECURITY DEFINER trigger function should run only through the
+-- auth.users trigger. Removing its public RPC privilege does not prevent the
+-- trigger from firing when Auth creates a user.
+ALTER FUNCTION public.handle_new_user() SET search_path = '';
+REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
