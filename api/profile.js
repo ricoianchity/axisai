@@ -118,7 +118,21 @@ export default async function handler(req) {
 
   if (req.method === 'POST') {
     const body = await req.json();
-    const payload = { ...body, updated_at: new Date().toISOString() };
+    const answers = body?.parq_answers;
+    const allowedKeys = new Set(['parq_answers', 'parq_cleared', 'parq_completed_at']);
+    if (!body || typeof body !== 'object' || Object.keys(body).some(key => !allowedKeys.has(key)) ||
+        !answers || typeof answers !== 'object' || Array.isArray(answers) ||
+        Array.from({ length: 7 }, (_, index) => answers[`q${index + 1}`])
+          .some(answer => answer !== 'yes' && answer !== 'no') ||
+        Object.keys(answers).length !== 7) {
+      return new Response(JSON.stringify({ error: 'Invalid PAR-Q answers' }), { status: 400, headers });
+    }
+    const payload = {
+      parq_answers: answers,
+      parq_cleared: Object.values(answers).every(answer => answer === 'no'),
+      parq_completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
 
     const attempts = [
       { key: 'user_id', value: user.id },

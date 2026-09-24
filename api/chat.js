@@ -1,27 +1,37 @@
+import { verifiedUser } from '../lib/supabase-auth.mjs';
+
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-    });
+    return new Response(null, { status: 204 });
   }
 
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
   }
 
+  const user = await verifiedUser(req.headers.get('Authorization'));
+  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+  if (Number(req.headers.get('Content-Length')) > 128_000) {
+    return Response.json({ error: 'Request too large' }, { status: 413 });
+  }
+
   try {
     const body = await req.json();
+    const messages = body?.messages;
+    if (!Array.isArray(messages) || messages.length < 1 || messages.length > 20 ||
+        messages.some(message => !['user', 'assistant'].includes(message?.role) ||
+          typeof message?.content !== 'string' || message.content.length > 12_000) ||
+        typeof body.system !== 'string' || body.system.length > 40_000) {
+      return Response.json({ error: 'Invalid chat payload' }, { status: 400 });
+    }
 
     // Extrair dados relevantes do body
     const { readiness } = body;
 
-    console.log('[api/chat] model:', body.model, '| messages:', body.messages?.length, '| readiness_score:', readiness?.readiness_score ?? 'n/a');
+    console.log('[api/chat] user:', user.id, '| messages:', messages.length);
 
     // Construir contexto de prontidão — usa 'readiness' (novo) se disponível, senão tenta 'checkin' legacy
     let readinessContext = '';
@@ -52,10 +62,10 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
     }
 
     const anthropicPayload = {
-      model: body.model || 'claude-sonnet-4-5',
-      max_tokens: body.max_tokens || 2048,
+      model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5',
+      max_tokens: 2048,
       system: body.system || readinessContext,
-      messages: body.messages || [],
+      messages,
     };
 
     let response;
@@ -83,15 +93,13 @@ INSTRUÇÃO: Adapte o volume, intensidade e seleção de exercícios do treino d
       status: response.status,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
       },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: 'Chat unavailable' }), {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
       },
     });
   }

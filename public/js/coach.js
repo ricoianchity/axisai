@@ -1170,9 +1170,11 @@ async function loadUserWorkouts(userId, userEmail) {
   if (!container || !userId) return;
 
   try {
-    const qs = new URLSearchParams({ user_id: userId });
-    if (userEmail) qs.set('email', userEmail);
-    const res = await fetch(`/api/get-workouts?${qs.toString()}`);
+    const token = await getSupaToken();
+    if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+    const res = await fetch('/api/get-workouts', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
     const payload = await res.json();
 
     if (!res.ok) {
@@ -1708,10 +1710,13 @@ function saveTreinosIA(treinos) {
     const apiPayload = _buildApiPayload(newest, state.user.id);
 
     // Tentar via API (source of truth)
-    fetch('/api/save-workout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(apiPayload)
+    getSupaToken().then(token => {
+      if (!token) throw new Error('Sessão expirada');
+      return fetch('/api/save-workout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(apiPayload)
+      });
     })
       .then(r => r.ok ? r.json() : Promise.reject(r))
       .then(json => {
@@ -1761,9 +1766,11 @@ async function syncPendingWorkouts() {
       const apiPayload = _buildApiPayload(t, state.user.id);
       let apiOk = false;
       try {
+        const token = await getSupaToken();
+        if (!token) throw new Error('Sessão expirada');
         const r = await fetch('/api/save-workout', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify(apiPayload)
         });
         if (r.ok) {
@@ -5213,9 +5220,11 @@ async function clearChat() {
 
   try {
     console.log('[clearChat] Enviando init para /api/chat:', _initPayload);
+    const token = await getSupaToken();
+    if (!token) throw new Error('Sessão expirada');
     const _initResp = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(_initPayload)
     });
     const _initData = await _initResp.json();
@@ -5454,9 +5463,11 @@ async function sendMessage() {
     }
 
     console.log('[chat] Enviando para /api/chat:', { messages: mensagensParaEnviar.length, messagesTotal: state.chatHistory.length, model: 'claude-sonnet-4-5', readinessScore: rdToday?.readiness_score ?? 'n/a' });
+    const token = await getSupaToken();
+    if (!token) throw new Error('Sessão expirada');
     const response = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
         max_tokens: 2048,

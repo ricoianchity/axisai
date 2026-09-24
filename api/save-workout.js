@@ -1,3 +1,5 @@
+import { bearerToken, verifiedUser } from '../lib/supabase-auth.mjs';
+
 async function fetchJson(res) {
   try {
     return await res.json();
@@ -6,11 +8,11 @@ async function fetchJson(res) {
   }
 }
 
-function buildSbHeaders() {
+function buildSbHeaders(token) {
   return {
     'Content-Type': 'application/json',
-    'apikey': process.env.SUPABASE_SERVICE_KEY,
-    'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+    'apikey': process.env.SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${token}`,
     'Prefer': 'return=representation'
   };
 }
@@ -56,8 +58,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const user = await verifiedUser(req.headers.authorization || req.headers.Authorization);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
   const {
-    user_id,
     local_id,
     titulo,
     data: dataField,
@@ -69,13 +73,20 @@ export default async function handler(req, res) {
     plano_titulo,
     fonte
   } = req.body || {};
+  const user_id = user.id;
 
-  if (!user_id || !titulo) {
-    return res.status(400).json({ error: 'user_id e titulo são obrigatórios' });
+  if (req.body?.user_id && req.body.user_id !== user_id) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  if (typeof titulo !== 'string' || !titulo.trim() || titulo.length > 200 ||
+      (local_id != null && !/^\d{1,19}$/.test(String(local_id))) ||
+      (conteudo != null && (typeof conteudo !== 'string' || conteudo.length > 50_000))) {
+    return res.status(400).json({ error: 'Dados de treino inválidos' });
   }
 
   const baseUrl = `${process.env.SUPABASE_URL}/rest/v1/workouts`;
-  const headers = buildSbHeaders();
+  const headers = buildSbHeaders(bearerToken(req.headers.authorization || req.headers.Authorization));
 
   // Se local_id fornecido, verificar se row já existe
   if (local_id) {
